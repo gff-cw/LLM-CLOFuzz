@@ -1,0 +1,18 @@
+rm -f afl-gcc afl-fuzz afl-replay aflnet-replay afl-showmap afl-tmin afl-gotcpu afl-analyze afl-as as afl-g++ afl-clang afl-clang++ *.o *~ a.out core core.[1-9][0-9]* *.stackdump test .test test-instr .test-instr0 .test-instr1 qemu_mode/qemu-2.10.0.tar.bz2 afl-qemu-trace
+rm -rf out_dir qemu_mode/qemu-2.10.0
+make -C llvm_mode clean
+make[1]: Entering directory '/home/weicresec/Desktop/stateafl/llvm_mode'
+rm -f *.o *.so *~ a.out core core.[1-9][0-9]* test-instr .test-instr0 .test-instr1
+rm -f ../afl-clang-fast ../afl-llvm-pass.so ../afl-llvm-rt.o ../afl-llvm-rt-32.o ../afl-llvm-rt-64.o ../afl-llvm-rt-state-tracer.o ../afl-llvm-rt-state-tracer.o.cpp.o ../afl-clang-fast++
+rm -rf .build
+make[1]: Leaving directory '/home/weicresec/Desktop/stateafl/llvm_mode'
+make -C libdislocator clean
+make[1]: Entering directory '/home/weicresec/Desktop/stateafl/libdislocator'
+rm -f *.o *.so *~ a.out core core.[1-9][0-9]*
+rm -f libdislocator.so
+make[1]: Leaving directory '/home/weicresec/Desktop/stateafl/libdislocator'
+make -C libtokencap clean
+make[1]: Entering directory '/home/weicresec/Desktop/stateafl/libtokencap'
+rm -f *.o *.so *~ a.out core core.[1-9][0-9]*
+rm -f libtokencap.so
+make[1]: Leaving directory '/home/weicresec/Desktop/stateafl/libtokencap'

@@ -1,0 +1,327 @@
+OUTDIR: /home/weicresec/Desktop/stateafl/tests/llvm18/out/verified-suite/dynamic/io-logs-eybuo749
+STATE TRACER STARTED
+NO SHM (for testing)
+NEW STACK ALLOC: 0x7ffd1c3a33d0 (1024 bytes)
+NEW ALLOC [0]: 0x7ffd1c3a33d0, 1024
+NEW STACK ALLOC: 0x7ffd1c3a3310 (184 bytes)
+NEW ALLOC [1]: 0x7ffd1c3a3310, 184
+NEW STACK ALLOC: 0x7ffd1c3a3250 (184 bytes)
+NEW ALLOC [2]: 0x7ffd1c3a3250, 184
+TRACE RECV (buf = 0x7ffd1c3a33e0, size = 32)
+DETECTED I/O BUF AREA: addr = 0x7ffd1c3a33e0, size = 32
+TRACE SEND (buf = 0x7ffd1c3a34d0, size = 7)
+DUMPING ALLOC RECORD [2]: addr=0x7ffd1c3a3250 (size=184 bytes)
+DUMPING ALLOC RECORD [1]: addr=0x7ffd1c3a3310 (size=184 bytes)
+DUMPING ALLOC RECORD [0]: addr=0x7ffd1c3a33d0 (size=1024 bytes)
+DETECTED I/O BUF AREA: addr = 0x7ffd1c3a34d0, size = 7
+NEW STACK ALLOC: 0x7ffd1c3a30f0 (256 bytes)
+FREE STACK ALLOC: 0x7ffd1c3a30f0 (256 bytes)
+TRACE RECV (buf = 0x7ffd1c3a3410, size = 48)
+DETECTED I/O BUF AREA: addr = 0x7ffd1c3a3410, size = 48
+TRACE SEND (buf = 0x7ffd1c3a3510, size = 9)
+DUMPING ALLOC RECORD [2]: addr=0x7ffd1c3a3250 (size=184 bytes)
+DUMPING ALLOC RECORD [1]: addr=0x7ffd1c3a3310 (size=184 bytes)
+DUMPING ALLOC RECORD [0]: addr=0x7ffd1c3a33d0 (size=1024 bytes)
+DETECTED I/O BUF AREA: addr = 0x7ffd1c3a3510, size = 9
+NEW STACK ALLOC: 0x7ffd1c3a30f0 (256 bytes)
+FREE STACK ALLOC: 0x7ffd1c3a30f0 (256 bytes)
+TRACE RECV (buf = 0x7ffd1c3a3310, size = 56)
+DETECTED I/O BUF AREA: addr = 0x7ffd1c3a3310, size = 56
+TRACE SEND (buf = 0x7ffd1c3a3250, size = 56)
+DUMPING ALLOC RECORD [2]: addr=0x7ffd1c3a3250 (size=184 bytes)
+DUMPING ALLOC RECORD [1]: addr=0x7ffd1c3a3310 (size=184 bytes)
+DUMPING ALLOC RECORD [0]: addr=0x7ffd1c3a33d0 (size=1024 bytes)
+DETECTED I/O BUF AREA: addr = 0x7ffd1c3a3250, size = 56
+NEW STACK ALLOC: 0x7ffd1c3a30f0 (256 bytes)
+FREE STACK ALLOC: 0x7ffd1c3a30f0 (256 bytes)
+TRACE READ
+FD IS SOCKET
+TRACE RECV (buf = 0x7ffd1c3a3590, size = 16)
+DETECTED I/O BUF AREA: addr = 0x7ffd1c3a3590, size = 16
+TRACE WRITE
+FD IN SOCKET SET
+TRACE SEND (buf = 0x7ffd1c3a35b0, size = 13)
+DUMPING ALLOC RECORD [2]: addr=0x7ffd1c3a3250 (size=184 bytes)
+DUMPING ALLOC RECORD [1]: addr=0x7ffd1c3a3310 (size=184 bytes)
+DUMPING ALLOC RECORD [0]: addr=0x7ffd1c3a33d0 (size=1024 bytes)
+DETECTED I/O BUF AREA: addr = 0x7ffd1c3a35b0, size = 13
+NEW STACK ALLOC: 0x7ffd1c3a30f0 (256 bytes)
+FREE STACK ALLOC: 0x7ffd1c3a30f0 (256 bytes)
+TRACE FGETS
+FD IS SOCKET
+TRACE RECV (buf = 0x7ffd1c3a35d0, size = 32)
+DETECTED I/O BUF AREA: addr = 0x7ffd1c3a35d0, size = 32
+TRACE FPRINTF
+FD IN SOCKET SET
+TRACE SEND (buf = 0x62d6e69864b7, size = 9)
+DUMPING ALLOC RECORD [2]: addr=0x7ffd1c3a3250 (size=184 bytes)
+DUMPING ALLOC RECORD [1]: addr=0x7ffd1c3a3310 (size=184 bytes)
+DUMPING ALLOC RECORD [0]: addr=0x7ffd1c3a33d0 (size=1024 bytes)
+NEW STACK ALLOC: 0x7ffd1c3a30f0 (256 bytes)
+FREE STACK ALLOC: 0x7ffd1c3a30f0 (256 bytes)
+TRACE FREAD
+FD IN SOCKET SET
+TRACE RECV (buf = 0x7ffd1c3a3610, size = 6)
+DETECTED I/O BUF AREA: addr = 0x7ffd1c3a3610, size = 6
+TRACE FWRITE
+FD IN SOCKET SET
+TRACE SEND (buf = 0x7ffd1c3a3650, size = 15)
+DUMPING ALLOC RECORD [2]: addr=0x7ffd1c3a3250 (size=184 bytes)
+DUMPING ALLOC RECORD [1]: addr=0x7ffd1c3a3310 (size=184 bytes)
+DUMPING ALLOC RECORD [0]: addr=0x7ffd1c3a33d0 (size=1024 bytes)
+DETECTED I/O BUF AREA: addr = 0x7ffd1c3a3650, size = 15
+NEW STACK ALLOC: 0x7ffd1c3a30f0 (256 bytes)
+FREE STACK ALLOC: 0x7ffd1c3a30f0 (256 bytes)
+TRACE FCLOSE
+TRACE CLOSE
+FD IN SOCKET SET
+TRACE FWRITE
+FD IS NOT SOCKET
+TRACE FREAD
+FD IS NOT SOCKET
+TRACE FCLOSE
+TRACE CLOSE
+FD IS NOT SOCKET
+TRACE CLOSE
+FD IS SOCKET
+TRACE CLOSE
+FD IS SOCKET
+TRACE CLOSE
+FD IN SOCKET SET
+TRACE CLOSE
+FD IS SOCKET
+# DUMPS: 18
+
+Latest iteration: 6
+Unable to read MVP Tree from file, initializing new one...
+SAVING STATE [# 0]: 0
+
+DUMPING [0x7ffd1c3a3250, id=2, iter_init=0, iter_end=-1, iter_dumped=0]:
+SKIPPING IGNORED AREA: [0x7ffd1c3a3250, id=2, iter_init=0, iter_end=-1, iter_dumped=0]:
+
+DUMPING [0x7ffd1c3a3310, id=1, iter_init=0, iter_end=-1, iter_dumped=0]:
+SKIPPING IGNORED AREA: [0x7ffd1c3a3310, id=1, iter_init=0, iter_end=-1, iter_dumped=0]:
+
+DUMPING [0x7ffd1c3a33d0, id=0, iter_init=0, iter_end=-1, iter_dumped=0]:
+ANALYZING: [0x7ffd1c3a33d0, id=0, iter_init=0, iter_end=-1, iter_dumped=0, size=1024]:
+SKIPPING IGNORED AREA INSIDE AREA: [area=0x7ffd1c3a33d0, ignore_addr=0x7ffd1c3a33e0, size=32]
+STORING AREA: [start=0x7ffd1c3a33d0, size=16]
+SKIPPING IGNORED AREA INSIDE AREA: [area=0x7ffd1c3a33d0, ignore_addr=0x7ffd1c3a3410, size=48]
+STORING AREA: [start=0x7ffd1c3a3400, size=16]
+SKIPPING IGNORED AREA INSIDE AREA: [area=0x7ffd1c3a33d0, ignore_addr=0x7ffd1c3a34d0, size=7]
+STORING AREA: [start=0x7ffd1c3a3440, size=144]
+SKIPPING IGNORED AREA INSIDE AREA: [area=0x7ffd1c3a33d0, ignore_addr=0x7ffd1c3a3510, size=9]
+STORING AREA: [start=0x7ffd1c3a34d7, size=57]
+SKIPPING IGNORED AREA INSIDE AREA: [area=0x7ffd1c3a33d0, ignore_addr=0x7ffd1c3a3590, size=16]
+STORING AREA: [start=0x7ffd1c3a3519, size=119]
+SKIPPING IGNORED AREA INSIDE AREA: [area=0x7ffd1c3a33d0, ignore_addr=0x7ffd1c3a35b0, size=13]
+STORING AREA: [start=0x7ffd1c3a35a0, size=16]
+SKIPPING IGNORED AREA INSIDE AREA: [area=0x7ffd1c3a33d0, ignore_addr=0x7ffd1c3a35d0, size=32]
+STORING AREA: [start=0x7ffd1c3a35bd, size=19]
+SKIPPING IGNORED AREA INSIDE AREA: [area=0x7ffd1c3a33d0, ignore_addr=0x7ffd1c3a3610, size=6]
+STORING AREA: [start=0x7ffd1c3a35f0, size=32]
+SKIPPING IGNORED AREA INSIDE AREA: [area=0x7ffd1c3a33d0, ignore_addr=0x7ffd1c3a3650, size=15]
+STORING AREA: [start=0x7ffd1c3a3616, size=58]
+STORING AREA: [start=0x7ffd1c3a365f, size=369]
+
+DUMPING [0x7ffd1c3a3250, id=2, iter_init=0, iter_end=-1, iter_dumped=1]:
+SKIPPING IGNORED AREA: [0x7ffd1c3a3250, id=2, iter_init=0, iter_end=-1, iter_dumped=1]:
+
+DUMPING [0x7ffd1c3a3310, id=1, iter_init=0, iter_end=-1, iter_dumped=1]:
+SKIPPING IGNORED AREA: [0x7ffd1c3a3310, id=1, iter_init=0, iter_end=-1, iter_dumped=1]:
+
+DUMPING [0x7ffd1c3a33d0, id=0, iter_init=0, iter_end=-1, iter_dumped=1]:
+ADDING MORE RANDOMNESS (initial size=846)
+TLSH HASH: 'T1621105398C828A0A0F0A8780A89682B27C118743048E530132880F0591C10E1C100004'
+DATA SIZE: 1024
+MVP RADIUS: 100.000000
+QUERY MVP TREE - HASH NOT FOUND
+ADDING NEW HASH TO MVP TREE: state=1, hash='T1621105398C828A0A0F0A8780A89682B27C118743048E530132880F0591C10E1C100004' (size=73)
+TLSH DISTANCE: 0
+COMPUTED STATE: 1
+SAVING STATE [# 1]: 00000001
+ANALYZING: [0x7ffd1c3a33d0, id=0, iter_init=0, iter_end=-1, iter_dumped=1, size=1024]:
+SKIPPING IGNORED AREA INSIDE AREA: [area=0x7ffd1c3a33d0, ignore_addr=0x7ffd1c3a33e0, size=32]
+STORING AREA: [start=0x7ffd1c3a33d0, size=16]
+SKIPPING IGNORED AREA INSIDE AREA: [area=0x7ffd1c3a33d0, ignore_addr=0x7ffd1c3a3410, size=48]
+STORING AREA: [start=0x7ffd1c3a3400, size=16]
+SKIPPING IGNORED AREA INSIDE AREA: [area=0x7ffd1c3a33d0, ignore_addr=0x7ffd1c3a34d0, size=7]
+STORING AREA: [start=0x7ffd1c3a3440, size=144]
+SKIPPING IGNORED AREA INSIDE AREA: [area=0x7ffd1c3a33d0, ignore_addr=0x7ffd1c3a3510, size=9]
+STORING AREA: [start=0x7ffd1c3a34d7, size=57]
+SKIPPING IGNORED AREA INSIDE AREA: [area=0x7ffd1c3a33d0, ignore_addr=0x7ffd1c3a3590, size=16]
+STORING AREA: [start=0x7ffd1c3a3519, size=119]
+SKIPPING IGNORED AREA INSIDE AREA: [area=0x7ffd1c3a33d0, ignore_addr=0x7ffd1c3a35b0, size=13]
+STORING AREA: [start=0x7ffd1c3a35a0, size=16]
+SKIPPING IGNORED AREA INSIDE AREA: [area=0x7ffd1c3a33d0, ignore_addr=0x7ffd1c3a35d0, size=32]
+STORING AREA: [start=0x7ffd1c3a35bd, size=19]
+SKIPPING IGNORED AREA INSIDE AREA: [area=0x7ffd1c3a33d0, ignore_addr=0x7ffd1c3a3610, size=6]
+STORING AREA: [start=0x7ffd1c3a35f0, size=32]
+SKIPPING IGNORED AREA INSIDE AREA: [area=0x7ffd1c3a33d0, ignore_addr=0x7ffd1c3a3650, size=15]
+STORING AREA: [start=0x7ffd1c3a3616, size=58]
+STORING AREA: [start=0x7ffd1c3a365f, size=369]
+
+DUMPING [0x7ffd1c3a3250, id=2, iter_init=0, iter_end=-1, iter_dumped=2]:
+SKIPPING IGNORED AREA: [0x7ffd1c3a3250, id=2, iter_init=0, iter_end=-1, iter_dumped=2]:
+
+DUMPING [0x7ffd1c3a3310, id=1, iter_init=0, iter_end=-1, iter_dumped=2]:
+SKIPPING IGNORED AREA: [0x7ffd1c3a3310, id=1, iter_init=0, iter_end=-1, iter_dumped=2]:
+
+DUMPING [0x7ffd1c3a33d0, id=0, iter_init=0, iter_end=-1, iter_dumped=2]:
+ADDING MORE RANDOMNESS (initial size=846)
+TLSH HASH: 'T1621105398C828A0A0F0A8780A89682B27C118743048E530132880F0591C10E1C100004'
+DATA SIZE: 1024
+MVP RADIUS: 100.000000
+TLSH DISTANCE: 0
+QUERY MVP TREE - HASH FOUND
+TLSH DISTANCE: 0
+HASH FOUND: T1621105398C828A0A0F0A8780A89682B27C118743048E530132880F0591C10E1C100004 (id=1, distance=0.000000)
+COMPUTED STATE: 1
+SAVING STATE [# 2]: 00000001
+ANALYZING: [0x7ffd1c3a33d0, id=0, iter_init=0, iter_end=-1, iter_dumped=2, size=1024]:
+SKIPPING IGNORED AREA INSIDE AREA: [area=0x7ffd1c3a33d0, ignore_addr=0x7ffd1c3a33e0, size=32]
+STORING AREA: [start=0x7ffd1c3a33d0, size=16]
+SKIPPING IGNORED AREA INSIDE AREA: [area=0x7ffd1c3a33d0, ignore_addr=0x7ffd1c3a3410, size=48]
+STORING AREA: [start=0x7ffd1c3a3400, size=16]
+SKIPPING IGNORED AREA INSIDE AREA: [area=0x7ffd1c3a33d0, ignore_addr=0x7ffd1c3a34d0, size=7]
+STORING AREA: [start=0x7ffd1c3a3440, size=144]
+SKIPPING IGNORED AREA INSIDE AREA: [area=0x7ffd1c3a33d0, ignore_addr=0x7ffd1c3a3510, size=9]
+STORING AREA: [start=0x7ffd1c3a34d7, size=57]
+SKIPPING IGNORED AREA INSIDE AREA: [area=0x7ffd1c3a33d0, ignore_addr=0x7ffd1c3a3590, size=16]
+STORING AREA: [start=0x7ffd1c3a3519, size=119]
+SKIPPING IGNORED AREA INSIDE AREA: [area=0x7ffd1c3a33d0, ignore_addr=0x7ffd1c3a35b0, size=13]
+STORING AREA: [start=0x7ffd1c3a35a0, size=16]
+SKIPPING IGNORED AREA INSIDE AREA: [area=0x7ffd1c3a33d0, ignore_addr=0x7ffd1c3a35d0, size=32]
+STORING AREA: [start=0x7ffd1c3a35bd, size=19]
+SKIPPING IGNORED AREA INSIDE AREA: [area=0x7ffd1c3a33d0, ignore_addr=0x7ffd1c3a3610, size=6]
+STORING AREA: [start=0x7ffd1c3a35f0, size=32]
+SKIPPING IGNORED AREA INSIDE AREA: [area=0x7ffd1c3a33d0, ignore_addr=0x7ffd1c3a3650, size=15]
+STORING AREA: [start=0x7ffd1c3a3616, size=58]
+STORING AREA: [start=0x7ffd1c3a365f, size=369]
+
+DUMPING [0x7ffd1c3a3250, id=2, iter_init=0, iter_end=-1, iter_dumped=3]:
+SKIPPING IGNORED AREA: [0x7ffd1c3a3250, id=2, iter_init=0, iter_end=-1, iter_dumped=3]:
+
+DUMPING [0x7ffd1c3a3310, id=1, iter_init=0, iter_end=-1, iter_dumped=3]:
+SKIPPING IGNORED AREA: [0x7ffd1c3a3310, id=1, iter_init=0, iter_end=-1, iter_dumped=3]:
+
+DUMPING [0x7ffd1c3a33d0, id=0, iter_init=0, iter_end=-1, iter_dumped=3]:
+ADDING MORE RANDOMNESS (initial size=846)
+TLSH HASH: 'T1E9110579CC828E0E0F0B9781F89692B27C518753048E7702329D1F05D2C14F5C100114'
+DATA SIZE: 1024
+MVP RADIUS: 100.000000
+TLSH DISTANCE: 28
+QUERY MVP TREE - HASH FOUND
+TLSH DISTANCE: 28
+HASH FOUND: T1621105398C828A0A0F0A8780A89682B27C118743048E530132880F0591C10E1C100004 (id=1, distance=28.000000)
+COMPUTED STATE: 1
+SAVING STATE [# 3]: 00000001
+ANALYZING: [0x7ffd1c3a33d0, id=0, iter_init=0, iter_end=-1, iter_dumped=3, size=1024]:
+SKIPPING IGNORED AREA INSIDE AREA: [area=0x7ffd1c3a33d0, ignore_addr=0x7ffd1c3a33e0, size=32]
+STORING AREA: [start=0x7ffd1c3a33d0, size=16]
+SKIPPING IGNORED AREA INSIDE AREA: [area=0x7ffd1c3a33d0, ignore_addr=0x7ffd1c3a3410, size=48]
+STORING AREA: [start=0x7ffd1c3a3400, size=16]
+SKIPPING IGNORED AREA INSIDE AREA: [area=0x7ffd1c3a33d0, ignore_addr=0x7ffd1c3a34d0, size=7]
+STORING AREA: [start=0x7ffd1c3a3440, size=144]
+SKIPPING IGNORED AREA INSIDE AREA: [area=0x7ffd1c3a33d0, ignore_addr=0x7ffd1c3a3510, size=9]
+STORING AREA: [start=0x7ffd1c3a34d7, size=57]
+SKIPPING IGNORED AREA INSIDE AREA: [area=0x7ffd1c3a33d0, ignore_addr=0x7ffd1c3a3590, size=16]
+STORING AREA: [start=0x7ffd1c3a3519, size=119]
+SKIPPING IGNORED AREA INSIDE AREA: [area=0x7ffd1c3a33d0, ignore_addr=0x7ffd1c3a35b0, size=13]
+STORING AREA: [start=0x7ffd1c3a35a0, size=16]
+SKIPPING IGNORED AREA INSIDE AREA: [area=0x7ffd1c3a33d0, ignore_addr=0x7ffd1c3a35d0, size=32]
+STORING AREA: [start=0x7ffd1c3a35bd, size=19]
+SKIPPING IGNORED AREA INSIDE AREA: [area=0x7ffd1c3a33d0, ignore_addr=0x7ffd1c3a3610, size=6]
+STORING AREA: [start=0x7ffd1c3a35f0, size=32]
+SKIPPING IGNORED AREA INSIDE AREA: [area=0x7ffd1c3a33d0, ignore_addr=0x7ffd1c3a3650, size=15]
+STORING AREA: [start=0x7ffd1c3a3616, size=58]
+STORING AREA: [start=0x7ffd1c3a365f, size=369]
+
+DUMPING [0x7ffd1c3a3250, id=2, iter_init=0, iter_end=-1, iter_dumped=4]:
+SKIPPING IGNORED AREA: [0x7ffd1c3a3250, id=2, iter_init=0, iter_end=-1, iter_dumped=4]:
+
+DUMPING [0x7ffd1c3a3310, id=1, iter_init=0, iter_end=-1, iter_dumped=4]:
+SKIPPING IGNORED AREA: [0x7ffd1c3a3310, id=1, iter_init=0, iter_end=-1, iter_dumped=4]:
+
+DUMPING [0x7ffd1c3a33d0, id=0, iter_init=0, iter_end=-1, iter_dumped=4]:
+ADDING MORE RANDOMNESS (initial size=846)
+TLSH HASH: 'T1E9110579CC828E0E0F0B9781F89692B27C518753048E7702329D1F05D2C14F5C100114'
+DATA SIZE: 1024
+MVP RADIUS: 100.000000
+TLSH DISTANCE: 28
+QUERY MVP TREE - HASH FOUND
+TLSH DISTANCE: 28
+HASH FOUND: T1621105398C828A0A0F0A8780A89682B27C118743048E530132880F0591C10E1C100004 (id=1, distance=28.000000)
+COMPUTED STATE: 1
+SAVING STATE [# 4]: 00000001
+ANALYZING: [0x7ffd1c3a33d0, id=0, iter_init=0, iter_end=-1, iter_dumped=4, size=1024]:
+SKIPPING IGNORED AREA INSIDE AREA: [area=0x7ffd1c3a33d0, ignore_addr=0x7ffd1c3a33e0, size=32]
+STORING AREA: [start=0x7ffd1c3a33d0, size=16]
+SKIPPING IGNORED AREA INSIDE AREA: [area=0x7ffd1c3a33d0, ignore_addr=0x7ffd1c3a3410, size=48]
+STORING AREA: [start=0x7ffd1c3a3400, size=16]
+SKIPPING IGNORED AREA INSIDE AREA: [area=0x7ffd1c3a33d0, ignore_addr=0x7ffd1c3a34d0, size=7]
+STORING AREA: [start=0x7ffd1c3a3440, size=144]
+SKIPPING IGNORED AREA INSIDE AREA: [area=0x7ffd1c3a33d0, ignore_addr=0x7ffd1c3a3510, size=9]
+STORING AREA: [start=0x7ffd1c3a34d7, size=57]
+SKIPPING IGNORED AREA INSIDE AREA: [area=0x7ffd1c3a33d0, ignore_addr=0x7ffd1c3a3590, size=16]
+STORING AREA: [start=0x7ffd1c3a3519, size=119]
+SKIPPING IGNORED AREA INSIDE AREA: [area=0x7ffd1c3a33d0, ignore_addr=0x7ffd1c3a35b0, size=13]
+STORING AREA: [start=0x7ffd1c3a35a0, size=16]
+SKIPPING IGNORED AREA INSIDE AREA: [area=0x7ffd1c3a33d0, ignore_addr=0x7ffd1c3a35d0, size=32]
+STORING AREA: [start=0x7ffd1c3a35bd, size=19]
+SKIPPING IGNORED AREA INSIDE AREA: [area=0x7ffd1c3a33d0, ignore_addr=0x7ffd1c3a3610, size=6]
+STORING AREA: [start=0x7ffd1c3a35f0, size=32]
+SKIPPING IGNORED AREA INSIDE AREA: [area=0x7ffd1c3a33d0, ignore_addr=0x7ffd1c3a3650, size=15]
+STORING AREA: [start=0x7ffd1c3a3616, size=58]
+STORING AREA: [start=0x7ffd1c3a365f, size=369]
+
+DUMPING [0x7ffd1c3a3250, id=2, iter_init=0, iter_end=-1, iter_dumped=5]:
+SKIPPING IGNORED AREA: [0x7ffd1c3a3250, id=2, iter_init=0, iter_end=-1, iter_dumped=5]:
+
+DUMPING [0x7ffd1c3a3310, id=1, iter_init=0, iter_end=-1, iter_dumped=5]:
+SKIPPING IGNORED AREA: [0x7ffd1c3a3310, id=1, iter_init=0, iter_end=-1, iter_dumped=5]:
+
+DUMPING [0x7ffd1c3a33d0, id=0, iter_init=0, iter_end=-1, iter_dumped=5]:
+ADDING MORE RANDOMNESS (initial size=846)
+TLSH HASH: 'T1E9110579CC828E0E0F0B9781F89692B27C518753048E7702329D1F05D2C14F5C100114'
+DATA SIZE: 1024
+MVP RADIUS: 100.000000
+TLSH DISTANCE: 28
+QUERY MVP TREE - HASH FOUND
+TLSH DISTANCE: 28
+HASH FOUND: T1621105398C828A0A0F0A8780A89682B27C118743048E530132880F0591C10E1C100004 (id=1, distance=28.000000)
+COMPUTED STATE: 1
+SAVING STATE [# 5]: 00000001
+ANALYZING: [0x7ffd1c3a33d0, id=0, iter_init=0, iter_end=-1, iter_dumped=5, size=1024]:
+SKIPPING IGNORED AREA INSIDE AREA: [area=0x7ffd1c3a33d0, ignore_addr=0x7ffd1c3a33e0, size=32]
+STORING AREA: [start=0x7ffd1c3a33d0, size=16]
+SKIPPING IGNORED AREA INSIDE AREA: [area=0x7ffd1c3a33d0, ignore_addr=0x7ffd1c3a3410, size=48]
+STORING AREA: [start=0x7ffd1c3a3400, size=16]
+SKIPPING IGNORED AREA INSIDE AREA: [area=0x7ffd1c3a33d0, ignore_addr=0x7ffd1c3a34d0, size=7]
+STORING AREA: [start=0x7ffd1c3a3440, size=144]
+SKIPPING IGNORED AREA INSIDE AREA: [area=0x7ffd1c3a33d0, ignore_addr=0x7ffd1c3a3510, size=9]
+STORING AREA: [start=0x7ffd1c3a34d7, size=57]
+SKIPPING IGNORED AREA INSIDE AREA: [area=0x7ffd1c3a33d0, ignore_addr=0x7ffd1c3a3590, size=16]
+STORING AREA: [start=0x7ffd1c3a3519, size=119]
+SKIPPING IGNORED AREA INSIDE AREA: [area=0x7ffd1c3a33d0, ignore_addr=0x7ffd1c3a35b0, size=13]
+STORING AREA: [start=0x7ffd1c3a35a0, size=16]
+SKIPPING IGNORED AREA INSIDE AREA: [area=0x7ffd1c3a33d0, ignore_addr=0x7ffd1c3a35d0, size=32]
+STORING AREA: [start=0x7ffd1c3a35bd, size=19]
+SKIPPING IGNORED AREA INSIDE AREA: [area=0x7ffd1c3a33d0, ignore_addr=0x7ffd1c3a3610, size=6]
+STORING AREA: [start=0x7ffd1c3a35f0, size=32]
+SKIPPING IGNORED AREA INSIDE AREA: [area=0x7ffd1c3a33d0, ignore_addr=0x7ffd1c3a3650, size=15]
+STORING AREA: [start=0x7ffd1c3a3616, size=58]
+STORING AREA: [start=0x7ffd1c3a365f, size=369]
+ADDING MORE RANDOMNESS (initial size=846)
+TLSH HASH: 'T1E9110579CC828E0E0F0B9781F89692B27C518753048E7702329D1F05D2C14F5C100114'
+DATA SIZE: 1024
+MVP RADIUS: 100.000000
+TLSH DISTANCE: 28
+QUERY MVP TREE - HASH FOUND
+TLSH DISTANCE: 28
+HASH FOUND: T1621105398C828A0A0F0A8780A89682B27C118743048E530132880F0591C10E1C100004 (id=1, distance=28.000000)
+COMPUTED STATE: 1
+SAVING STATE [# 6]: 00000001
+
+TOTAL STATES: 7
+WRITING MVP TREE TO FILE (/home/weicresec/Desktop/stateafl/tests/llvm18/out/verified-suite/dynamic/io-logs-eybuo749/.tree.mvp)...

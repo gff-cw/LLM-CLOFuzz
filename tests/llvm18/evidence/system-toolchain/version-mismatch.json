@@ -1,0 +1,11 @@
+{
+  "command": [
+    "make",
+    "-C",
+    "llvm_mode",
+    "test_deps",
+    "CLANG=/tmp/stateafl-version-guard-e52za_85/clang"
+  ],
+  "returncode": 2,
+  "expected_rejection": true
+}

@@ -1,0 +1,104 @@
+{
+  "shared_sizes": [
+    408,
+    407324
+  ],
+  "evidence_directory": "/home/weicresec/Desktop/stateafl/tests/llvm18/out/verified-suite/state-feedback/data/run-4jzcaua1",
+  "runs": [
+    {
+      "name": "initial",
+      "iterations": 3,
+      "sequence": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "reference_length": 0,
+      "distance_length": 0
+    },
+    {
+      "name": "repeat",
+      "iterations": 3,
+      "sequence": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "reference_length": 0,
+      "distance_length": 0
+    },
+    {
+      "name": "branch",
+      "iterations": 3,
+      "sequence": [
+        0,
+        4,
+        5,
+        6
+      ],
+      "reference_length": 0,
+      "distance_length": 0
+    },
+    {
+      "name": "branch_repeat",
+      "iterations": 3,
+      "sequence": [
+        0,
+        4,
+        5,
+        6
+      ],
+      "reference_length": 0,
+      "distance_length": 0
+    },
+    {
+      "name": "calibration_reference",
+      "iterations": 3,
+      "sequence": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "reference_length": 3,
+      "distance_length": 0
+    },
+    {
+      "name": "calibration_repeat",
+      "iterations": 3,
+      "sequence": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "reference_length": 3,
+      "distance_length": 3
+    },
+    {
+      "name": "after_calibration",
+      "iterations": 3,
+      "sequence": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "reference_length": 3,
+      "distance_length": 3
+    }
+  ],
+  "reference_hashes": [
+    "T193918F380431A213F2E615BCF4479AD098F76A34A6818E4F8F5B7724EC59D50A7535F8",
+    "T1D8919F03185C21A1A754F07F3ED4E3E43A3158CE2D0C672DFB511185AAEB63437066F4",
+    "T1E6918D5440C6EF21719D58C2076C995982989C2E1F7A8029129FECCCEB1DFA7FBF54E4"
+  ],
+  "calibration_distances": [
+    0,
+    0,
+    0
+  ],
+  "unique_states": 6
+}

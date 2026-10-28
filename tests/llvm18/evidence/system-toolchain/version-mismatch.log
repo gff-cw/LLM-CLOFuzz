@@ -1,0 +1,6 @@
+make: Entering directory '/home/weicresec/Desktop/stateafl/llvm_mode'
+[*] Checking for working 'llvm-config'...
+[*] Using system LLVM configuration: /usr/bin/llvm-config
+[-] /tmp/stateafl-version-guard-e52za_85/clang and llvm-config must use the same LLVM major version.
+make: Leaving directory '/home/weicresec/Desktop/stateafl/llvm_mode'
+make: *** [Makefile:96: test_deps] Error 1

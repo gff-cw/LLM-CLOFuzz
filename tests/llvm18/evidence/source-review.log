@@ -1,0 +1,5 @@
+Original literal getenv names missing: []
+Shared structure definitions:
+state_shared byte-for-byte source definition unchanged
+calibration byte-for-byte source definition unchanged
+No retired pointer/legacy registration APIs in instrumentation source

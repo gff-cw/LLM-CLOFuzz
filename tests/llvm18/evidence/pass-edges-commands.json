@@ -1,0 +1,309 @@
+[
+  {
+    "name": "custom-caller-debug",
+    "argv": [
+      "/home/weicresec/Desktop/stateafl/afl-clang-fast",
+      "-O0",
+      "-g",
+      "-S",
+      "-emit-llvm",
+      "-c",
+      "/home/weicresec/Desktop/stateafl/tests/llvm18/pass_edges.c",
+      "-o",
+      "/home/weicresec/Desktop/stateafl/tests/llvm18/out/verified-suite/pass-edges/custom-caller-debug.ll"
+    ],
+    "environment": {
+      "TRACE_CUSTOM_RECEIVE": "edge_external:0;edge_body:0"
+    }
+  },
+  {
+    "name": "custom-caller-debug-verify",
+    "argv": [
+      "/usr/bin/opt-18",
+      "-passes=verify",
+      "-disable-output",
+      "/home/weicresec/Desktop/stateafl/tests/llvm18/out/verified-suite/pass-edges/custom-caller-debug.ll"
+    ],
+    "environment": {}
+  },
+  {
+    "name": "opaque-explicit",
+    "argv": [
+      "/home/weicresec/Desktop/stateafl/afl-clang-fast",
+      "-O0",
+      "-g0",
+      "-S",
+      "-emit-llvm",
+      "-c",
+      "/home/weicresec/Desktop/stateafl/tests/llvm18/custom_opaque_edges.c",
+      "-o",
+      "/home/weicresec/Desktop/stateafl/tests/llvm18/out/verified-suite/pass-edges/opaque-explicit.ll"
+    ],
+    "environment": {
+      "TRACE_CUSTOM_RECEIVE": "edge_opaque:0:256"
+    }
+  },
+  {
+    "name": "opaque-explicit-verify",
+    "argv": [
+      "/usr/bin/opt-18",
+      "-passes=verify",
+      "-disable-output",
+      "/home/weicresec/Desktop/stateafl/tests/llvm18/out/verified-suite/pass-edges/opaque-explicit.ll"
+    ],
+    "environment": {}
+  },
+  {
+    "name": "legacy-minus-one",
+    "argv": [
+      "/home/weicresec/Desktop/stateafl/afl-clang-fast",
+      "-O0",
+      "-g0",
+      "-S",
+      "-emit-llvm",
+      "-c",
+      "/home/weicresec/Desktop/stateafl/tests/llvm18/custom_opaque_edges.c",
+      "-o",
+      "/home/weicresec/Desktop/stateafl/tests/llvm18/out/verified-suite/pass-edges/legacy-minus-one.ll"
+    ],
+    "environment": {
+      "TRACE_CUSTOM_RECEIVE": "edge_opaque:-1"
+    }
+  },
+  {
+    "name": "legacy-minus-one-verify",
+    "argv": [
+      "/usr/bin/opt-18",
+      "-passes=verify",
+      "-disable-output",
+      "/home/weicresec/Desktop/stateafl/tests/llvm18/out/verified-suite/pass-edges/legacy-minus-one.ll"
+    ],
+    "environment": {}
+  },
+  {
+    "name": "pointer-to-pointer",
+    "argv": [
+      "/home/weicresec/Desktop/stateafl/afl-clang-fast",
+      "-O0",
+      "-g",
+      "-DDOUBLE_POINTER",
+      "-S",
+      "-emit-llvm",
+      "-c",
+      "/home/weicresec/Desktop/stateafl/tests/llvm18/custom_opaque_edges.c",
+      "-o",
+      "/home/weicresec/Desktop/stateafl/tests/llvm18/out/verified-suite/pass-edges/pointer-to-pointer.ll"
+    ],
+    "environment": {
+      "TRACE_CUSTOM_RECEIVE": "edge_opaque:0"
+    }
+  },
+  {
+    "name": "non-pointer",
+    "argv": [
+      "/home/weicresec/Desktop/stateafl/afl-clang-fast",
+      "-O0",
+      "-g0",
+      "-DNON_POINTER",
+      "-S",
+      "-emit-llvm",
+      "-c",
+      "/home/weicresec/Desktop/stateafl/tests/llvm18/custom_opaque_edges.c",
+      "-o",
+      "/home/weicresec/Desktop/stateafl/tests/llvm18/out/verified-suite/pass-edges/non-pointer.ll"
+    ],
+    "environment": {
+      "TRACE_CUSTOM_RECEIVE": "edge_opaque:0"
+    }
+  },
+  {
+    "name": "invalid-index-text",
+    "argv": [
+      "/home/weicresec/Desktop/stateafl/afl-clang-fast",
+      "-O0",
+      "-g0",
+      "-S",
+      "-emit-llvm",
+      "-c",
+      "/home/weicresec/Desktop/stateafl/tests/llvm18/custom_opaque_edges.c",
+      "-o",
+      "/home/weicresec/Desktop/stateafl/tests/llvm18/out/verified-suite/pass-edges/invalid-index-text.ll"
+    ],
+    "environment": {
+      "TRACE_CUSTOM_RECEIVE": "edge_opaque:garbage"
+    }
+  },
+  {
+    "name": "size-overflow-32",
+    "argv": [
+      "/home/weicresec/Desktop/stateafl/afl-clang-fast",
+      "-O0",
+      "-g0",
+      "-m32",
+      "-S",
+      "-emit-llvm",
+      "-c",
+      "/home/weicresec/Desktop/stateafl/tests/llvm18/custom_opaque_edges.c",
+      "-o",
+      "/home/weicresec/Desktop/stateafl/tests/llvm18/out/verified-suite/pass-edges/size-overflow-32.ll"
+    ],
+    "environment": {
+      "TRACE_CUSTOM_RECEIVE": "edge_opaque:0:4294967296"
+    }
+  },
+  {
+    "name": "original-int-stubs",
+    "argv": [
+      "/home/weicresec/Desktop/stateafl/afl-clang-fast",
+      "-O0",
+      "-g0",
+      "-S",
+      "-emit-llvm",
+      "-c",
+      "/home/weicresec/Desktop/stateafl/llvm_mode/test-state-tracer.c",
+      "-o",
+      "/home/weicresec/Desktop/stateafl/tests/llvm18/out/verified-suite/pass-edges/original-int-stubs.ll"
+    ],
+    "environment": {}
+  },
+  {
+    "name": "original-int-stubs-verify",
+    "argv": [
+      "/usr/bin/opt-18",
+      "-passes=verify",
+      "-disable-output",
+      "/home/weicresec/Desktop/stateafl/tests/llvm18/out/verified-suite/pass-edges/original-int-stubs.ll"
+    ],
+    "environment": {}
+  },
+  {
+    "name": "abi32",
+    "argv": [
+      "/home/weicresec/Desktop/stateafl/afl-clang-fast",
+      "-O1",
+      "-g0",
+      "-m32",
+      "-S",
+      "-emit-llvm",
+      "-c",
+      "/home/weicresec/Desktop/stateafl/tests/llvm18/abi_edges.c",
+      "-o",
+      "/home/weicresec/Desktop/stateafl/tests/llvm18/out/verified-suite/pass-edges/abi32.ll"
+    ],
+    "environment": {}
+  },
+  {
+    "name": "abi32-verify",
+    "argv": [
+      "/usr/bin/opt-18",
+      "-passes=verify",
+      "-disable-output",
+      "/home/weicresec/Desktop/stateafl/tests/llvm18/out/verified-suite/pass-edges/abi32.ll"
+    ],
+    "environment": {}
+  },
+  {
+    "name": "abi-too-wide",
+    "argv": [
+      "/home/weicresec/Desktop/stateafl/afl-clang-fast",
+      "-O0",
+      "-g0",
+      "-DCOUNT_TYPE=unsigned __int128",
+      "-S",
+      "-emit-llvm",
+      "-c",
+      "/home/weicresec/Desktop/stateafl/tests/llvm18/abi_edges.c",
+      "-o",
+      "/home/weicresec/Desktop/stateafl/tests/llvm18/out/verified-suite/pass-edges/abi-too-wide.ll"
+    ],
+    "environment": {}
+  },
+  {
+    "name": "lifetime-O0",
+    "argv": [
+      "/usr/bin/opt-18",
+      "-load-pass-plugin",
+      "/home/weicresec/Desktop/stateafl/afl-llvm-pass.so",
+      "-passes=stateafl,stateafl,default<O0>,verify",
+      "-verify-each",
+      "-S",
+      "/home/weicresec/Desktop/stateafl/tests/llvm18/lifetime_edges.ll",
+      "-o",
+      "/home/weicresec/Desktop/stateafl/tests/llvm18/out/verified-suite/pass-edges/lifetime-O0.ll"
+    ],
+    "environment": {}
+  },
+  {
+    "name": "lifetime-build",
+    "argv": [
+      "/tmp/stateafl-deps/usr/bin/clang-18",
+      "-O0",
+      "/home/weicresec/Desktop/stateafl/tests/llvm18/out/verified-suite/pass-edges/lifetime-O0.ll",
+      "/home/weicresec/Desktop/stateafl/tests/llvm18/lifetime_observer.c",
+      "-o",
+      "/home/weicresec/Desktop/stateafl/tests/llvm18/out/verified-suite/pass-edges/lifetime-observer"
+    ],
+    "environment": {}
+  },
+  {
+    "name": "lifetime-execute",
+    "argv": [
+      "/home/weicresec/Desktop/stateafl/tests/llvm18/out/verified-suite/pass-edges/lifetime-observer"
+    ],
+    "environment": {}
+  },
+  {
+    "name": "ratio1",
+    "argv": [
+      "/home/weicresec/Desktop/stateafl/afl-clang-fast",
+      "-O0",
+      "-g0",
+      "-S",
+      "-emit-llvm",
+      "-c",
+      "/home/weicresec/Desktop/stateafl/tests/llvm18/ir_fixture.c",
+      "-o",
+      "/home/weicresec/Desktop/stateafl/tests/llvm18/out/verified-suite/pass-edges/ratio1.ll"
+    ],
+    "environment": {
+      "AFL_INST_RATIO": "1"
+    }
+  },
+  {
+    "name": "ratio1-verify",
+    "argv": [
+      "/usr/bin/opt-18",
+      "-passes=verify",
+      "-disable-output",
+      "/home/weicresec/Desktop/stateafl/tests/llvm18/out/verified-suite/pass-edges/ratio1.ll"
+    ],
+    "environment": {}
+  },
+  {
+    "name": "ratio100",
+    "argv": [
+      "/home/weicresec/Desktop/stateafl/afl-clang-fast",
+      "-O0",
+      "-g0",
+      "-S",
+      "-emit-llvm",
+      "-c",
+      "/home/weicresec/Desktop/stateafl/tests/llvm18/ir_fixture.c",
+      "-o",
+      "/home/weicresec/Desktop/stateafl/tests/llvm18/out/verified-suite/pass-edges/ratio100.ll"
+    ],
+    "environment": {
+      "AFL_INST_RATIO": "100"
+    }
+  },
+  {
+    "name": "ratio100-verify",
+    "argv": [
+      "/usr/bin/opt-18",
+      "-passes=verify",
+      "-disable-output",
+      "/home/weicresec/Desktop/stateafl/tests/llvm18/out/verified-suite/pass-edges/ratio100.ll"
+    ],
+    "environment": {}
+  }
+]

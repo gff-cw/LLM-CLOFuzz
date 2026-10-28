@@ -1,0 +1,28 @@
+afl-fuzz 2.56b by <lcamtuf@google.com>
+[+] Disabling the UI because AFL_NO_UI is set.
+[+] You have 4 CPU cores and 5 runnable tasks (utilization: 125%).
+[!] WARNING: Not binding to a CPU core (AFL_NO_AFFINITY set).
+[*] Checking core_pattern...
+
+[-] Hmm, your system is configured to send core dump notifications to an
+    external utility. This will cause issues: there will be an extended delay
+    between stumbling upon a crash and having this information relayed to the
+    fuzzer via the standard waitpid() API.
+
+    To avoid having crashes misinterpreted as timeouts, please log in as root
+    and temporarily modify /proc/sys/kernel/core_pattern, like so:
+
+    echo core >/proc/sys/kernel/core_pattern
+[*] Checking ASLR...
+
+[-] Beware, ASLR (Address Space Layout Randomization) is enabled on your system.
+    This can cause non-deterministic variations at run-time (e.g., pointers)
+    that can affect state analysis.
+
+    To disable ASLR, please log in as root
+    and temporarily modify /proc/sys/kernel/randomize_va_space, like so:
+
+    echo 0 | sudo tee /proc/sys/kernel/randomize_va_space
+)B
+[-] PROGRAM ABORT : ASLR detected
+         Location : check_aslr(), afl-fuzz.c:9636

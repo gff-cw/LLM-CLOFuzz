@@ -1,0 +1,413 @@
+[
+  {
+    "name": "default-c-version",
+    "argv": [
+      "/home/weicresec/Desktop/stateafl/afl-clang-fast",
+      "--version"
+    ],
+    "environment": {}
+  },
+  {
+    "name": "default-cpp-version",
+    "argv": [
+      "/home/weicresec/Desktop/stateafl/afl-clang-fast++",
+      "--version"
+    ],
+    "environment": {}
+  },
+  {
+    "name": "plugin-export",
+    "argv": [
+      "nm",
+      "-D",
+      "/home/weicresec/Desktop/stateafl/afl-llvm-pass.so"
+    ],
+    "environment": {}
+  },
+  {
+    "name": "driver",
+    "argv": [
+      "/home/weicresec/Desktop/stateafl/afl-clang-fast",
+      "-###",
+      "-O0",
+      "/home/weicresec/Desktop/stateafl/test-instr.c",
+      "-o",
+      "/home/weicresec/Desktop/stateafl/tests/llvm18/out/verified-suite/features/driver"
+    ],
+    "environment": {}
+  },
+  {
+    "name": "afl_cc-override",
+    "argv": [
+      "/home/weicresec/Desktop/stateafl/afl-clang-fast",
+      "-c",
+      "-O1",
+      "input.c"
+    ],
+    "environment": {
+      "AFL_CC": "/home/weicresec/Desktop/stateafl/tests/llvm18/out/verified-suite/features/compiler-spy.py"
+    }
+  },
+  {
+    "name": "afl_cxx-override",
+    "argv": [
+      "/home/weicresec/Desktop/stateafl/afl-clang-fast++",
+      "-c",
+      "-O1",
+      "input.c"
+    ],
+    "environment": {
+      "AFL_CXX": "/home/weicresec/Desktop/stateafl/tests/llvm18/out/verified-suite/features/compiler-spy.py"
+    }
+  },
+  {
+    "name": "harden-flags",
+    "argv": [
+      "/home/weicresec/Desktop/stateafl/afl-clang-fast",
+      "-c",
+      "input.c"
+    ],
+    "environment": {
+      "AFL_HARDEN": "1",
+      "AFL_CC": "/home/weicresec/Desktop/stateafl/tests/llvm18/out/verified-suite/features/compiler-spy.py"
+    }
+  },
+  {
+    "name": "asan-flags",
+    "argv": [
+      "/home/weicresec/Desktop/stateafl/afl-clang-fast",
+      "-c",
+      "input.c"
+    ],
+    "environment": {
+      "AFL_USE_ASAN": "1",
+      "AFL_CC": "/home/weicresec/Desktop/stateafl/tests/llvm18/out/verified-suite/features/compiler-spy.py"
+    }
+  },
+  {
+    "name": "msan-flags",
+    "argv": [
+      "/home/weicresec/Desktop/stateafl/afl-clang-fast",
+      "-c",
+      "input.c"
+    ],
+    "environment": {
+      "AFL_USE_MSAN": "1",
+      "AFL_CC": "/home/weicresec/Desktop/stateafl/tests/llvm18/out/verified-suite/features/compiler-spy.py"
+    }
+  },
+  {
+    "name": "builtin-flags",
+    "argv": [
+      "/home/weicresec/Desktop/stateafl/afl-clang-fast",
+      "-c",
+      "input.c"
+    ],
+    "environment": {
+      "AFL_NO_BUILTIN": "1",
+      "AFL_CC": "/home/weicresec/Desktop/stateafl/tests/llvm18/out/verified-suite/features/compiler-spy.py"
+    }
+  },
+  {
+    "name": "asan-msan-conflict",
+    "argv": [
+      "/home/weicresec/Desktop/stateafl/afl-clang-fast",
+      "-c",
+      "input.c"
+    ],
+    "environment": {
+      "AFL_USE_ASAN": "1",
+      "AFL_USE_MSAN": "1"
+    }
+  },
+  {
+    "name": "harden-asan-conflict",
+    "argv": [
+      "/home/weicresec/Desktop/stateafl/afl-clang-fast",
+      "-c",
+      "input.c"
+    ],
+    "environment": {
+      "AFL_USE_ASAN": "1",
+      "AFL_HARDEN": "1"
+    }
+  },
+  {
+    "name": "instrument-coverage",
+    "argv": [
+      "/home/weicresec/Desktop/stateafl/afl-clang-fast",
+      "-O0",
+      "/home/weicresec/Desktop/stateafl/test-instr.c",
+      "-o",
+      "/home/weicresec/Desktop/stateafl/tests/llvm18/out/verified-suite/features/coverage"
+    ],
+    "environment": {}
+  },
+  {
+    "name": "path-empty",
+    "argv": [
+      "/home/weicresec/Desktop/stateafl/afl-showmap",
+      "-m",
+      "none",
+      "-q",
+      "-o",
+      "/home/weicresec/Desktop/stateafl/tests/llvm18/out/verified-suite/features/path-empty.map",
+      "/home/weicresec/Desktop/stateafl/tests/llvm18/out/verified-suite/features/coverage"
+    ],
+    "environment": {}
+  },
+  {
+    "name": "path-one",
+    "argv": [
+      "/home/weicresec/Desktop/stateafl/afl-showmap",
+      "-m",
+      "none",
+      "-q",
+      "-o",
+      "/home/weicresec/Desktop/stateafl/tests/llvm18/out/verified-suite/features/path-one.map",
+      "/home/weicresec/Desktop/stateafl/tests/llvm18/out/verified-suite/features/coverage"
+    ],
+    "environment": {}
+  },
+  {
+    "name": "ratio-0",
+    "argv": [
+      "/home/weicresec/Desktop/stateafl/afl-clang-fast",
+      "-O1",
+      "-c",
+      "/home/weicresec/Desktop/stateafl/test-instr.c",
+      "-o",
+      "/home/weicresec/Desktop/stateafl/tests/llvm18/out/verified-suite/features/bad.o"
+    ],
+    "environment": {
+      "AFL_INST_RATIO": "0"
+    }
+  },
+  {
+    "name": "ratio-101",
+    "argv": [
+      "/home/weicresec/Desktop/stateafl/afl-clang-fast",
+      "-O1",
+      "-c",
+      "/home/weicresec/Desktop/stateafl/test-instr.c",
+      "-o",
+      "/home/weicresec/Desktop/stateafl/tests/llvm18/out/verified-suite/features/bad.o"
+    ],
+    "environment": {
+      "AFL_INST_RATIO": "101"
+    }
+  },
+  {
+    "name": "ratio-invalid",
+    "argv": [
+      "/home/weicresec/Desktop/stateafl/afl-clang-fast",
+      "-O1",
+      "-c",
+      "/home/weicresec/Desktop/stateafl/test-instr.c",
+      "-o",
+      "/home/weicresec/Desktop/stateafl/tests/llvm18/out/verified-suite/features/bad.o"
+    ],
+    "environment": {
+      "AFL_INST_RATIO": "invalid"
+    }
+  },
+  {
+    "name": "ratio-1",
+    "argv": [
+      "/home/weicresec/Desktop/stateafl/afl-clang-fast",
+      "-O1",
+      "-c",
+      "/home/weicresec/Desktop/stateafl/test-instr.c",
+      "-o",
+      "/home/weicresec/Desktop/stateafl/tests/llvm18/out/verified-suite/features/ratio1.o"
+    ],
+    "environment": {
+      "AFL_INST_RATIO": "1"
+    }
+  },
+  {
+    "name": "ratio-100",
+    "argv": [
+      "/home/weicresec/Desktop/stateafl/afl-clang-fast",
+      "-O1",
+      "-c",
+      "/home/weicresec/Desktop/stateafl/test-instr.c",
+      "-o",
+      "/home/weicresec/Desktop/stateafl/tests/llvm18/out/verified-suite/features/ratio100.o"
+    ],
+    "environment": {
+      "AFL_INST_RATIO": "100"
+    }
+  },
+  {
+    "name": "c-object",
+    "argv": [
+      "/home/weicresec/Desktop/stateafl/afl-clang-fast",
+      "-O0",
+      "-c",
+      "/home/weicresec/Desktop/stateafl/tests/llvm18/out/verified-suite/features/hello.c",
+      "-o",
+      "/home/weicresec/Desktop/stateafl/tests/llvm18/out/verified-suite/features/c.o"
+    ],
+    "environment": {}
+  },
+  {
+    "name": "c-link",
+    "argv": [
+      "/home/weicresec/Desktop/stateafl/afl-clang-fast",
+      "/home/weicresec/Desktop/stateafl/tests/llvm18/out/verified-suite/features/c.o",
+      "-o",
+      "/home/weicresec/Desktop/stateafl/tests/llvm18/out/verified-suite/features/c"
+    ],
+    "environment": {}
+  },
+  {
+    "name": "c-execute",
+    "argv": [
+      "/home/weicresec/Desktop/stateafl/tests/llvm18/out/verified-suite/features/c"
+    ],
+    "environment": {}
+  },
+  {
+    "name": "c-harden-build",
+    "argv": [
+      "/home/weicresec/Desktop/stateafl/afl-clang-fast",
+      "-O1",
+      "/home/weicresec/Desktop/stateafl/tests/llvm18/out/verified-suite/features/hello.c",
+      "-o",
+      "/home/weicresec/Desktop/stateafl/tests/llvm18/out/verified-suite/features/c-harden"
+    ],
+    "environment": {
+      "AFL_HARDEN": "1"
+    }
+  },
+  {
+    "name": "c-harden-execute",
+    "argv": [
+      "/home/weicresec/Desktop/stateafl/tests/llvm18/out/verified-suite/features/c-harden"
+    ],
+    "environment": {
+      "ASAN_OPTIONS": "detect_leaks=0:abort_on_error=1"
+    }
+  },
+  {
+    "name": "c-asan-build",
+    "argv": [
+      "/home/weicresec/Desktop/stateafl/afl-clang-fast",
+      "-O1",
+      "/home/weicresec/Desktop/stateafl/tests/llvm18/out/verified-suite/features/hello.c",
+      "-o",
+      "/home/weicresec/Desktop/stateafl/tests/llvm18/out/verified-suite/features/c-asan"
+    ],
+    "environment": {
+      "AFL_USE_ASAN": "1"
+    }
+  },
+  {
+    "name": "c-asan-execute",
+    "argv": [
+      "/home/weicresec/Desktop/stateafl/tests/llvm18/out/verified-suite/features/c-asan"
+    ],
+    "environment": {
+      "ASAN_OPTIONS": "detect_leaks=0:abort_on_error=1"
+    }
+  },
+  {
+    "name": "cpp-object",
+    "argv": [
+      "/home/weicresec/Desktop/stateafl/afl-clang-fast++",
+      "-O0",
+      "-c",
+      "/home/weicresec/Desktop/stateafl/tests/llvm18/out/verified-suite/features/hello.cpp",
+      "-o",
+      "/home/weicresec/Desktop/stateafl/tests/llvm18/out/verified-suite/features/cpp.o"
+    ],
+    "environment": {}
+  },
+  {
+    "name": "cpp-link",
+    "argv": [
+      "/home/weicresec/Desktop/stateafl/afl-clang-fast++",
+      "/home/weicresec/Desktop/stateafl/tests/llvm18/out/verified-suite/features/cpp.o",
+      "-o",
+      "/home/weicresec/Desktop/stateafl/tests/llvm18/out/verified-suite/features/cpp"
+    ],
+    "environment": {}
+  },
+  {
+    "name": "cpp-execute",
+    "argv": [
+      "/home/weicresec/Desktop/stateafl/tests/llvm18/out/verified-suite/features/cpp"
+    ],
+    "environment": {}
+  },
+  {
+    "name": "cpp-harden-build",
+    "argv": [
+      "/home/weicresec/Desktop/stateafl/afl-clang-fast++",
+      "-O1",
+      "/home/weicresec/Desktop/stateafl/tests/llvm18/out/verified-suite/features/hello.cpp",
+      "-o",
+      "/home/weicresec/Desktop/stateafl/tests/llvm18/out/verified-suite/features/cpp-harden"
+    ],
+    "environment": {
+      "AFL_HARDEN": "1"
+    }
+  },
+  {
+    "name": "cpp-harden-execute",
+    "argv": [
+      "/home/weicresec/Desktop/stateafl/tests/llvm18/out/verified-suite/features/cpp-harden"
+    ],
+    "environment": {
+      "ASAN_OPTIONS": "detect_leaks=0:abort_on_error=1"
+    }
+  },
+  {
+    "name": "cpp-asan-build",
+    "argv": [
+      "/home/weicresec/Desktop/stateafl/afl-clang-fast++",
+      "-O1",
+      "/home/weicresec/Desktop/stateafl/tests/llvm18/out/verified-suite/features/hello.cpp",
+      "-o",
+      "/home/weicresec/Desktop/stateafl/tests/llvm18/out/verified-suite/features/cpp-asan"
+    ],
+    "environment": {
+      "AFL_USE_ASAN": "1"
+    }
+  },
+  {
+    "name": "cpp-asan-execute",
+    "argv": [
+      "/home/weicresec/Desktop/stateafl/tests/llvm18/out/verified-suite/features/cpp-asan"
+    ],
+    "environment": {
+      "ASAN_OPTIONS": "detect_leaks=0:abort_on_error=1"
+    }
+  },
+  {
+    "name": "msan-build",
+    "argv": [
+      "/home/weicresec/Desktop/stateafl/afl-clang-fast",
+      "-O1",
+      "-fPIE",
+      "-pie",
+      "/home/weicresec/Desktop/stateafl/tests/llvm18/out/verified-suite/features/hello.c",
+      "-o",
+      "/home/weicresec/Desktop/stateafl/tests/llvm18/out/verified-suite/features/c-msan"
+    ],
+    "environment": {
+      "AFL_USE_MSAN": "1"
+    }
+  },
+  {
+    "name": "msan-execute",
+    "argv": [
+      "/home/weicresec/Desktop/stateafl/tests/llvm18/out/verified-suite/features/c-msan"
+    ],
+    "environment": {
+      "MSAN_OPTIONS": "exit_code=86",
+      "ASAN_OPTIONS": "detect_leaks=0"
+    }
+  }
+]

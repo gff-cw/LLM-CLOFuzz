@@ -1,0 +1,52 @@
+{
+  "system_tools": {
+    "clang": {
+      "command": "/usr/bin/clang",
+      "resolved_path": "/usr/lib/llvm-18/bin/clang"
+    },
+    "clang++": {
+      "command": "/usr/bin/clang++",
+      "resolved_path": "/usr/lib/llvm-18/bin/clang"
+    },
+    "llvm-config": {
+      "command": "/usr/bin/llvm-config",
+      "resolved_path": "/usr/lib/llvm-18/bin/llvm-config"
+    },
+    "opt": {
+      "command": "/usr/bin/opt",
+      "resolved_path": "/usr/lib/llvm-18/bin/opt"
+    },
+    "llvm-dis": {
+      "command": "/usr/bin/llvm-dis",
+      "resolved_path": "/usr/lib/llvm-18/bin/llvm-dis"
+    },
+    "cmake": {
+      "command": "/usr/bin/cmake",
+      "resolved_path": "/usr/bin/cmake"
+    }
+  },
+  "cleanup": [
+    {
+      "path": "/tmp/stateafl-deps",
+      "existed_before": true,
+      "exists_after": false
+    },
+    {
+      "path": "/tmp/stateafl-packages",
+      "existed_before": true,
+      "exists_after": false
+    },
+    {
+      "path": "/tmp/stateafl-env.sh",
+      "existed_before": true,
+      "exists_after": false
+    },
+    {
+      "path": "/tmp/stateafl-install",
+      "existed_before": true,
+      "exists_after": false
+    }
+  ],
+  "system_package_directory_preserved": "/usr/lib/llvm-18",
+  "reason": "System /usr/bin/clang and llvm-config are package-managed symlinks into this pre-existing directory."
+}

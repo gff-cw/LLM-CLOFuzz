@@ -1,0 +1,18 @@
+OUTDIR: /home/weicresec/Desktop/stateafl/tests/llvm18/out/verified-suite/dynamic/memory-logs-rwbgsdc2
+STATE TRACER STARTED
+NO SHM (for testing)
+NEW HEAP ALLOC: 0x63769134e7f0 (256 bytes)
+NEW ALLOC [0]: 0x63769134e7f0, 256
+NEW HEAP CALLOC: 0x63769134e980 (3 elems, 768 bytes)
+NEW ALLOC [1]: 0x63769134e980, 768
+TRACE REALLOC
+FREE ALLOC [1]: 0x63769134e980
+NEW ALLOC [2]: 0x63769134ed10, 1024
+FREE HEAP ALLOC: 0x63769134e7f0 (0 bytes)
+FREE ALLOC [0]: 0x63769134e7f0
+FREE HEAP ALLOC: 0x63769134ed10 (0 bytes)
+FREE ALLOC [2]: 0x63769134ed10
+# DUMPS: 0
+
+Latest iteration: 0
+No dumps found, skipping analysis...

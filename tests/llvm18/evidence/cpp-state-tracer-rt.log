@@ -1,0 +1,19 @@
+OUTDIR: /home/weicresec/Desktop/stateafl/tests/llvm18/out/verified-suite/dynamic/cpp-logs-ibniq3tl
+STATE TRACER STARTED
+NO SHM (for testing)
+NEW HEAP ALLOC: 0x58a2d65c57f0 (256 bytes)
+NEW ALLOC [0]: 0x58a2d65c57f0, 256
+FREE HEAP ALLOC: 0x58a2d65c57f0 (0 bytes)
+FREE ALLOC [0]: 0x58a2d65c57f0
+NEW HEAP ALLOC: 0x58a2d65c57f0 (256 bytes)
+NEW ALLOC [1]: 0x58a2d65c57f0, 256
+FREE HEAP ALLOC: 0x58a2d65c57f0 (0 bytes)
+FREE ALLOC [1]: 0x58a2d65c57f0
+NEW HEAP ALLOC: 0x58a2d65c5a50 (512 bytes)
+NEW ALLOC [2]: 0x58a2d65c5a50, 512
+FREE HEAP ALLOC: 0x58a2d65c5a50 (0 bytes)
+FREE ALLOC [2]: 0x58a2d65c5a50
+# DUMPS: 0
+
+Latest iteration: 0
+No dumps found, skipping analysis...

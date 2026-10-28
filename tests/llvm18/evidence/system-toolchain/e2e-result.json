@@ -1,0 +1,240 @@
+{
+  "passed": true,
+  "checks": {
+    "stream_framing_and_state_repeatability": true,
+    "effective_fuzzer_aslr_disabled": true,
+    "clean_bounded_stop": true,
+    "executions_continue": true,
+    "coverage_nonzero": true,
+    "queue_expands": true,
+    "queue_matches_final_statistics": true,
+    "replayable_queue_present": true,
+    "state_paths_present": true,
+    "initial_state_zero": true,
+    "multiple_inferred_states": true,
+    "different_state_sequences": true,
+    "new_state_path_during_fuzzing": true,
+    "state_graph_has_edges": true,
+    "state_graph_matches_feedback": true,
+    "calibration_present": true,
+    "no_target_crashes": true,
+    "no_target_hangs": true
+  },
+  "exit_code": 0,
+  "time_limited": true,
+  "elapsed_seconds": 45.03,
+  "stats": {
+    "start_time": "1792763903",
+    "last_update": "1792763948",
+    "fuzzer_pid": "15776",
+    "cycles_done": "0",
+    "execs_done": "443",
+    "execs_per_sec": "8.93",
+    "paths_total": "13",
+    "paths_favored": "1",
+    "paths_found": "11",
+    "paths_imported": "0",
+    "max_depth": "2",
+    "cur_path": "0",
+    "pending_favs": "1",
+    "pending_total": "13",
+    "variable_paths": "0",
+    "stability": "100.00%",
+    "bitmap_cvg": "0.07%",
+    "unique_crashes": "0",
+    "unique_hangs": "0",
+    "last_path": "1792763939",
+    "last_crash": "0",
+    "last_hang": "0",
+    "execs_since_crash": "443",
+    "exec_timeout": "1000",
+    "afl_banner": "network_server",
+    "afl_version": "2.56b",
+    "target_mode": "default",
+    "command_line": "/home/weicresec/Desktop/stateafl/afl-fuzz -d -i /home/weicresec/Desktop/stateafl/tests/llvm18/out/system-toolchain/e2e/in -o /home/weicresec/Desktop/stateafl/tests/llvm18/out/system-toolchain/e2e/out -N tcp://127.0.0.1/49329 -D 10000 -W 20 -r 20 -w 10000 -E -R -q 3 -s 3 -m none -t 1000 -- /home/weicresec/Desktop/stateafl/tests/llvm18/out/system-toolchain/e2e/network_server 49329",
+    "slowest_exec_ms": "214",
+    "peak_rss_mb": "1"
+  },
+  "queue_count": 13,
+  "replayable_queue_count": 13,
+  "state_paths": [
+    "id:0-4-1-5:id:000001,orig:bac",
+    "id:0-5-5-4-5:new",
+    "id:0-1-8-7-1-2-3:new",
+    "id:0-6-6-7-6-6-:new",
+    "id:0-1-1-7-8-1-6-6-7:new",
+    "id:0-8-4-5:new",
+    "id:0-7-7-4-5:new",
+    "id:0-1-2-3:id:000000,orig:abc",
+    "id:0-1-6-6-1-1-7:new",
+    "id:0-5-4-4-5:new",
+    "id:0-1-1-6-7-1:new",
+    "id:0-5-4-6-6-4-5:new",
+    "id:0-7-6:new"
+  ],
+  "dot_bytes": 1359,
+  "state_sequences": [
+    [
+      0,
+      4,
+      1,
+      5
+    ],
+    [
+      0,
+      5,
+      5,
+      4,
+      5
+    ],
+    [
+      0,
+      1,
+      8,
+      7,
+      1,
+      2,
+      3
+    ],
+    [
+      0,
+      6,
+      6,
+      7,
+      6,
+      6
+    ],
+    [
+      0,
+      1,
+      1,
+      7,
+      8,
+      1,
+      6,
+      6,
+      7
+    ],
+    [
+      0,
+      8,
+      4,
+      5
+    ],
+    [
+      0,
+      7,
+      7,
+      4,
+      5
+    ],
+    [
+      0,
+      1,
+      2,
+      3
+    ],
+    [
+      0,
+      1,
+      6,
+      6,
+      1,
+      1,
+      7
+    ],
+    [
+      0,
+      5,
+      4,
+      4,
+      5
+    ],
+    [
+      0,
+      1,
+      1,
+      6,
+      7,
+      1
+    ],
+    [
+      0,
+      5,
+      4,
+      6,
+      6,
+      4,
+      5
+    ],
+    [
+      0,
+      7,
+      6
+    ]
+  ],
+  "inferred_state_ids": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+  ],
+  "stream_framing": {
+    "passed": true,
+    "runs": [
+      {
+        "mode": "coalesced",
+        "command": [
+          "setarch",
+          "x86_64",
+          "-R",
+          "/home/weicresec/Desktop/stateafl/tests/llvm18/out/system-toolchain/e2e/network_server",
+          "49365"
+        ],
+        "reply_hex": "4f4b310a4f4b32db4f4b34e8",
+        "sequence": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "iterations": 3,
+        "exit_code": 0
+      },
+      {
+        "mode": "fragmented",
+        "command": [
+          "setarch",
+          "x86_64",
+          "-R",
+          "/home/weicresec/Desktop/stateafl/tests/llvm18/out/system-toolchain/e2e/network_server",
+          "55033"
+        ],
+        "reply_hex": "4f4b310a4f4b32db4f4b34e8",
+        "sequence": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "iterations": 3,
+        "exit_code": 0
+      }
+    ],
+    "evidence_directory": "/home/weicresec/Desktop/stateafl/tests/llvm18/out/system-toolchain/e2e/stream-framing"
+  },
+  "calibrated_radii": [
+    5
+  ],
+  "aslr": {
+    "global_sysctl": "2",
+    "launcher_personality": 0,
+    "fuzzer_personality_confirmed_by_log": true,
+    "fuzzer_evidence": "/home/weicresec/Desktop/stateafl/tests/llvm18/out/system-toolchain/e2e/fuzz.log"
+  }
+}

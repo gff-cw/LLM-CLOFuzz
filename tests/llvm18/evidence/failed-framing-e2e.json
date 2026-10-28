@@ -1,0 +1,71 @@
+{
+  "passed": false,
+  "checks": {
+    "clean_bounded_stop": true,
+    "executions_continue": true,
+    "coverage_nonzero": true,
+    "queue_expands": true,
+    "queue_matches_final_statistics": true,
+    "replayable_queue_present": true,
+    "state_paths_present": false,
+    "initial_state_zero": false,
+    "multiple_inferred_states": false,
+    "different_state_sequences": false,
+    "new_state_path_during_fuzzing": false,
+    "state_graph_has_edges": true,
+    "state_graph_matches_feedback": false,
+    "calibration_present": true,
+    "no_target_crashes": true,
+    "no_target_hangs": true
+  },
+  "exit_code": 0,
+  "time_limited": true,
+  "elapsed_seconds": 45.03,
+  "stats": {
+    "start_time": "1792755250",
+    "last_update": "1792755295",
+    "fuzzer_pid": "10719",
+    "cycles_done": "0",
+    "execs_done": "587",
+    "execs_per_sec": "17.45",
+    "paths_total": "14",
+    "paths_favored": "1",
+    "paths_found": "12",
+    "paths_imported": "0",
+    "max_depth": "2",
+    "cur_path": "0",
+    "pending_favs": "1",
+    "pending_total": "14",
+    "variable_paths": "2",
+    "stability": "68.29%",
+    "bitmap_cvg": "0.06%",
+    "unique_crashes": "0",
+    "unique_hangs": "0",
+    "last_path": "1792755284",
+    "last_crash": "0",
+    "last_hang": "0",
+    "execs_since_crash": "587",
+    "exec_timeout": "1000",
+    "afl_banner": "network_server",
+    "afl_version": "2.56b",
+    "target_mode": "default",
+    "command_line": "/home/weicresec/Desktop/stateafl/afl-fuzz -d -i /home/weicresec/Desktop/stateafl/tests/llvm18/out/final-suite/e2e/in -o /home/weicresec/Desktop/stateafl/tests/llvm18/out/final-suite/e2e/out -N tcp://127.0.0.1/46053 -D 10000 -W 2 -r 2 -w 10000 -E -R -q 3 -s 3 -m none -t 1000 -- /home/weicresec/Desktop/stateafl/tests/llvm18/out/final-suite/e2e/network_server 46053",
+    "slowest_exec_ms": "142",
+    "peak_rss_mb": "1"
+  },
+  "queue_count": 14,
+  "replayable_queue_count": 14,
+  "state_paths": [
+    "id:0-1-1-:id:000000,orig:abc"
+  ],
+  "dot_bytes": 166,
+  "state_sequences": [],
+  "inferred_state_ids": [],
+  "calibrated_radii": [
+    595
+  ],
+  "aslr": {
+    "global_sysctl": "2",
+    "launcher_personality": 0
+  }
+}

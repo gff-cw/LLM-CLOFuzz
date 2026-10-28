@@ -1,0 +1,8 @@
+IR matrix
+Pass edges
+Wrapper and coverage
+Runtime records
+Instrumented I/O and allocations
+State SHM and calibration
+Bounded network campaign
+All regression groups passed. Evidence: /home/weicresec/Desktop/stateafl/tests/llvm18/out/system-toolchain

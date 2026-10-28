@@ -1,0 +1,51 @@
+afl-fuzz 2.56b by <lcamtuf@google.com>
+[+] Disabling the UI because AFL_NO_UI is set.
+[+] You have 4 CPU cores and 7 runnable tasks (utilization: 175%).
+[!] WARNING: System under apparent load, performance may be spotty.
+[!] WARNING: Not binding to a CPU core (AFL_NO_AFFINITY set).
+[*] Checking core_pattern...
+
+[-] Hmm, your system is configured to send core dump notifications to an
+    external utility. This will cause issues: there will be an extended delay
+    between stumbling upon a crash and having this information relayed to the
+    fuzzer via the standard waitpid() API.
+
+    To avoid having crashes misinterpreted as timeouts, please log in as root
+    and temporarily modify /proc/sys/kernel/core_pattern, like so:
+
+    echo core >/proc/sys/kernel/core_pattern
+[+] ASLR disabled for this process (ADDR_NO_RANDOMIZE).
+[*] Setting up output directories...
+[*] Scanning '/home/weicresec/Desktop/stateafl/tests/llvm18/out/final-suite/e2e/in'...
+[+] No auto-generated dictionary tokens to reuse.
+[*] Creating hard links for all input files...
+[*] Validating target binary...
+[*] Spinning up the fork server...
+[+] All right - fork server is up.
+[*] Spinning up the fork server...
+[+] All right - fork server is up.
+[*] Attempting dry run with 'id:000000,orig:abc'...
+    len = 6, map size = 41, exec speed = 55401 us
+[!] WARNING: Instrumentation output varies across runs.
+[*] Attempting dry run with 'id:000001,orig:bac'...
+    len = 6, map size = 41, exec speed = 55688 us
+[!] WARNING: No new instrumentation output, test case may be useless.
+[+] Setting TLSH distance threshold to 595
+[+] Initializing IPSM by running the seed inputs
+[+] Running: id:000000,orig:abc
+[+] Running: id:000001,orig:bac
+[+] All test cases processed.
+
+[!] WARNING: The target binary is pretty slow! See docs/perf_tips.txt.
+[!] WARNING: Some test cases look useless. Consider using a smaller set.
+[+] Here are some useful stats:
+
+    Test case count : 1 favored, 1 variable, 2 total
+       Bitmap range : 41 to 41 bits (average: 41.00 bits)
+        Exec timing : 55.4k to 55.7k us (average: 55.4k us)
+
+[+] All set and ready to roll!
+
+
++++ Testing aborted by user +++
+[+] We're done here. Have a nice day!

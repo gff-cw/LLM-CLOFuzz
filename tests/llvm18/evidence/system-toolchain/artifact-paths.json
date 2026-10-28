@@ -1,0 +1,10 @@
+{
+  "temporary_toolchain_removed": true,
+  "temporary_environment_removed": true,
+  "afl-clang-fast_no_temporary_toolchain_path": true,
+  "afl-llvm-pass.so_no_temporary_toolchain_path": true,
+  "afl-llvm-rt.o_no_temporary_toolchain_path": true,
+  "afl-llvm-rt-state-tracer.o_no_temporary_toolchain_path": true,
+  "afl-llvm-rt-state-tracer.o.cpp.o_no_temporary_toolchain_path": true,
+  "llvm_cmake_uses_system_compiler": true
+}

@@ -1,0 +1,44 @@
+{
+  "io": {
+    "status": "passed",
+    "evidence_directory": "/home/weicresec/Desktop/stateafl/tests/llvm18/out/system-toolchain/dynamic/io-logs-gidsz9fq",
+    "operations": [
+      "recv",
+      "send",
+      "recvfrom",
+      "sendto",
+      "recvmsg",
+      "sendmsg",
+      "read",
+      "write",
+      "fgets",
+      "fprintf",
+      "fread",
+      "fwrite",
+      "fclose",
+      "plain-file",
+      "close"
+    ]
+  },
+  "cpp": {
+    "status": "passed",
+    "evidence_directory": "/home/weicresec/Desktop/stateafl/tests/llvm18/out/system-toolchain/dynamic/cpp-logs-94sncd4y",
+    "operations": [
+      "C++ new/delete, new[]/delete[], invoke and constructor cleanup passed"
+    ]
+  },
+  "memory": {
+    "status": "passed",
+    "evidence_directory": "/home/weicresec/Desktop/stateafl/tests/llvm18/out/system-toolchain/dynamic/memory-logs-3cv71nzf",
+    "operations": [
+      "malloc/calloc/realloc/free passed"
+    ]
+  },
+  "custom": {
+    "status": "passed",
+    "evidence_directory": "/home/weicresec/Desktop/stateafl/tests/llvm18/out/system-toolchain/dynamic/custom-logs-yd1osqzv",
+    "operations": [
+      "legacy custom struct receive/send passed"
+    ]
+  }
+}

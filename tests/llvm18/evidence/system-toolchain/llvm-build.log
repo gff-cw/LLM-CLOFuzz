@@ -1,0 +1,103 @@
+make: Entering directory '/home/weicresec/Desktop/stateafl/llvm_mode'
+[*] Checking for working 'llvm-config'...
+[*] Using system LLVM configuration: /usr/bin/llvm-config
+[*] Using target compiler: /usr/bin/clang (18.1.3)
+[*] Using target compiler: /usr/bin/clang++ (18.1.3)
+[*] Checking for working 'clang'...
+[*] Checking for '../afl-showmap'...
+[+] All set and ready to build.
+clang -O3 -funroll-loops -Wall -D_FORTIFY_SOURCE=2 -g -Wno-pointer-sign -DAFL_PATH=\"/usr/local/lib/afl\" -DBIN_PATH=\"/usr/local/bin\" -DVERSION=\"2.56b\"  -DAFL_DEFAULT_CC=\"clang\" -DAFL_DEFAULT_CXX=\"clang++\" afl-clang-fast.c -o ../afl-clang-fast
+ln -sf afl-clang-fast ../afl-clang-fast++
+clang++ `llvm-config --cxxflags` -Wl,-znodelete -fno-rtti -fpic -O3 -funroll-loops -Wall -D_FORTIFY_SOURCE=2 -g -Wno-pointer-sign -DVERSION=\"2.56b\" -Wno-variadic-macros -shared afl-llvm-pass.so.cc -o ../afl-llvm-pass.so `llvm-config --ldflags`
+clang -O3 -funroll-loops -Wall -D_FORTIFY_SOURCE=2 -g -Wno-pointer-sign -DAFL_PATH=\"/usr/local/lib/afl\" -DBIN_PATH=\"/usr/local/bin\" -DVERSION=\"2.56b\"  -DAFL_DEFAULT_CC=\"clang\" -DAFL_DEFAULT_CXX=\"clang++\" -fPIC -c afl-llvm-rt.o.c -o ../afl-llvm-rt.o
+[*] Building 32-bit variant of the runtime (-m32)... failed (that's fine)
+[*] Building 64-bit variant of the runtime (-m64)... success!
+clang -O3 -fPIC -c Containers/src/array.c -o .build/containers/array.o
+clang -O3 -fPIC -c Containers/src/deque.c -o .build/containers/deque.o
+clang -O3 -fPIC -c Containers/src/forward_list.c -o .build/containers/forward_list.o
+clang -O3 -fPIC -c Containers/src/list.c -o .build/containers/list.o
+clang -O3 -fPIC -c Containers/src/map.c -o .build/containers/map.o
+clang -O3 -fPIC -c Containers/src/multimap.c -o .build/containers/multimap.o
+clang -O3 -fPIC -c Containers/src/multiset.c -o .build/containers/multiset.o
+clang -O3 -fPIC -c Containers/src/priority_queue.c -o .build/containers/priority_queue.o
+clang -O3 -fPIC -c Containers/src/queue.c -o .build/containers/queue.o
+clang -O3 -fPIC -c Containers/src/set.c -o .build/containers/set.o
+clang -O3 -fPIC -c Containers/src/stack.c -o .build/containers/stack.o
+clang -O3 -fPIC -c Containers/src/unordered_map.c -o .build/containers/unordered_map.o
+clang -O3 -fPIC -c Containers/src/unordered_multimap.c -o .build/containers/unordered_multimap.o
+clang -O3 -fPIC -c Containers/src/unordered_multiset.c -o .build/containers/unordered_multiset.o
+clang -O3 -fPIC -c Containers/src/unordered_set.c -o .build/containers/unordered_set.o
+clang -O3 -fPIC -c Containers/src/vector.c -o .build/containers/vector.o
+ar rcs .build/containers.a .build/containers/array.o .build/containers/deque.o .build/containers/forward_list.o .build/containers/list.o .build/containers/map.o .build/containers/multimap.o .build/containers/multiset.o .build/containers/priority_queue.o .build/containers/queue.o .build/containers/set.o .build/containers/stack.o .build/containers/unordered_map.o .build/containers/unordered_multimap.o .build/containers/unordered_multiset.o .build/containers/unordered_set.o .build/containers/vector.o
+rm -rf .build/tlsh .build/tlsh-src
+mkdir -p .build/tlsh-src
+cp -a tlsh/. .build/tlsh-src/
+patch -d .build/tlsh-src -p1 < patches/tlsh-return-value.patch
+patching file src/tlsh-wrapper.cpp
+Hunk #1 succeeded at 31 (offset -1 lines).
+cmake -S .build/tlsh-src -B .build/tlsh -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_POSITION_INDEPENDENT_CODE=ON
+CMake Deprecation Warning at CMakeLists.txt:54 (cmake_minimum_required):
+  Compatibility with CMake < 3.5 will be removed from a future version of
+  CMake.
+
+  Update the VERSION argument <min> value or use a ...<max> suffix to tell
+  CMake that the project does not need compatibility with older versions.
+
+
+-- The C compiler identification is Clang 18.1.3
+-- The CXX compiler identification is Clang 18.1.3
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/clang - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/clang++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Configuring done (2.2s)
+-- Generating done (0.0s)
+-- Build files have been written to: /home/weicresec/Desktop/stateafl/llvm_mode/.build/tlsh
+cmake --build .build/tlsh --target tlsh
+gmake[1]: Entering directory '/home/weicresec/Desktop/stateafl/llvm_mode/.build/tlsh'
+gmake[1]: warning: jobserver unavailable: using -j1.  Add '+' to parent make rule.
+gmake[2]: Entering directory '/home/weicresec/Desktop/stateafl/llvm_mode/.build/tlsh'
+gmake[3]: Entering directory '/home/weicresec/Desktop/stateafl/llvm_mode/.build/tlsh'
+gmake[4]: Entering directory '/home/weicresec/Desktop/stateafl/llvm_mode/.build/tlsh'
+gmake[4]: Leaving directory '/home/weicresec/Desktop/stateafl/llvm_mode/.build/tlsh'
+gmake[4]: Entering directory '/home/weicresec/Desktop/stateafl/llvm_mode/.build/tlsh'
+[ 14%] Building CXX object src/CMakeFiles/tlsh.dir/tlsh.cpp.o
+[ 28%] Building CXX object src/CMakeFiles/tlsh.dir/tlsh_impl.cpp.o
+[ 42%] Building CXX object src/CMakeFiles/tlsh.dir/tlsh_util.cpp.o
+[ 57%] Building CXX object src/CMakeFiles/tlsh.dir/input_desc.cpp.o
+[ 71%] Building CXX object src/CMakeFiles/tlsh.dir/shared_file_functions.cpp.o
+[ 85%] Building CXX object src/CMakeFiles/tlsh.dir/tlsh-wrapper.cpp.o
+[100%] Linking CXX static library /home/weicresec/Desktop/stateafl/llvm_mode/.build/tlsh-src/lib/libtlsh.a
+gmake[4]: Leaving directory '/home/weicresec/Desktop/stateafl/llvm_mode/.build/tlsh'
+[100%] Built target tlsh
+gmake[3]: Leaving directory '/home/weicresec/Desktop/stateafl/llvm_mode/.build/tlsh'
+gmake[2]: Leaving directory '/home/weicresec/Desktop/stateafl/llvm_mode/.build/tlsh'
+gmake[1]: Leaving directory '/home/weicresec/Desktop/stateafl/llvm_mode/.build/tlsh'
+cp .build/tlsh-src/lib/libtlsh.a .build/libtlsh.a
+clang -O3 -fPIC -c mvptree/mvptree.c -o .build/mvptree.o
+ar rcs .build/libmvptree.a .build/mvptree.o
+clang -O3 -funroll-loops -Wall -D_FORTIFY_SOURCE=2 -g -Wno-pointer-sign -DAFL_PATH=\"/usr/local/lib/afl\" -DBIN_PATH=\"/usr/local/bin\" -DVERSION=\"2.56b\"  -DAFL_DEFAULT_CC=\"clang\" -DAFL_DEFAULT_CXX=\"clang++\" -fPIC -c afl-llvm-rt-state-tracer.o.c -o .build/state-tracer-core.o.tmp.o
+ld -r -o .build/state-tracer-core.o .build/state-tracer-core.o.tmp.o .build/containers.a .build/libtlsh.a .build/libmvptree.a
+rm .build/state-tracer-core.o.tmp.o
+ld -r -o ../afl-llvm-rt-state-tracer.o .build/state-tracer-core.o /usr/bin/../lib/gcc/x86_64-linux-gnu/13/libstdc++.a
+cp .build/state-tracer-core.o ../afl-llvm-rt-state-tracer.o.cpp.o
+for OBJ_FILE in ../afl-llvm-rt*.o ; do \
+	objcopy --rename-section .data=.tracer_data ${OBJ_FILE}; \
+	objcopy --rename-section .bss=.tracer_bss ${OBJ_FILE}; \
+done
+[*] Testing the CC wrapper and instrumentation output...
+unset AFL_USE_ASAN AFL_USE_MSAN AFL_INST_RATIO; AFL_QUIET=1 AFL_PATH=. AFL_CC=clang ../afl-clang-fast -O3 -funroll-loops -Wall -D_FORTIFY_SOURCE=2 -g -Wno-pointer-sign -DAFL_PATH=\"/usr/local/lib/afl\" -DBIN_PATH=\"/usr/local/bin\" -DVERSION=\"2.56b\"  -DAFL_DEFAULT_CC=\"clang\" -DAFL_DEFAULT_CXX=\"clang++\" ../test-instr.c -o test-instr
+[+] FUNCTION LLVM: llvm.lifetime.start.p0
+[+] Found function call: read
+
+../afl-showmap -m none -q -o .test-instr0 ./test-instr < /dev/null
+echo 1 | ../afl-showmap -m none -q -o .test-instr1 ./test-instr
+[+] All right, the instrumentation seems to be working!
+[+] All done! You can now use '../afl-clang-fast' to compile programs.
+make: Leaving directory '/home/weicresec/Desktop/stateafl/llvm_mode'

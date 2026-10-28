@@ -1,0 +1,741 @@
+{
+  "passed": true,
+  "cases": [
+    {
+      "name": "c-O0-nodebug",
+      "checks": {
+        "ir_verified": true,
+        "coverage_globals": true,
+        "coverage_increment": true,
+        "debug_information_matches_request": true,
+        "optnone_matches_request": true,
+        "driver_optimization_matches_request": true,
+        "clang18_driver": true,
+        "new_pm_plugin_option": true,
+        "calls_end_state_tracer": true,
+        "calls_free_heap_alloc_record": true,
+        "calls_new_heap_alloc_record": true,
+        "calls_trace_calloc": true,
+        "calls_trace_close": true,
+        "calls_trace_fclose": true,
+        "calls_trace_fgets": true,
+        "calls_trace_fprintf": true,
+        "calls_trace_fread": true,
+        "calls_trace_fwrite": true,
+        "calls_trace_read": true,
+        "calls_trace_realloc": true,
+        "calls_trace_receive": true,
+        "calls_trace_recvmsg": true,
+        "calls_trace_send": true,
+        "calls_trace_sendmsg": true,
+        "calls_trace_write": true,
+        "receive_hook_count": true,
+        "send_hook_count": true,
+        "recvmsg_hook_count": true,
+        "sendmsg_hook_count": true,
+        "custom_buffers_recovered": true,
+        "single_coverage_globals": true
+      },
+      "passed": true,
+      "custom_environment": {
+        "TRACE_CUSTOM_RECEIVE": "custom_receive_local:0;custom_receive_global:0;custom_receive_formal:0;custom_receive_external:0:96;custom_receive_nobuf;custom_receive_debug:0:96",
+        "TRACE_CUSTOM_SEND": "custom_send_local:0;custom_send_global:0;custom_send_formal:0;custom_send_external:0:96;custom_send_nobuf;custom_send_debug:0:96"
+      },
+      "helper_counts": {
+        "end_state_tracer": 1,
+        "free_heap_alloc_record": 2,
+        "new_heap_alloc_record": 1,
+        "trace_calloc": 1,
+        "trace_close": 1,
+        "trace_fclose": 1,
+        "trace_fgets": 1,
+        "trace_fprintf": 1,
+        "trace_fread": 1,
+        "trace_fwrite": 1,
+        "trace_read": 1,
+        "trace_realloc": 1,
+        "trace_receive": 8,
+        "trace_recvmsg": 1,
+        "trace_send": 8,
+        "trace_sendmsg": 1,
+        "trace_write": 1
+      }
+    },
+    {
+      "name": "c-O0-debug",
+      "checks": {
+        "ir_verified": true,
+        "coverage_globals": true,
+        "coverage_increment": true,
+        "debug_information_matches_request": true,
+        "optnone_matches_request": true,
+        "driver_optimization_matches_request": true,
+        "clang18_driver": true,
+        "new_pm_plugin_option": true,
+        "calls_end_state_tracer": true,
+        "calls_free_heap_alloc_record": true,
+        "calls_new_heap_alloc_record": true,
+        "calls_trace_calloc": true,
+        "calls_trace_close": true,
+        "calls_trace_fclose": true,
+        "calls_trace_fgets": true,
+        "calls_trace_fprintf": true,
+        "calls_trace_fread": true,
+        "calls_trace_fwrite": true,
+        "calls_trace_read": true,
+        "calls_trace_realloc": true,
+        "calls_trace_receive": true,
+        "calls_trace_recvmsg": true,
+        "calls_trace_send": true,
+        "calls_trace_sendmsg": true,
+        "calls_trace_write": true,
+        "receive_hook_count": true,
+        "send_hook_count": true,
+        "recvmsg_hook_count": true,
+        "sendmsg_hook_count": true,
+        "custom_buffers_recovered": true,
+        "single_coverage_globals": true
+      },
+      "passed": true,
+      "custom_environment": {
+        "TRACE_CUSTOM_RECEIVE": "custom_receive_local:0;custom_receive_global:0;custom_receive_formal:0;custom_receive_external:0:96;custom_receive_nobuf;custom_receive_debug:0",
+        "TRACE_CUSTOM_SEND": "custom_send_local:0;custom_send_global:0;custom_send_formal:0;custom_send_external:0:96;custom_send_nobuf;custom_send_debug:0"
+      },
+      "helper_counts": {
+        "end_state_tracer": 1,
+        "free_heap_alloc_record": 2,
+        "new_heap_alloc_record": 1,
+        "trace_calloc": 1,
+        "trace_close": 1,
+        "trace_fclose": 1,
+        "trace_fgets": 1,
+        "trace_fprintf": 1,
+        "trace_fread": 1,
+        "trace_fwrite": 1,
+        "trace_read": 1,
+        "trace_realloc": 1,
+        "trace_receive": 8,
+        "trace_recvmsg": 1,
+        "trace_send": 8,
+        "trace_sendmsg": 1,
+        "trace_write": 1
+      }
+    },
+    {
+      "name": "c-O1-nodebug",
+      "checks": {
+        "ir_verified": true,
+        "coverage_globals": true,
+        "coverage_increment": true,
+        "debug_information_matches_request": true,
+        "optnone_matches_request": true,
+        "driver_optimization_matches_request": true,
+        "clang18_driver": true,
+        "new_pm_plugin_option": true,
+        "calls_end_state_tracer": true,
+        "calls_free_heap_alloc_record": true,
+        "calls_new_heap_alloc_record": true,
+        "calls_trace_calloc": true,
+        "calls_trace_close": true,
+        "calls_trace_fclose": true,
+        "calls_trace_fgets": true,
+        "calls_trace_fprintf": true,
+        "calls_trace_fread": true,
+        "calls_trace_fwrite": true,
+        "calls_trace_read": true,
+        "calls_trace_realloc": true,
+        "calls_trace_receive": true,
+        "calls_trace_recvmsg": true,
+        "calls_trace_send": true,
+        "calls_trace_sendmsg": true,
+        "calls_trace_write": true,
+        "stack_start": true,
+        "stack_end": true,
+        "stack_large_tracked": true,
+        "stack_small_excluded": true,
+        "receive_hook_count": true,
+        "send_hook_count": true,
+        "recvmsg_hook_count": true,
+        "sendmsg_hook_count": true,
+        "custom_buffers_recovered": true,
+        "single_coverage_globals": true
+      },
+      "passed": true,
+      "custom_environment": {
+        "TRACE_CUSTOM_RECEIVE": "custom_receive_local:0;custom_receive_global:0;custom_receive_formal:0;custom_receive_external:0:96;custom_receive_nobuf;custom_receive_debug:0:96",
+        "TRACE_CUSTOM_SEND": "custom_send_local:0;custom_send_global:0;custom_send_formal:0;custom_send_external:0:96;custom_send_nobuf;custom_send_debug:0:96"
+      },
+      "helper_counts": {
+        "end_state_tracer": 1,
+        "free_heap_alloc_record": 2,
+        "new_heap_alloc_record": 1,
+        "trace_calloc": 1,
+        "trace_close": 1,
+        "trace_fclose": 1,
+        "trace_fgets": 1,
+        "trace_fprintf": 1,
+        "trace_fread": 1,
+        "trace_fwrite": 1,
+        "trace_read": 1,
+        "trace_realloc": 1,
+        "trace_receive": 8,
+        "trace_recvmsg": 1,
+        "trace_send": 8,
+        "trace_sendmsg": 1,
+        "trace_write": 1
+      }
+    },
+    {
+      "name": "c-O1-debug",
+      "checks": {
+        "ir_verified": true,
+        "coverage_globals": true,
+        "coverage_increment": true,
+        "debug_information_matches_request": true,
+        "optnone_matches_request": true,
+        "driver_optimization_matches_request": true,
+        "clang18_driver": true,
+        "new_pm_plugin_option": true,
+        "calls_end_state_tracer": true,
+        "calls_free_heap_alloc_record": true,
+        "calls_new_heap_alloc_record": true,
+        "calls_trace_calloc": true,
+        "calls_trace_close": true,
+        "calls_trace_fclose": true,
+        "calls_trace_fgets": true,
+        "calls_trace_fprintf": true,
+        "calls_trace_fread": true,
+        "calls_trace_fwrite": true,
+        "calls_trace_read": true,
+        "calls_trace_realloc": true,
+        "calls_trace_receive": true,
+        "calls_trace_recvmsg": true,
+        "calls_trace_send": true,
+        "calls_trace_sendmsg": true,
+        "calls_trace_write": true,
+        "stack_start": true,
+        "stack_end": true,
+        "stack_large_tracked": true,
+        "stack_small_excluded": true,
+        "receive_hook_count": true,
+        "send_hook_count": true,
+        "recvmsg_hook_count": true,
+        "sendmsg_hook_count": true,
+        "custom_buffers_recovered": true,
+        "single_coverage_globals": true
+      },
+      "passed": true,
+      "custom_environment": {
+        "TRACE_CUSTOM_RECEIVE": "custom_receive_local:0;custom_receive_global:0;custom_receive_formal:0;custom_receive_external:0:96;custom_receive_nobuf;custom_receive_debug:0",
+        "TRACE_CUSTOM_SEND": "custom_send_local:0;custom_send_global:0;custom_send_formal:0;custom_send_external:0:96;custom_send_nobuf;custom_send_debug:0"
+      },
+      "helper_counts": {
+        "end_state_tracer": 1,
+        "free_heap_alloc_record": 2,
+        "new_heap_alloc_record": 1,
+        "trace_calloc": 1,
+        "trace_close": 1,
+        "trace_fclose": 1,
+        "trace_fgets": 1,
+        "trace_fprintf": 1,
+        "trace_fread": 1,
+        "trace_fwrite": 1,
+        "trace_read": 1,
+        "trace_realloc": 1,
+        "trace_receive": 8,
+        "trace_recvmsg": 1,
+        "trace_send": 8,
+        "trace_sendmsg": 1,
+        "trace_write": 1
+      }
+    },
+    {
+      "name": "c-O2-nodebug",
+      "checks": {
+        "ir_verified": true,
+        "coverage_globals": true,
+        "coverage_increment": true,
+        "debug_information_matches_request": true,
+        "optnone_matches_request": true,
+        "driver_optimization_matches_request": true,
+        "clang18_driver": true,
+        "new_pm_plugin_option": true,
+        "calls_end_state_tracer": true,
+        "calls_free_heap_alloc_record": true,
+        "calls_new_heap_alloc_record": true,
+        "calls_trace_calloc": true,
+        "calls_trace_close": true,
+        "calls_trace_fclose": true,
+        "calls_trace_fgets": true,
+        "calls_trace_fprintf": true,
+        "calls_trace_fread": true,
+        "calls_trace_fwrite": true,
+        "calls_trace_read": true,
+        "calls_trace_realloc": true,
+        "calls_trace_receive": true,
+        "calls_trace_recvmsg": true,
+        "calls_trace_send": true,
+        "calls_trace_sendmsg": true,
+        "calls_trace_write": true,
+        "stack_start": true,
+        "stack_end": true,
+        "stack_large_tracked": true,
+        "stack_small_excluded": true,
+        "receive_hook_count": true,
+        "send_hook_count": true,
+        "recvmsg_hook_count": true,
+        "sendmsg_hook_count": true,
+        "custom_buffers_recovered": true,
+        "single_coverage_globals": true
+      },
+      "passed": true,
+      "custom_environment": {
+        "TRACE_CUSTOM_RECEIVE": "custom_receive_local:0;custom_receive_global:0;custom_receive_formal:0;custom_receive_external:0:96;custom_receive_nobuf;custom_receive_debug:0:96",
+        "TRACE_CUSTOM_SEND": "custom_send_local:0;custom_send_global:0;custom_send_formal:0;custom_send_external:0:96;custom_send_nobuf;custom_send_debug:0:96"
+      },
+      "helper_counts": {
+        "end_state_tracer": 1,
+        "free_heap_alloc_record": 2,
+        "new_heap_alloc_record": 1,
+        "trace_calloc": 1,
+        "trace_close": 1,
+        "trace_fclose": 1,
+        "trace_fgets": 1,
+        "trace_fprintf": 1,
+        "trace_fread": 1,
+        "trace_fwrite": 1,
+        "trace_read": 1,
+        "trace_realloc": 1,
+        "trace_receive": 8,
+        "trace_recvmsg": 1,
+        "trace_send": 8,
+        "trace_sendmsg": 1,
+        "trace_write": 1
+      }
+    },
+    {
+      "name": "c-O2-debug",
+      "checks": {
+        "ir_verified": true,
+        "coverage_globals": true,
+        "coverage_increment": true,
+        "debug_information_matches_request": true,
+        "optnone_matches_request": true,
+        "driver_optimization_matches_request": true,
+        "clang18_driver": true,
+        "new_pm_plugin_option": true,
+        "calls_end_state_tracer": true,
+        "calls_free_heap_alloc_record": true,
+        "calls_new_heap_alloc_record": true,
+        "calls_trace_calloc": true,
+        "calls_trace_close": true,
+        "calls_trace_fclose": true,
+        "calls_trace_fgets": true,
+        "calls_trace_fprintf": true,
+        "calls_trace_fread": true,
+        "calls_trace_fwrite": true,
+        "calls_trace_read": true,
+        "calls_trace_realloc": true,
+        "calls_trace_receive": true,
+        "calls_trace_recvmsg": true,
+        "calls_trace_send": true,
+        "calls_trace_sendmsg": true,
+        "calls_trace_write": true,
+        "stack_start": true,
+        "stack_end": true,
+        "stack_large_tracked": true,
+        "stack_small_excluded": true,
+        "receive_hook_count": true,
+        "send_hook_count": true,
+        "recvmsg_hook_count": true,
+        "sendmsg_hook_count": true,
+        "custom_buffers_recovered": true,
+        "single_coverage_globals": true
+      },
+      "passed": true,
+      "custom_environment": {
+        "TRACE_CUSTOM_RECEIVE": "custom_receive_local:0;custom_receive_global:0;custom_receive_formal:0;custom_receive_external:0:96;custom_receive_nobuf;custom_receive_debug:0",
+        "TRACE_CUSTOM_SEND": "custom_send_local:0;custom_send_global:0;custom_send_formal:0;custom_send_external:0:96;custom_send_nobuf;custom_send_debug:0"
+      },
+      "helper_counts": {
+        "end_state_tracer": 1,
+        "free_heap_alloc_record": 2,
+        "new_heap_alloc_record": 1,
+        "trace_calloc": 1,
+        "trace_close": 1,
+        "trace_fclose": 1,
+        "trace_fgets": 1,
+        "trace_fprintf": 1,
+        "trace_fread": 1,
+        "trace_fwrite": 1,
+        "trace_read": 1,
+        "trace_realloc": 1,
+        "trace_receive": 8,
+        "trace_recvmsg": 1,
+        "trace_send": 8,
+        "trace_sendmsg": 1,
+        "trace_write": 1
+      }
+    },
+    {
+      "name": "c-O3-nodebug",
+      "checks": {
+        "ir_verified": true,
+        "coverage_globals": true,
+        "coverage_increment": true,
+        "debug_information_matches_request": true,
+        "optnone_matches_request": true,
+        "driver_optimization_matches_request": true,
+        "clang18_driver": true,
+        "new_pm_plugin_option": true,
+        "calls_end_state_tracer": true,
+        "calls_free_heap_alloc_record": true,
+        "calls_new_heap_alloc_record": true,
+        "calls_trace_calloc": true,
+        "calls_trace_close": true,
+        "calls_trace_fclose": true,
+        "calls_trace_fgets": true,
+        "calls_trace_fprintf": true,
+        "calls_trace_fread": true,
+        "calls_trace_fwrite": true,
+        "calls_trace_read": true,
+        "calls_trace_realloc": true,
+        "calls_trace_receive": true,
+        "calls_trace_recvmsg": true,
+        "calls_trace_send": true,
+        "calls_trace_sendmsg": true,
+        "calls_trace_write": true,
+        "stack_start": true,
+        "stack_end": true,
+        "stack_large_tracked": true,
+        "stack_small_excluded": true,
+        "receive_hook_count": true,
+        "send_hook_count": true,
+        "recvmsg_hook_count": true,
+        "sendmsg_hook_count": true,
+        "custom_buffers_recovered": true,
+        "single_coverage_globals": true
+      },
+      "passed": true,
+      "custom_environment": {
+        "TRACE_CUSTOM_RECEIVE": "custom_receive_local:0;custom_receive_global:0;custom_receive_formal:0;custom_receive_external:0:96;custom_receive_nobuf;custom_receive_debug:0:96",
+        "TRACE_CUSTOM_SEND": "custom_send_local:0;custom_send_global:0;custom_send_formal:0;custom_send_external:0:96;custom_send_nobuf;custom_send_debug:0:96"
+      },
+      "helper_counts": {
+        "end_state_tracer": 1,
+        "free_heap_alloc_record": 2,
+        "new_heap_alloc_record": 1,
+        "trace_calloc": 1,
+        "trace_close": 1,
+        "trace_fclose": 1,
+        "trace_fgets": 1,
+        "trace_fprintf": 1,
+        "trace_fread": 1,
+        "trace_fwrite": 1,
+        "trace_read": 1,
+        "trace_realloc": 1,
+        "trace_receive": 8,
+        "trace_recvmsg": 1,
+        "trace_send": 8,
+        "trace_sendmsg": 1,
+        "trace_write": 1
+      }
+    },
+    {
+      "name": "c-O3-debug",
+      "checks": {
+        "ir_verified": true,
+        "coverage_globals": true,
+        "coverage_increment": true,
+        "debug_information_matches_request": true,
+        "optnone_matches_request": true,
+        "driver_optimization_matches_request": true,
+        "clang18_driver": true,
+        "new_pm_plugin_option": true,
+        "calls_end_state_tracer": true,
+        "calls_free_heap_alloc_record": true,
+        "calls_new_heap_alloc_record": true,
+        "calls_trace_calloc": true,
+        "calls_trace_close": true,
+        "calls_trace_fclose": true,
+        "calls_trace_fgets": true,
+        "calls_trace_fprintf": true,
+        "calls_trace_fread": true,
+        "calls_trace_fwrite": true,
+        "calls_trace_read": true,
+        "calls_trace_realloc": true,
+        "calls_trace_receive": true,
+        "calls_trace_recvmsg": true,
+        "calls_trace_send": true,
+        "calls_trace_sendmsg": true,
+        "calls_trace_write": true,
+        "stack_start": true,
+        "stack_end": true,
+        "stack_large_tracked": true,
+        "stack_small_excluded": true,
+        "receive_hook_count": true,
+        "send_hook_count": true,
+        "recvmsg_hook_count": true,
+        "sendmsg_hook_count": true,
+        "custom_buffers_recovered": true,
+        "single_coverage_globals": true
+      },
+      "passed": true,
+      "custom_environment": {
+        "TRACE_CUSTOM_RECEIVE": "custom_receive_local:0;custom_receive_global:0;custom_receive_formal:0;custom_receive_external:0:96;custom_receive_nobuf;custom_receive_debug:0",
+        "TRACE_CUSTOM_SEND": "custom_send_local:0;custom_send_global:0;custom_send_formal:0;custom_send_external:0:96;custom_send_nobuf;custom_send_debug:0"
+      },
+      "helper_counts": {
+        "end_state_tracer": 1,
+        "free_heap_alloc_record": 2,
+        "new_heap_alloc_record": 1,
+        "trace_calloc": 1,
+        "trace_close": 1,
+        "trace_fclose": 1,
+        "trace_fgets": 1,
+        "trace_fprintf": 1,
+        "trace_fread": 1,
+        "trace_fwrite": 1,
+        "trace_read": 1,
+        "trace_realloc": 1,
+        "trace_receive": 8,
+        "trace_recvmsg": 1,
+        "trace_send": 8,
+        "trace_sendmsg": 1,
+        "trace_write": 1
+      }
+    },
+    {
+      "name": "cpp-O0-nodebug",
+      "checks": {
+        "ir_verified": true,
+        "coverage_globals": true,
+        "coverage_increment": true,
+        "debug_information_matches_request": true,
+        "optnone_matches_request": true,
+        "driver_optimization_matches_request": true,
+        "clang18_driver": true,
+        "new_pm_plugin_option": true,
+        "calls_free_heap_alloc_record": true,
+        "calls_new_heap_alloc_record": true,
+        "single_coverage_globals": true
+      },
+      "passed": true,
+      "custom_environment": {
+        "TRACE_CUSTOM_RECEIVE": "custom_receive_local:0;custom_receive_global:0;custom_receive_formal:0;custom_receive_external:0:96;custom_receive_nobuf;custom_receive_debug:0:96",
+        "TRACE_CUSTOM_SEND": "custom_send_local:0;custom_send_global:0;custom_send_formal:0;custom_send_external:0:96;custom_send_nobuf;custom_send_debug:0:96"
+      },
+      "helper_counts": {
+        "free_heap_alloc_record": 2,
+        "new_heap_alloc_record": 2
+      }
+    },
+    {
+      "name": "cpp-O0-debug",
+      "checks": {
+        "ir_verified": true,
+        "coverage_globals": true,
+        "coverage_increment": true,
+        "debug_information_matches_request": true,
+        "optnone_matches_request": true,
+        "driver_optimization_matches_request": true,
+        "clang18_driver": true,
+        "new_pm_plugin_option": true,
+        "calls_free_heap_alloc_record": true,
+        "calls_new_heap_alloc_record": true,
+        "single_coverage_globals": true
+      },
+      "passed": true,
+      "custom_environment": {
+        "TRACE_CUSTOM_RECEIVE": "custom_receive_local:0;custom_receive_global:0;custom_receive_formal:0;custom_receive_external:0:96;custom_receive_nobuf;custom_receive_debug:0",
+        "TRACE_CUSTOM_SEND": "custom_send_local:0;custom_send_global:0;custom_send_formal:0;custom_send_external:0:96;custom_send_nobuf;custom_send_debug:0"
+      },
+      "helper_counts": {
+        "free_heap_alloc_record": 2,
+        "new_heap_alloc_record": 2
+      }
+    },
+    {
+      "name": "cpp-O1-nodebug",
+      "checks": {
+        "ir_verified": true,
+        "coverage_globals": true,
+        "coverage_increment": true,
+        "debug_information_matches_request": true,
+        "optnone_matches_request": true,
+        "driver_optimization_matches_request": true,
+        "clang18_driver": true,
+        "new_pm_plugin_option": true,
+        "calls_free_heap_alloc_record": true,
+        "calls_new_heap_alloc_record": true,
+        "single_coverage_globals": true
+      },
+      "passed": true,
+      "custom_environment": {
+        "TRACE_CUSTOM_RECEIVE": "custom_receive_local:0;custom_receive_global:0;custom_receive_formal:0;custom_receive_external:0:96;custom_receive_nobuf;custom_receive_debug:0:96",
+        "TRACE_CUSTOM_SEND": "custom_send_local:0;custom_send_global:0;custom_send_formal:0;custom_send_external:0:96;custom_send_nobuf;custom_send_debug:0:96"
+      },
+      "helper_counts": {
+        "free_heap_alloc_record": 2,
+        "new_heap_alloc_record": 2
+      }
+    },
+    {
+      "name": "cpp-O1-debug",
+      "checks": {
+        "ir_verified": true,
+        "coverage_globals": true,
+        "coverage_increment": true,
+        "debug_information_matches_request": true,
+        "optnone_matches_request": true,
+        "driver_optimization_matches_request": true,
+        "clang18_driver": true,
+        "new_pm_plugin_option": true,
+        "calls_free_heap_alloc_record": true,
+        "calls_new_heap_alloc_record": true,
+        "single_coverage_globals": true
+      },
+      "passed": true,
+      "custom_environment": {
+        "TRACE_CUSTOM_RECEIVE": "custom_receive_local:0;custom_receive_global:0;custom_receive_formal:0;custom_receive_external:0:96;custom_receive_nobuf;custom_receive_debug:0",
+        "TRACE_CUSTOM_SEND": "custom_send_local:0;custom_send_global:0;custom_send_formal:0;custom_send_external:0:96;custom_send_nobuf;custom_send_debug:0"
+      },
+      "helper_counts": {
+        "free_heap_alloc_record": 2,
+        "new_heap_alloc_record": 2
+      }
+    },
+    {
+      "name": "cpp-O2-nodebug",
+      "checks": {
+        "ir_verified": true,
+        "coverage_globals": true,
+        "coverage_increment": true,
+        "debug_information_matches_request": true,
+        "optnone_matches_request": true,
+        "driver_optimization_matches_request": true,
+        "clang18_driver": true,
+        "new_pm_plugin_option": true,
+        "calls_free_heap_alloc_record": true,
+        "calls_new_heap_alloc_record": true,
+        "single_coverage_globals": true
+      },
+      "passed": true,
+      "custom_environment": {
+        "TRACE_CUSTOM_RECEIVE": "custom_receive_local:0;custom_receive_global:0;custom_receive_formal:0;custom_receive_external:0:96;custom_receive_nobuf;custom_receive_debug:0:96",
+        "TRACE_CUSTOM_SEND": "custom_send_local:0;custom_send_global:0;custom_send_formal:0;custom_send_external:0:96;custom_send_nobuf;custom_send_debug:0:96"
+      },
+      "helper_counts": {
+        "free_heap_alloc_record": 2,
+        "new_heap_alloc_record": 2
+      }
+    },
+    {
+      "name": "cpp-O2-debug",
+      "checks": {
+        "ir_verified": true,
+        "coverage_globals": true,
+        "coverage_increment": true,
+        "debug_information_matches_request": true,
+        "optnone_matches_request": true,
+        "driver_optimization_matches_request": true,
+        "clang18_driver": true,
+        "new_pm_plugin_option": true,
+        "calls_free_heap_alloc_record": true,
+        "calls_new_heap_alloc_record": true,
+        "single_coverage_globals": true
+      },
+      "passed": true,
+      "custom_environment": {
+        "TRACE_CUSTOM_RECEIVE": "custom_receive_local:0;custom_receive_global:0;custom_receive_formal:0;custom_receive_external:0:96;custom_receive_nobuf;custom_receive_debug:0",
+        "TRACE_CUSTOM_SEND": "custom_send_local:0;custom_send_global:0;custom_send_formal:0;custom_send_external:0:96;custom_send_nobuf;custom_send_debug:0"
+      },
+      "helper_counts": {
+        "free_heap_alloc_record": 2,
+        "new_heap_alloc_record": 2
+      }
+    },
+    {
+      "name": "cpp-O3-nodebug",
+      "checks": {
+        "ir_verified": true,
+        "coverage_globals": true,
+        "coverage_increment": true,
+        "debug_information_matches_request": true,
+        "optnone_matches_request": true,
+        "driver_optimization_matches_request": true,
+        "clang18_driver": true,
+        "new_pm_plugin_option": true,
+        "calls_free_heap_alloc_record": true,
+        "calls_new_heap_alloc_record": true,
+        "single_coverage_globals": true
+      },
+      "passed": true,
+      "custom_environment": {
+        "TRACE_CUSTOM_RECEIVE": "custom_receive_local:0;custom_receive_global:0;custom_receive_formal:0;custom_receive_external:0:96;custom_receive_nobuf;custom_receive_debug:0:96",
+        "TRACE_CUSTOM_SEND": "custom_send_local:0;custom_send_global:0;custom_send_formal:0;custom_send_external:0:96;custom_send_nobuf;custom_send_debug:0:96"
+      },
+      "helper_counts": {
+        "free_heap_alloc_record": 2,
+        "new_heap_alloc_record": 2
+      }
+    },
+    {
+      "name": "cpp-O3-debug",
+      "checks": {
+        "ir_verified": true,
+        "coverage_globals": true,
+        "coverage_increment": true,
+        "debug_information_matches_request": true,
+        "optnone_matches_request": true,
+        "driver_optimization_matches_request": true,
+        "clang18_driver": true,
+        "new_pm_plugin_option": true,
+        "calls_free_heap_alloc_record": true,
+        "calls_new_heap_alloc_record": true,
+        "single_coverage_globals": true
+      },
+      "passed": true,
+      "custom_environment": {
+        "TRACE_CUSTOM_RECEIVE": "custom_receive_local:0;custom_receive_global:0;custom_receive_formal:0;custom_receive_external:0:96;custom_receive_nobuf;custom_receive_debug:0",
+        "TRACE_CUSTOM_SEND": "custom_send_local:0;custom_send_global:0;custom_send_formal:0;custom_send_external:0:96;custom_send_nobuf;custom_send_debug:0"
+      },
+      "helper_counts": {
+        "free_heap_alloc_record": 2,
+        "new_heap_alloc_record": 2
+      }
+    },
+    {
+      "name": "explicit-plugin-idempotency",
+      "passed": true,
+      "checks": {
+        "helper_counts_unchanged": true,
+        "single_coverage_global": true
+      }
+    },
+    {
+      "name": "diagnostic-custom_5",
+      "exit_code": 1,
+      "passed": true
+    },
+    {
+      "name": "diagnostic-custom_-2",
+      "exit_code": 1,
+      "passed": true
+    },
+    {
+      "name": "diagnostic-custom_0_0",
+      "exit_code": 1,
+      "passed": true
+    },
+    {
+      "name": "diagnostic-custom_0",
+      "exit_code": 1,
+      "passed": true
+    }
+  ],
+  "custom_environment": {
+    "TRACE_CUSTOM_RECEIVE": "custom_receive_local:0;custom_receive_global:0;custom_receive_formal:0;custom_receive_external:0:96;custom_receive_nobuf",
+    "TRACE_CUSTOM_SEND": "custom_send_local:0;custom_send_global:0;custom_send_formal:0;custom_send_external:0:96;custom_send_nobuf"
+  }
+}

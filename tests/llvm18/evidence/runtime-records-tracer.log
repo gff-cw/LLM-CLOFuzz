@@ -1,0 +1,266 @@
+OUTDIR: /home/weicresec/Desktop/stateafl/tests/llvm18/out/verified-suite/runtime-records/data
+STATE TRACER STARTED
+NO SHM (for testing)
+NEW HEAP ALLOC: 0x63203d6867e0 (4096 bytes)
+NEW ALLOC [0]: 0x63203d6867e0, 4096
+NEW STACK ALLOC: 0x7ffe19b35fd0 (256 bytes)
+NEW ALLOC [1]: 0x7ffe19b35fd0, 256
+NEW STACK ALLOC: 0x7ffe19b363d0 (128 bytes)
+NEW ALLOC [2]: 0x7ffe19b363d0, 128
+NEW STACK ALLOC: 0x7ffe19b360d0 (256 bytes)
+NEW ALLOC [3]: 0x7ffe19b360d0, 256
+TRACE RECV (buf = 0x7ffe19b36110, size = 16)
+DETECTED I/O BUF AREA: addr = 0x7ffe19b36110, size = 16
+NEW HEAP CALLOC: 0x63203d687a50 (3 elems, 384 bytes)
+NEW ALLOC [4]: 0x63203d687a50, 384
+TRACE REALLOC
+FREE ALLOC [4]: 0x63203d687a50
+NEW ALLOC [5]: 0x63203d687c60, 768
+TRACE REALLOC
+NEW HEAP ALLOC: (nil) (1024 bytes)
+NEW HEAP CALLOC: (nil) (1 elems, 1024 bytes)
+NEW HEAP CALLOC: 0x7ffe19b35f50 (1 elems, 8589934609 bytes)
+NEW ALLOC [6]: 0x7ffe19b35f50, 8589934609
+TRACE REALLOC
+TRACE RECV (buf = 0x7ffe19b35f50, size = 8589934609)
+DETECTED I/O BUF AREA: addr = 0x7ffe19b35f50, size = 8589934609
+NEW STACK ALLOC: 0x7ffe19b361d0 (512 bytes)
+NEW ALLOC [7]: 0x7ffe19b361d0, 512
+TRACE READ
+FD IS SOCKET
+TRACE RECV (buf = 0x7ffe19b361d0, size = 13)
+DETECTED I/O BUF AREA: addr = 0x7ffe19b361d0, size = 13
+TRACE WRITE
+FD IN SOCKET SET
+TRACE SEND (buf = 0x7ffe19b361f0, size = 7)
+DUMPING ALLOC RECORD [0]: addr=0x63203d6867e0 (size=4096 bytes)
+DUMPING ALLOC RECORD [5]: addr=0x63203d687c60 (size=768 bytes)
+DUMPING ALLOC RECORD [6]: addr=0x7ffe19b35f50 (size=128 bytes)
+DUMPING ALLOC RECORD [1]: addr=0x7ffe19b35fd0 (size=256 bytes)
+DUMPING ALLOC RECORD [3]: addr=0x7ffe19b360d0 (size=256 bytes)
+DUMPING ALLOC RECORD [7]: addr=0x7ffe19b361d0 (size=512 bytes)
+DUMPING ALLOC RECORD [2]: addr=0x7ffe19b363d0 (size=128 bytes)
+DETECTED I/O BUF AREA: addr = 0x7ffe19b361f0, size = 7
+FREE STACK ALLOC: 0x7ffe19b363d0 (128 bytes)
+FREE ALLOC [2]: 0x7ffe19b363d0
+TRACE FGETS
+FD IS SOCKET
+TRACE RECV (buf = 0x7ffe19b36210, size = 16)
+DETECTED I/O BUF AREA: addr = 0x7ffe19b36210, size = 16
+TRACE FPRINTF
+FD IN SOCKET SET
+TRACE SEND (buf = 0x7ffe19b36230, size = 5)
+DUMPING ALLOC RECORD [0]: addr=0x63203d6867e0 (size=4096 bytes)
+DUMPING ALLOC RECORD [5]: addr=0x63203d687c60 (size=768 bytes)
+DUMPING ALLOC RECORD [6]: addr=0x7ffe19b35f50 (size=128 bytes)
+DUMPING ALLOC RECORD [1]: addr=0x7ffe19b35fd0 (size=256 bytes)
+DUMPING ALLOC RECORD [3]: addr=0x7ffe19b360d0 (size=256 bytes)
+DUMPING ALLOC RECORD [7]: addr=0x7ffe19b361d0 (size=512 bytes)
+DETECTED I/O BUF AREA: addr = 0x7ffe19b36230, size = 5
+TRACE FREAD
+FD IN SOCKET SET
+TRACE RECV (buf = 0x7ffe19b36250, size = 21)
+DETECTED I/O BUF AREA: addr = 0x7ffe19b36250, size = 21
+TRACE FWRITE
+FD IN SOCKET SET
+TRACE SEND (buf = 0x7ffe19b36270, size = 35)
+DUMPING ALLOC RECORD [0]: addr=0x63203d6867e0 (size=4096 bytes)
+DUMPING ALLOC RECORD [5]: addr=0x63203d687c60 (size=768 bytes)
+DUMPING ALLOC RECORD [6]: addr=0x7ffe19b35f50 (size=128 bytes)
+DUMPING ALLOC RECORD [1]: addr=0x7ffe19b35fd0 (size=256 bytes)
+DUMPING ALLOC RECORD [3]: addr=0x7ffe19b360d0 (size=256 bytes)
+DUMPING ALLOC RECORD [7]: addr=0x7ffe19b361d0 (size=512 bytes)
+DETECTED I/O BUF AREA: addr = 0x7ffe19b36270, size = 35
+NEW STACK ALLOC: 0x7ffe19b35e80 (56 bytes)
+NEW ALLOC [8]: 0x7ffe19b35e80, 56
+TRACE RECV (buf = 0x7ffe19b35e80, size = 56)
+DETECTED I/O BUF AREA: addr = 0x7ffe19b35e80, size = 56
+TRACE SEND (buf = 0x7ffe19b35e80, size = 56)
+DUMPING ALLOC RECORD [0]: addr=0x63203d6867e0 (size=4096 bytes)
+DUMPING ALLOC RECORD [5]: addr=0x63203d687c60 (size=768 bytes)
+DUMPING ALLOC RECORD [8]: addr=0x7ffe19b35e80 (size=56 bytes)
+DUMPING ALLOC RECORD [6]: addr=0x7ffe19b35f50 (size=128 bytes)
+DUMPING ALLOC RECORD [1]: addr=0x7ffe19b35fd0 (size=256 bytes)
+DUMPING ALLOC RECORD [3]: addr=0x7ffe19b360d0 (size=256 bytes)
+DUMPING ALLOC RECORD [7]: addr=0x7ffe19b361d0 (size=512 bytes)
+TRACE FCLOSE
+TRACE CLOSE
+FD IN SOCKET SET
+FD IN SOCKET SET
+TRACE CLOSE
+FD IN SOCKET SET
+TRACE FGETS
+FD IS NOT SOCKET
+TRACE FPRINTF
+FD IS NOT SOCKET
+TRACE FREAD
+FD IS NOT SOCKET
+TRACE FWRITE
+FD IS NOT SOCKET
+TRACE READ
+FD IS NOT SOCKET
+TRACE WRITE
+FD IS NOT SOCKET
+TRACE FCLOSE
+TRACE CLOSE
+FD IS NOT SOCKET
+NEW STACK ALLOC: 0x7ffe19b35ec0 (128 bytes)
+FREE STACK ALLOC: 0x7ffe19b35e80 (56 bytes)
+FREE ALLOC [8]: 0x7ffe19b35e80
+FREE STACK ALLOC: 0x7ffe19b35fd0 (256 bytes)
+FREE ALLOC [1]: 0x7ffe19b35fd0
+FREE STACK ALLOC: 0x7ffe19b361d0 (512 bytes)
+FREE ALLOC [7]: 0x7ffe19b361d0
+FREE STACK ALLOC: 0x7ffe19b35f50 (128 bytes)
+FREE ALLOC [6]: 0x7ffe19b35f50
+FREE STACK ALLOC: 0x7ffe19b360d0 (256 bytes)
+FREE ALLOC [3]: 0x7ffe19b360d0
+FREE HEAP ALLOC: 0x63203d6867e0 (0 bytes)
+FREE ALLOC [0]: 0x63203d6867e0
+FREE HEAP ALLOC: 0x63203d687c60 (0 bytes)
+FREE ALLOC [5]: 0x63203d687c60
+# DUMPS: 26
+
+Latest iteration: 4
+Unable to read MVP Tree from file, initializing new one...
+SAVING STATE [# 0]: 0
+
+DUMPING [0x63203d6867e0, id=0, iter_init=0, iter_end=4, iter_dumped=0]:
+ANALYZING: [0x63203d6867e0, id=0, iter_init=0, iter_end=4, iter_dumped=0, size=4096]:
+STORING AREA: [start=0x63203d6867e0, size=4096]
+
+DUMPING [0x63203d687c60, id=5, iter_init=0, iter_end=4, iter_dumped=0]:
+ANALYZING: [0x63203d687c60, id=5, iter_init=0, iter_end=4, iter_dumped=0, size=768]:
+STORING AREA: [start=0x63203d687c60, size=768]
+
+DUMPING [0x7ffe19b35f50, id=6, iter_init=0, iter_end=4, iter_dumped=0]:
+SKIPPING IGNORED AREA: [0x7ffe19b35f50, id=6, iter_init=0, iter_end=4, iter_dumped=0]:
+
+DUMPING [0x7ffe19b35fd0, id=1, iter_init=0, iter_end=4, iter_dumped=0]:
+ANALYZING: [0x7ffe19b35fd0, id=1, iter_init=0, iter_end=4, iter_dumped=0, size=256]:
+STORING AREA: [start=0x7ffe19b35fd0, size=256]
+
+DUMPING [0x7ffe19b360d0, id=3, iter_init=0, iter_end=4, iter_dumped=0]:
+ANALYZING: [0x7ffe19b360d0, id=3, iter_init=0, iter_end=4, iter_dumped=0, size=256]:
+SKIPPING IGNORED AREA INSIDE AREA: [area=0x7ffe19b360d0, ignore_addr=0x7ffe19b36110, size=16]
+STORING AREA: [start=0x7ffe19b360d0, size=64]
+STORING AREA: [start=0x7ffe19b36120, size=176]
+
+DUMPING [0x7ffe19b361d0, id=7, iter_init=0, iter_end=4, iter_dumped=0]:
+SKIPPING IGNORED AREA: [0x7ffe19b361d0, id=7, iter_init=0, iter_end=4, iter_dumped=0]:
+
+DUMPING [0x7ffe19b363d0, id=2, iter_init=0, iter_end=1, iter_dumped=0]:
+SKIPPING TRANSIENT AREA: [0x7ffe19b363d0, id=2, iter_init=0, iter_end=1, iter_dumped=0]:
+
+DUMPING [0x63203d6867e0, id=0, iter_init=0, iter_end=4, iter_dumped=1]:
+TLSH HASH: 'T119B17D3805326623E1A704BCB84395D0D8F76134A5818E4F9B177B25F915E60A2936F8'
+DATA SIZE: 5360
+MVP RADIUS: 100.000000
+QUERY MVP TREE - HASH NOT FOUND
+ADDING NEW HASH TO MVP TREE: state=1, hash='T119B17D3805326623E1A704BCB84395D0D8F76134A5818E4F9B177B25F915E60A2936F8' (size=73)
+TLSH DISTANCE: 0
+COMPUTED STATE: 1
+SAVING STATE [# 1]: 00000001
+ANALYZING: [0x63203d6867e0, id=0, iter_init=0, iter_end=4, iter_dumped=1, size=4096]:
+STORING AREA: [start=0x63203d6867e0, size=4096]
+
+DUMPING [0x63203d687c60, id=5, iter_init=0, iter_end=4, iter_dumped=1]:
+ANALYZING: [0x63203d687c60, id=5, iter_init=0, iter_end=4, iter_dumped=1, size=768]:
+STORING AREA: [start=0x63203d687c60, size=768]
+
+DUMPING [0x7ffe19b35f50, id=6, iter_init=0, iter_end=4, iter_dumped=1]:
+SKIPPING IGNORED AREA: [0x7ffe19b35f50, id=6, iter_init=0, iter_end=4, iter_dumped=1]:
+
+DUMPING [0x7ffe19b35fd0, id=1, iter_init=0, iter_end=4, iter_dumped=1]:
+ANALYZING: [0x7ffe19b35fd0, id=1, iter_init=0, iter_end=4, iter_dumped=1, size=256]:
+STORING AREA: [start=0x7ffe19b35fd0, size=256]
+
+DUMPING [0x7ffe19b360d0, id=3, iter_init=0, iter_end=4, iter_dumped=1]:
+ANALYZING: [0x7ffe19b360d0, id=3, iter_init=0, iter_end=4, iter_dumped=1, size=256]:
+SKIPPING IGNORED AREA INSIDE AREA: [area=0x7ffe19b360d0, ignore_addr=0x7ffe19b36110, size=16]
+STORING AREA: [start=0x7ffe19b360d0, size=64]
+STORING AREA: [start=0x7ffe19b36120, size=176]
+
+DUMPING [0x7ffe19b361d0, id=7, iter_init=0, iter_end=4, iter_dumped=1]:
+SKIPPING IGNORED AREA: [0x7ffe19b361d0, id=7, iter_init=0, iter_end=4, iter_dumped=1]:
+
+DUMPING [0x63203d6867e0, id=0, iter_init=0, iter_end=4, iter_dumped=2]:
+TLSH HASH: 'T119B17D3805326623E1A704BCB84395D0D8F76134A5818E4F9B177B25F915E60A2936F8'
+DATA SIZE: 5360
+MVP RADIUS: 100.000000
+TLSH DISTANCE: 0
+QUERY MVP TREE - HASH FOUND
+TLSH DISTANCE: 0
+HASH FOUND: T119B17D3805326623E1A704BCB84395D0D8F76134A5818E4F9B177B25F915E60A2936F8 (id=1, distance=0.000000)
+COMPUTED STATE: 1
+SAVING STATE [# 2]: 00000001
+ANALYZING: [0x63203d6867e0, id=0, iter_init=0, iter_end=4, iter_dumped=2, size=4096]:
+STORING AREA: [start=0x63203d6867e0, size=4096]
+
+DUMPING [0x63203d687c60, id=5, iter_init=0, iter_end=4, iter_dumped=2]:
+ANALYZING: [0x63203d687c60, id=5, iter_init=0, iter_end=4, iter_dumped=2, size=768]:
+STORING AREA: [start=0x63203d687c60, size=768]
+
+DUMPING [0x7ffe19b35f50, id=6, iter_init=0, iter_end=4, iter_dumped=2]:
+SKIPPING IGNORED AREA: [0x7ffe19b35f50, id=6, iter_init=0, iter_end=4, iter_dumped=2]:
+
+DUMPING [0x7ffe19b35fd0, id=1, iter_init=0, iter_end=4, iter_dumped=2]:
+ANALYZING: [0x7ffe19b35fd0, id=1, iter_init=0, iter_end=4, iter_dumped=2, size=256]:
+STORING AREA: [start=0x7ffe19b35fd0, size=256]
+
+DUMPING [0x7ffe19b360d0, id=3, iter_init=0, iter_end=4, iter_dumped=2]:
+ANALYZING: [0x7ffe19b360d0, id=3, iter_init=0, iter_end=4, iter_dumped=2, size=256]:
+SKIPPING IGNORED AREA INSIDE AREA: [area=0x7ffe19b360d0, ignore_addr=0x7ffe19b36110, size=16]
+STORING AREA: [start=0x7ffe19b360d0, size=64]
+STORING AREA: [start=0x7ffe19b36120, size=176]
+
+DUMPING [0x7ffe19b361d0, id=7, iter_init=0, iter_end=4, iter_dumped=2]:
+SKIPPING IGNORED AREA: [0x7ffe19b361d0, id=7, iter_init=0, iter_end=4, iter_dumped=2]:
+
+DUMPING [0x63203d6867e0, id=0, iter_init=0, iter_end=4, iter_dumped=3]:
+TLSH HASH: 'T119B17D3805326623E1A704BCB84395D0D8F76134A5818E4F9B177B25F915E60A2936F8'
+DATA SIZE: 5360
+MVP RADIUS: 100.000000
+TLSH DISTANCE: 0
+QUERY MVP TREE - HASH FOUND
+TLSH DISTANCE: 0
+HASH FOUND: T119B17D3805326623E1A704BCB84395D0D8F76134A5818E4F9B177B25F915E60A2936F8 (id=1, distance=0.000000)
+COMPUTED STATE: 1
+SAVING STATE [# 3]: 00000001
+ANALYZING: [0x63203d6867e0, id=0, iter_init=0, iter_end=4, iter_dumped=3, size=4096]:
+STORING AREA: [start=0x63203d6867e0, size=4096]
+
+DUMPING [0x63203d687c60, id=5, iter_init=0, iter_end=4, iter_dumped=3]:
+ANALYZING: [0x63203d687c60, id=5, iter_init=0, iter_end=4, iter_dumped=3, size=768]:
+STORING AREA: [start=0x63203d687c60, size=768]
+
+DUMPING [0x7ffe19b35e80, id=8, iter_init=0, iter_end=4, iter_dumped=3]:
+SKIPPING IGNORED AREA: [0x7ffe19b35e80, id=8, iter_init=0, iter_end=4, iter_dumped=3]:
+
+DUMPING [0x7ffe19b35f50, id=6, iter_init=0, iter_end=4, iter_dumped=3]:
+SKIPPING IGNORED AREA: [0x7ffe19b35f50, id=6, iter_init=0, iter_end=4, iter_dumped=3]:
+
+DUMPING [0x7ffe19b35fd0, id=1, iter_init=0, iter_end=4, iter_dumped=3]:
+ANALYZING: [0x7ffe19b35fd0, id=1, iter_init=0, iter_end=4, iter_dumped=3, size=256]:
+STORING AREA: [start=0x7ffe19b35fd0, size=256]
+
+DUMPING [0x7ffe19b360d0, id=3, iter_init=0, iter_end=4, iter_dumped=3]:
+ANALYZING: [0x7ffe19b360d0, id=3, iter_init=0, iter_end=4, iter_dumped=3, size=256]:
+SKIPPING IGNORED AREA INSIDE AREA: [area=0x7ffe19b360d0, ignore_addr=0x7ffe19b36110, size=16]
+STORING AREA: [start=0x7ffe19b360d0, size=64]
+STORING AREA: [start=0x7ffe19b36120, size=176]
+
+DUMPING [0x7ffe19b361d0, id=7, iter_init=0, iter_end=4, iter_dumped=3]:
+SKIPPING IGNORED AREA: [0x7ffe19b361d0, id=7, iter_init=0, iter_end=4, iter_dumped=3]:
+TLSH HASH: 'T119B17D3805326623E1A704BCB84395D0D8F76134A5818E4F9B177B25F915E60A2936F8'
+DATA SIZE: 5360
+MVP RADIUS: 100.000000
+TLSH DISTANCE: 0
+QUERY MVP TREE - HASH FOUND
+TLSH DISTANCE: 0
+HASH FOUND: T119B17D3805326623E1A704BCB84395D0D8F76134A5818E4F9B177B25F915E60A2936F8 (id=1, distance=0.000000)
+COMPUTED STATE: 1
+SAVING STATE [# 4]: 00000001
+
+TOTAL STATES: 5
+WRITING MVP TREE TO FILE (/home/weicresec/Desktop/stateafl/tests/llvm18/out/verified-suite/runtime-records/data/.tree.mvp)...

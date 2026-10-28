@@ -1,0 +1,98 @@
+{
+  "passed": true,
+  "cases": [
+    {
+      "name": "caller-and-debug-type-recovery",
+      "passed": true,
+      "evidence": {
+        "recovered_buffer_sizes": [
+          "260",
+          "260",
+          "260",
+          "260",
+          "260"
+        ]
+      }
+    },
+    {
+      "name": "explicit-size-and-original-minus-one",
+      "passed": true,
+      "evidence": {
+        "explicit_bytes": 256,
+        "legacy_event_without_buffer": true
+      }
+    },
+    {
+      "name": "pointer-to-pointer",
+      "passed": true,
+      "evidence": {
+        "expected_diagnostic": "Cannot recover struct type"
+      }
+    },
+    {
+      "name": "non-pointer",
+      "passed": true,
+      "evidence": {
+        "expected_diagnostic": "is not a pointer"
+      }
+    },
+    {
+      "name": "invalid-index-text",
+      "passed": true,
+      "evidence": {
+        "expected_diagnostic": "Invalid custom trace argument"
+      }
+    },
+    {
+      "name": "size-overflow-32",
+      "passed": true,
+      "evidence": {
+        "expected_diagnostic": "exceeds target size_t"
+      }
+    },
+    {
+      "name": "original-int-sized-recv-send-stubs",
+      "passed": true,
+      "evidence": {
+        "original_int_count_widened_to_i64": true
+      }
+    },
+    {
+      "name": "target32-helper-widths",
+      "passed": true,
+      "evidence": {
+        "target_size_t_bits": 32,
+        "heap_record_size_bits": 64,
+        "scope": "IR only; does not claim a 32-bit state runtime is linked"
+      }
+    },
+    {
+      "name": "oversized-count-diagnostic",
+      "passed": true,
+      "evidence": {
+        "oversized_byte_count_rejected": true
+      }
+    },
+    {
+      "name": "O0-explicit-lifetime-threshold-and-idempotency",
+      "passed": true,
+      "evidence": {
+        "threshold_bytes": 64,
+        "executed_start_hooks": 1,
+        "executed_end_hooks": 1,
+        "explicit_passes": 2
+      }
+    },
+    {
+      "name": "coverage-ratio-keeps-state-events",
+      "passed": true,
+      "evidence": {
+        "state_calls_per_ratio": 19,
+        "ratios": [
+          1,
+          100
+        ]
+      }
+    }
+  ]
+}

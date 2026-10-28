@@ -1,0 +1,22 @@
+make: Entering directory '/home/weicresec/Desktop/stateafl/llvm_mode'
+[*] Checking for working 'llvm-config'...
+[*] Checking for working '/tmp/stateafl-deps/usr/bin/clang-18'...
+[*] Checking for '../afl-showmap'...
+[+] All set and ready to build.
+[*] Building 32-bit variant of the runtime (-m32)... failed (that's fine)
+cp .build/state-tracer-core.o ../afl-llvm-rt-state-tracer.o.cpp.o
+for OBJ_FILE in ../afl-llvm-rt*.o ; do \
+	objcopy --rename-section .data=.tracer_data ${OBJ_FILE}; \
+	objcopy --rename-section .bss=.tracer_bss ${OBJ_FILE}; \
+done
+[*] Testing the CC wrapper and instrumentation output...
+unset AFL_USE_ASAN AFL_USE_MSAN AFL_INST_RATIO; AFL_QUIET=1 AFL_PATH=. AFL_CC=/tmp/stateafl-deps/usr/bin/clang-18 ../afl-clang-fast -O3 -funroll-loops -Wall -D_FORTIFY_SOURCE=2 -g -Wno-pointer-sign -DAFL_PATH=\"/usr/local/lib/afl\" -DBIN_PATH=\"/usr/local/bin\" -DVERSION=\"2.56b\"  -DAFL_DEFAULT_CC=\"/tmp/stateafl-deps/usr/bin/clang-18\" -DAFL_DEFAULT_CXX=\"/tmp/stateafl-deps/usr/bin/clang++-18\" ../test-instr.c -o test-instr
+[+] FUNCTION LLVM: llvm.lifetime.start.p0
+[+] Found function call: read
+
+../afl-showmap -m none -q -o .test-instr0 ./test-instr < /dev/null
+echo 1 | ../afl-showmap -m none -q -o .test-instr1 ./test-instr
+[+] All right, the instrumentation seems to be working!
+[+] All done! You can now use '../afl-clang-fast' to compile programs.
+make: Leaving directory '/home/weicresec/Desktop/stateafl/llvm_mode'
+afl-llvm-rt-state-tracer.o.cpp.o: OK

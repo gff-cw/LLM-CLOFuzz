@@ -1,0 +1,516 @@
+config.h:24:#ifndef _HAVE_CONFIG_H
+config.h:58:#if (defined (__x86_64__) || defined (__arm64__) || defined (__aarch64__))
+config.h:64:#ifndef WORD_SIZE_64
+aflnet.h:1:#ifndef __AFLNET_H
+llvm_mode/afl-llvm-rt.o.c:49:#ifdef USE_TRACE_PC
+llvm_mode/afl-llvm-rt.o.c:75:  u8 *id_str = getenv(SHM_ENV_VAR);
+llvm_mode/afl-llvm-rt.o.c:259:  is_persistent = !!getenv(PERSIST_ENV_VAR);
+llvm_mode/afl-llvm-rt.o.c:261:  if (getenv(DEFER_ENV_VAR)) return;
+llvm_mode/afl-llvm-rt.o.c:291:  x = getenv("AFL_INST_RATIO");
+llvm_mode/mvptree.h:22:#ifndef _MVPTREE_H
+llvm_mode/afl-clang-fast.c:52:  u8 *afl_path = getenv("AFL_PATH");
+llvm_mode/afl-clang-fast.c:115:    u8* alt_cxx = getenv("AFL_CXX");
+llvm_mode/afl-clang-fast.c:118:    u8* alt_cc = getenv("AFL_CC");
+llvm_mode/afl-clang-fast.c:129:#ifdef USE_TRACE_PC
+llvm_mode/afl-clang-fast.c:172:  if (getenv("AFL_HARDEN")) {
+llvm_mode/afl-clang-fast.c:183:    if (getenv("AFL_USE_ASAN")) {
+llvm_mode/afl-clang-fast.c:185:      if (getenv("AFL_USE_MSAN"))
+llvm_mode/afl-clang-fast.c:188:      if (getenv("AFL_HARDEN"))
+llvm_mode/afl-clang-fast.c:194:    } else if (getenv("AFL_USE_MSAN")) {
+llvm_mode/afl-clang-fast.c:196:      if (getenv("AFL_USE_ASAN"))
+llvm_mode/afl-clang-fast.c:199:      if (getenv("AFL_HARDEN"))
+llvm_mode/afl-clang-fast.c:209:#ifdef USE_TRACE_PC
+llvm_mode/afl-clang-fast.c:211:  if (getenv("AFL_INST_RATIO"))
+llvm_mode/afl-clang-fast.c:216:  if (!getenv("AFL_DONT_OPTIMIZE")) {
+llvm_mode/afl-clang-fast.c:224:  if (getenv("AFL_NO_BUILTIN")) {
+llvm_mode/afl-clang-fast.c:261:#ifdef __APPLE__
+llvm_mode/afl-clang-fast.c:273:#ifdef __APPLE__
+llvm_mode/afl-clang-fast.c:336:  if (isatty(2) && !getenv("AFL_QUIET")) {
+llvm_mode/afl-clang-fast.c:338:#ifdef USE_TRACE_PC
+llvm_mode/afl-llvm-pass.so.cc:95:  if (isatty(2) && !getenv("AFL_QUIET")) {
+llvm_mode/afl-llvm-pass.so.cc:103:  char* inst_ratio_str = getenv("AFL_INST_RATIO");
+llvm_mode/afl-llvm-pass.so.cc:127:  char* trace_custom_receive = getenv("TRACE_CUSTOM_RECEIVE");
+llvm_mode/afl-llvm-pass.so.cc:128:  char* trace_custom_send = getenv("TRACE_CUSTOM_SEND");
+llvm_mode/afl-llvm-pass.so.cc:733:             inst_blocks, getenv("AFL_HARDEN") ? "hardened" :
+llvm_mode/afl-llvm-pass.so.cc:734:             ((getenv("AFL_USE_ASAN") || getenv("AFL_USE_MSAN")) ?
+llvm_mode/tlsh-wrapper.h:1:#ifndef WRAPPER_H_
+llvm_mode/tlsh-wrapper.h:8:#ifdef __cplusplus
+llvm_mode/tlsh-wrapper.h:24:#ifdef __cplusplus
+llvm_mode/afl-llvm-rt-state-tracer.o.c:36:#ifndef MVP_RADIUS
+llvm_mode/afl-llvm-rt-state-tracer.o.c:54:#if defined(LOG_FILE) && (defined(TIMING_LOG_LEVEL) || defined(INFO_LOG_LEVEL) || defined(DEBUG_LOG_LEVEL))
+llvm_mode/afl-llvm-rt-state-tracer.o.c:59:#if defined(LOG_FILE) && defined(DEBUG_LOG_LEVEL)
+llvm_mode/afl-llvm-rt-state-tracer.o.c:65:#if defined(LOG_FILE) && (defined(INFO_LOG_LEVEL) || defined(DEBUG_LOG_LEVEL))
+llvm_mode/afl-llvm-rt-state-tracer.o.c:72:#if defined(LOG_FILE_ENABLED) && (defined(TIMING_LOG_LEVEL) || defined(INFO_LOG_LEVEL) || defined(DEBUG_LOG_LEVEL)) && defined(ENABLE_TIMING)
+llvm_mode/afl-llvm-rt-state-tracer.o.c:100:#if defined(DEBUG_ALLOC) || defined(DEBUG_BACKTRACE)
+llvm_mode/afl-llvm-rt-state-tracer.o.c:143:#ifdef BLACKLIST_ALLOC_SITES
+llvm_mode/afl-llvm-rt-state-tracer.o.c:166:#ifdef ENABLE_TRACE_GLOBAL_DATA
+llvm_mode/afl-llvm-rt-state-tracer.o.c:178:#ifdef __TRACER_USE_PTHREAD_MUTEX
+llvm_mode/afl-llvm-rt-state-tracer.o.c:223:#ifdef INTERNAL_MEMCPY
+llvm_mode/afl-llvm-rt-state-tracer.o.c:326:  char *out_dir_str = getenv(AFL_OUTDIR_ENV_VAR);
+llvm_mode/afl-llvm-rt-state-tracer.o.c:343:#ifdef LOG_FILE_ENABLED
+llvm_mode/afl-llvm-rt-state-tracer.o.c:361:  char *id_str = getenv(SHM_STATE_ENV_VAR);
+llvm_mode/afl-llvm-rt-state-tracer.o.c:389:  char *calib_str = getenv(MVP_CALIBRATION_ENV_VAR);
+llvm_mode/afl-llvm-rt-state-tracer.o.c:417:#ifdef BLACKLIST_ALLOC_SITES
+llvm_mode/afl-llvm-rt-state-tracer.o.c:418:  char* blacklist_alloc_sites = getenv("BLACKLIST_ALLOC_SITES");
+llvm_mode/afl-llvm-rt-state-tracer.o.c:471:#ifdef ENABLE_TRACE_GLOBAL_DATA
+llvm_mode/afl-llvm-rt-state-tracer.o.c:500:#ifdef BLACKLIST_GLOBALS
+llvm_mode/afl-llvm-rt-state-tracer.o.c:502:  char* blacklist_globals = getenv("BLACKLIST_GLOBALS");
+llvm_mode/afl-llvm-rt-state-tracer.o.c:571:  char *mvp_str = getenv(MVP_RADIUS_ENV_VAR);
+llvm_mode/afl-llvm-rt-state-tracer.o.c:581:  if(getenv("AFL_USE_ASAN") || getenv("ASAN_OPTIONS")) {
+llvm_mode/afl-llvm-rt-state-tracer.o.c:591:#if defined(DEBUG_ALLOC) || defined(DEBUG_BACKTRACE)
+llvm_mode/afl-llvm-rt-state-tracer.o.c:611:#ifndef BACKTRACE_OFFSET
+llvm_mode/afl-llvm-rt-state-tracer.o.c:623:#if (defined(INFO_LOG_LEVEL) || defined(DEBUG_LOG_LEVEL))
+llvm_mode/afl-llvm-rt-state-tracer.o.c:644:#ifdef RESTRICT_TEXT_ALLOCS
+llvm_mode/afl-llvm-rt-state-tracer.o.c:684:#ifdef BLACKLIST_ALLOC_SITES
+llvm_mode/afl-llvm-rt-state-tracer.o.c:741:#ifdef BLACKLIST_ALLOC_SITES
+llvm_mode/afl-llvm-rt-state-tracer.o.c:750:#ifdef RESTRICT_TEXT_ALLOCS
+llvm_mode/afl-llvm-rt-state-tracer.o.c:772:#if defined(DEBUG_ALLOC) || defined(DEBUG_BACKTRACE)
+llvm_mode/afl-llvm-rt-state-tracer.o.c:776:#ifdef __TRACER_USE_PTHREAD_MUTEX
+llvm_mode/afl-llvm-rt-state-tracer.o.c:782:#ifdef __TRACER_USE_PTHREAD_MUTEX
+llvm_mode/afl-llvm-rt-state-tracer.o.c:796:#ifdef __TRACER_USE_PTHREAD_MUTEX
+llvm_mode/afl-llvm-rt-state-tracer.o.c:812:#ifdef __TRACER_USE_PTHREAD_MUTEX
+llvm_mode/afl-llvm-rt-state-tracer.o.c:879:#ifdef __TRACER_USE_PTHREAD_MUTEX
+llvm_mode/afl-llvm-rt-state-tracer.o.c:887:#ifdef __TRACER_USE_PTHREAD_MUTEX
+llvm_mode/afl-llvm-rt-state-tracer.o.c:908:#ifdef BLACKLIST_ALLOC_SITES
+llvm_mode/afl-llvm-rt-state-tracer.o.c:917:#ifdef RESTRICT_TEXT_ALLOCS
+llvm_mode/afl-llvm-rt-state-tracer.o.c:958:#if defined(DEBUG_ALLOC) || defined(DEBUG_BACKTRACE)
+llvm_mode/afl-llvm-rt-state-tracer.o.c:962:#ifdef __TRACER_USE_PTHREAD_MUTEX
+llvm_mode/afl-llvm-rt-state-tracer.o.c:968:#ifdef __TRACER_USE_PTHREAD_MUTEX
+llvm_mode/afl-llvm-rt-state-tracer.o.c:982:#ifdef __TRACER_USE_PTHREAD_MUTEX
+llvm_mode/afl-llvm-rt-state-tracer.o.c:1014:#ifdef __TRACER_USE_PTHREAD_MUTEX
+llvm_mode/afl-llvm-rt-state-tracer.o.c:1272:#ifdef LOG_FILE_ENABLED
+llvm_mode/afl-llvm-rt-state-tracer.o.c:1397:#if defined(LOG_FILE) && defined(DEBUG_LOG_LEVEL)
+llvm_mode/afl-llvm-rt-state-tracer.o.c:1421:#if (defined(INFO_LOG_LEVEL) || defined(DEBUG_LOG_LEVEL))
+llvm_mode/afl-llvm-rt-state-tracer.o.c:1477:#ifdef SKIP_POSTEXEC_ANALYSIS
+llvm_mode/afl-llvm-rt-state-tracer.o.c:1674:#ifdef DEBUG_ALLOC
+llvm_mode/afl-llvm-rt-state-tracer.o.c:1742:#ifdef DEBUG_ALLOC
+llvm_mode/afl-llvm-rt-state-tracer.o.c:1761:#ifdef DEBUG_ALLOC
+llvm_mode/afl-llvm-rt-state-tracer.o.c:1766:#ifdef DEBUG_ALLOC
+llvm_mode/afl-llvm-rt-state-tracer.o.c:1798:#ifndef DISABLE_RATE_LIMITING
+llvm_mode/afl-llvm-rt-state-tracer.o.c:1887:#ifdef LOG_FILE_ENABLED
+llvm_mode/state-tracer.h:1:#ifndef _H_STATE_TRACER_
+libtokencap/libtokencap.so.c:36:#ifndef __linux__
+libtokencap/libtokencap.so.c:307:  u8* fn = getenv("AFL_TOKEN_FILE");
+llvm_mode/containers.h:30:#ifndef BKTHOMPS_CONTAINERS_ALL_H
+llvm_mode/containers.h:54:#ifndef BKTHOMPS_CONTAINERS_ARRAY_H
+llvm_mode/containers.h:81:#ifndef BKTHOMPS_CONTAINERS_DEQUE_H
+llvm_mode/containers.h:124:#ifndef BKTHOMPS_CONTAINERS_FORWARD_LIST_H
+llvm_mode/containers.h:168:#ifndef BKTHOMPS_CONTAINERS_LIST_H
+llvm_mode/containers.h:212:#ifndef BKTHOMPS_CONTAINERS_MAP_H
+llvm_mode/containers.h:250:#ifndef BKTHOMPS_CONTAINERS_MULTIMAP_H
+llvm_mode/containers.h:294:#ifndef BKTHOMPS_CONTAINERS_MULTISET_H
+llvm_mode/containers.h:334:#ifndef BKTHOMPS_CONTAINERS_PRIORITY_QUEUE_H
+llvm_mode/containers.h:368:#ifndef BKTHOMPS_CONTAINERS_QUEUE_H
+llvm_mode/containers.h:403:#ifndef BKTHOMPS_CONTAINERS_SET_H
+llvm_mode/containers.h:439:#ifndef BKTHOMPS_CONTAINERS_STACK_H
+llvm_mode/containers.h:473:#ifndef BKTHOMPS_CONTAINERS_UNORDERED_MAP_H
+llvm_mode/containers.h:507:#ifndef BKTHOMPS_CONTAINERS_UNORDERED_MULTIMAP_H
+llvm_mode/containers.h:548:#ifndef BKTHOMPS_CONTAINERS_UNORDERED_MULTISET_H
+llvm_mode/containers.h:583:#ifndef BKTHOMPS_CONTAINERS_UNORDERED_SET_H
+llvm_mode/containers.h:615:#ifndef BKTHOMPS_CONTAINERS_VECTOR_H
+android-ashmem.h:1:#ifdef __ANDROID__
+android-ashmem.h:2:#ifndef _ANDROID_ASHMEM_H
+android-ashmem.h:11:#if __ANDROID_API__ >= 26
+afl-showmap.c:177:  u8  cco = !!getenv("AFL_CMIN_CRASHES_ONLY"),
+afl-showmap.c:178:      caa = !!getenv("AFL_CMIN_ALLOW_ANY");
+afl-showmap.c:285:#ifdef RLIMIT_AS
+afl-showmap.c:302:    if (!getenv("LD_BIND_LAZY")) setenv("LD_BIND_NOW", "1", 0);
+afl-showmap.c:389:  if (getenv("AFL_PRELOAD")) {
+afl-showmap.c:390:    setenv("LD_PRELOAD", getenv("AFL_PRELOAD"), 1);
+afl-showmap.c:391:    setenv("DYLD_INSERT_LIBRARIES", getenv("AFL_PRELOAD"), 1);
+afl-showmap.c:517:  if (strchr(fname, '/') || !(env_path = getenv("PATH"))) {
+afl-showmap.c:581:  tmp = getenv("AFL_PATH");
+afl-as.c:77:#ifdef WORD_SIZE_64
+afl-as.c:85:#ifdef __APPLE__
+afl-as.c:98:  u8 *tmp_dir = getenv("TMPDIR"), *afl_as = getenv("AFL_AS");
+afl-as.c:101:#ifdef __APPLE__
+afl-as.c:121:    afl_as = getenv("AFL_CC");
+afl-as.c:122:    if (!afl_as) afl_as = getenv("AFL_CXX");
+afl-as.c:133:  if (!tmp_dir) tmp_dir = getenv("TEMP");
+afl-as.c:134:  if (!tmp_dir) tmp_dir = getenv("TMP");
+afl-as.c:148:#ifdef __APPLE__
+afl-as.c:172:#ifdef __APPLE__
+afl-as.c:239:#ifdef __APPLE__
+afl-as.c:391:#ifdef __APPLE__
+afl-as.c:411:#ifdef __APPLE__
+afl-as.c:466:             getenv("AFL_HARDEN") ? "hardened" :
+afl-as.c:482:  u8* inst_ratio_str = getenv("AFL_INST_RATIO");
+afl-as.c:487:  clang_mode = !!getenv(CLANG_ENV_VAR);
+afl-as.c:489:  if (isatty(2) && !getenv("AFL_QUIET")) {
+afl-as.c:525:  if (getenv(AS_LOOP_ENV_VAR))
+afl-as.c:534:  if (getenv("AFL_USE_ASAN") || getenv("AFL_USE_MSAN")) {
+afl-as.c:552:  if (!getenv("AFL_KEEP_ASSEMBLY")) unlink(modified_file);
+afl-analyze.c:286:#ifdef RLIMIT_AS
+afl-analyze.c:370:#ifdef USE_COLOR
+afl-analyze.c:413:#ifdef USE_COLOR
+afl-analyze.c:492:#ifdef USE_COLOR
+afl-analyze.c:552:#ifdef USE_COLOR
+afl-analyze.c:574:#ifdef USE_COLOR
+afl-analyze.c:680:      use_dir = getenv("TMPDIR");
+afl-analyze.c:691:  x = getenv("ASAN_OPTIONS");
+afl-analyze.c:703:  x = getenv("MSAN_OPTIONS");
+afl-analyze.c:727:  if (getenv("AFL_PRELOAD")) {
+afl-analyze.c:728:    setenv("LD_PRELOAD", getenv("AFL_PRELOAD"), 1);
+afl-analyze.c:729:    setenv("DYLD_INSERT_LIBRARIES", getenv("AFL_PRELOAD"), 1);
+afl-analyze.c:841:  if (strchr(fname, '/') || !(env_path = getenv("PATH"))) {
+afl-analyze.c:905:  tmp = getenv("AFL_PATH");
+afl-analyze.c:1050:  use_hex_offsets = !!getenv("AFL_ANALYZE_HEX");
+debug.h:24:#ifndef _HAVE_DEBUG_H
+debug.h:36:#ifdef USE_COLOR
+debug.h:116:#ifdef FANCY_BOXES
+debug.h:170:#ifdef MESSAGES_TO_STDOUT
+libdislocator/libdislocator.so.c:38:#ifndef PAGE_SIZE
+libdislocator/libdislocator.so.c:42:#ifndef MAP_ANONYMOUS
+libdislocator/libdislocator.so.c:262:  u8* tmp = getenv("AFL_LD_LIMIT_MB");
+libdislocator/libdislocator.so.c:271:  alloc_verbose = !!getenv("AFL_LD_VERBOSE");
+libdislocator/libdislocator.so.c:272:  hard_fail = !!getenv("AFL_LD_HARD_FAIL");
+libdislocator/libdislocator.so.c:273:  no_calloc_over = !!getenv("AFL_LD_NO_CALLOC_OVER");
+aflnet-replay.c:97:#ifdef LOCAL_PORT
+aflnet-replay.c:132:#ifdef SEND_DELAY
+alloc-inl.h:28:#ifndef _HAVE_ALLOC_INL_H
+alloc-inl.h:152:#ifdef DEBUG_BUILD
+alloc-inl.h:186:#ifndef DEBUG_BUILD
+alloc-inl.h:199:#ifndef DEBUG_BUILD
+alloc-inl.h:244:#ifndef DEBUG_BUILD
+alloc-inl.h:340:#ifndef DEBUG_BUILD
+alloc-inl.h:371:#ifdef AFL_MAIN
+afl-as.h:42:#ifndef _HAVE_AFL_AS_H
+afl-as.h:108:   Another side effect of this design is that getenv() will be called once per
+afl-as.h:109:   every .o file when running in non-instrumented mode; and since getenv() tends
+afl-as.h:187:#ifndef COVERAGE_ONLY
+afl-as.h:196:#ifdef SKIP_COUNTS
+afl-as.h:363:#ifndef COVERAGE_ONLY
+afl-as.h:383:#ifdef __APPLE__
+afl-as.h:401:#if defined(__OpenBSD__)  || (defined(__FreeBSD__) && (__FreeBSD__ < 9))
+afl-as.h:418:#ifndef COVERAGE_ONLY
+afl-as.h:424:#ifdef SKIP_COUNTS
+afl-as.h:433:#if defined(__OpenBSD__)  || (defined(__FreeBSD__) && (__FreeBSD__ < 9))
+afl-as.h:451:#ifndef __APPLE__
+afl-as.h:466:  "     getenv() and several other libcalls we'll be relying on. */\n"
+afl-as.h:528:#ifdef __APPLE__
+afl-as.h:697:#ifdef __APPLE__
+afl-as.h:700:#ifndef COVERAGE_ONLY
+afl-as.h:710:#ifndef COVERAGE_ONLY
+experimental/argv_fuzzing/argv-fuzz-inl.h:42:#ifndef _HAVE_ARGV_FUZZ_INL
+hash.h:34:#ifndef _HAVE_HASH_H
+hash.h:39:#ifdef __x86_64__
+types.h:25:#ifndef _HAVE_TYPES_H
+types.h:51:#ifdef __x86_64__
+types.h:62:#ifndef MIN
+types.h:79:#ifdef AFL_LLVM_PASS
+afl-gotcpu.c:53:#ifdef __linux__
+afl-gotcpu.c:129:#ifdef HAVE_AFFINITY
+afl-fuzz.c:35:#ifndef _GNU_SOURCE
+afl-fuzz.c:74:#if defined(__APPLE__) || defined(__FreeBSD__) || defined (__OpenBSD__)
+afl-fuzz.c:81:#ifdef __linux__
+afl-fuzz.c:88:#ifdef AFL_LIB
+afl-fuzz.c:192:#ifdef GRAPHVIZ_AFLNET_STATES
+afl-fuzz.c:203:#ifdef LOG_STATE_TRACER
+afl-fuzz.c:287:#ifdef HAVE_AFFINITY
+afl-fuzz.c:477:#ifdef GRAPHVIZ_AFLNET_STATES
+afl-fuzz.c:842:#ifdef DEBUG_STATE_SEQUENCE
+afl-fuzz.c:877:#ifdef DEBUG_STATE_SEQUENCE
+afl-fuzz.c:940:#ifdef GRAPHVIZ_EDGE_LABELS
+afl-fuzz.c:1003:#ifdef GRAPHVIZ_AFLNET_STATES
+afl-fuzz.c:1010:#ifdef GRAPHVIZ_AFLNET_STATES
+afl-fuzz.c:1016:#if !defined(GRAPHVIZ_AFLNET_STATES) || !defined(GRAPHVIZ_AFLNET_INSIDE_NODE)
+afl-fuzz.c:1035:#if defined(GRAPHVIZ_AFLNET_STATES)
+afl-fuzz.c:1036:#if defined(GRAPHVIZ_AFLNET_INSIDE_NODE)
+afl-fuzz.c:1073:#if defined(GRAPHVIZ_AFLNET_STATES)
+afl-fuzz.c:1075:#if defined(GRAPHVIZ_AFLNET_INSIDE_NODE)
+afl-fuzz.c:1116:#if defined(GRAPHVIZ_AFLNET_STATES)
+afl-fuzz.c:1117:#if defined(GRAPHVIZ_AFLNET_INSIDE_NODE)
+afl-fuzz.c:1154:#if defined(GRAPHVIZ_AFLNET_STATES)
+afl-fuzz.c:1156:#if defined(GRAPHVIZ_AFLNET_INSIDE_NODE)
+afl-fuzz.c:1198:#ifdef GRAPHVIZ_EDGE_LABELS
+afl-fuzz.c:1305:#ifdef GRAPHVIZ_AFLNET_STATES
+afl-fuzz.c:1325:#ifdef GRAPHVIZ_EDGE_LABELS
+afl-fuzz.c:1704:#ifdef HAVE_AFFINITY
+afl-fuzz.c:1720:  if (getenv("AFL_NO_AFFINITY")) {
+afl-fuzz.c:1820:#ifndef IGNORE_FINDS
+afl-fuzz.c:2241:#ifdef WORD_SIZE_64
+afl-fuzz.c:2275:#ifdef WORD_SIZE_64
+afl-fuzz.c:2411:#ifdef WORD_SIZE_64
+afl-fuzz.c:2505:#ifdef WORD_SIZE_64
+afl-fuzz.c:2568:#ifndef DISABLE_TLSH_CALIBRATION
+afl-fuzz.c:2572:#ifdef LOG_STATE_TRACER
+afl-fuzz.c:2766:#ifndef DISABLE_TLSH_CALIBRATION
+afl-fuzz.c:2790:#ifdef AFL_OUTDIR
+afl-fuzz.c:2795:#ifdef LOG_STATE_TRACER
+afl-fuzz.c:2805:#ifndef DISABLE_TLSH_CALIBRATION
+afl-fuzz.c:2868:    char * mvp_radius_str = getenv(MVP_RADIUS_ENV_VAR);
+afl-fuzz.c:2964:#ifdef LOG_STATE_TRACER
+afl-fuzz.c:2976:#ifdef GRAPHVIZ_AFLNET_STATES
+afl-fuzz.c:2989:#ifdef LOG_STATE_TRACER
+afl-fuzz.c:3069:  u8* fn = getenv("AFL_POST_LIBRARY");
+afl-fuzz.c:3708:#ifdef RLIMIT_AS
+afl-fuzz.c:3769:    if (!getenv("LD_BIND_LAZY")) setenv("LD_BIND_NOW", "1", 0);
+afl-fuzz.c:3855:#ifdef __APPLE__
+afl-fuzz.c:3877:#ifdef RLIMIT_AS
+afl-fuzz.c:3889:#ifdef __APPLE__
+afl-fuzz.c:3936:#ifdef RLIMIT_AS
+afl-fuzz.c:3947:         getenv(DEFER_ENV_VAR) ? "three" : "two",
+afl-fuzz.c:3948:         getenv(DEFER_ENV_VAR) ?
+afl-fuzz.c:4004:#ifdef RLIMIT_AS
+afl-fuzz.c:4140:#ifdef WORD_SIZE_64
+afl-fuzz.c:4387:  u8* skip_crashes = getenv("AFL_SKIP_CRASHES");
+afl-fuzz.c:4411:#ifndef DISABLE_TLSH_CALIBRATION
+afl-fuzz.c:4427:#ifdef DEBUG_TLSH
+afl-fuzz.c:4435:#ifdef DEBUG_TLSH
+afl-fuzz.c:4538:#ifdef RLIMIT_AS
+afl-fuzz.c:4548:#ifdef __APPLE__
+afl-fuzz.c:4570:#ifdef __APPLE__
+afl-fuzz.c:4625:#ifndef DISABLE_TLSH_CALIBRATION
+afl-fuzz.c:4630:#ifndef DISABLE_TLSH_CALIBRATION
+afl-fuzz.c:4631:#ifdef LOG_STATE_TRACER
+afl-fuzz.c:4656:#ifdef EXIT_AFTER_CALIBRATION
+afl-fuzz.c:4770:#ifndef SIMPLE_FILES
+afl-fuzz.c:4805:#ifndef SIMPLE_FILES
+afl-fuzz.c:4842:#ifndef SIMPLE_FILES
+afl-fuzz.c:4954:#ifndef SIMPLE_FILES
+afl-fuzz.c:5020:#ifdef WORD_SIZE_64
+afl-fuzz.c:5052:#ifndef SIMPLE_FILES
+afl-fuzz.c:5084:#ifdef WORD_SIZE_64
+afl-fuzz.c:5096:#ifndef SIMPLE_FILES
+afl-fuzz.c:5296:#ifdef __APPLE__
+afl-fuzz.c:5385:#if defined(__APPLE__) || defined(__FreeBSD__) || defined (__OpenBSD__)
+afl-fuzz.c:5486:#ifndef __sun
+afl-fuzz.c:5622:#ifndef SIMPLE_FILES
+afl-fuzz.c:5653:#ifndef SIMPLE_FILES
+afl-fuzz.c:5830:      getenv("AFL_EXIT_WHEN_DONE")) stop_soon = 2;
+afl-fuzz.c:5832:  if (total_crashes && getenv("AFL_BENCH_UNTIL_CRASH")) stop_soon = 2;
+afl-fuzz.c:6183:#ifdef HAVE_AFFINITY
+afl-fuzz.c:6208:  if (getenv("AFLNET_DEBUG") && (atoi(getenv("AFLNET_DEBUG")) == 1) && state_aware_mode) {
+afl-fuzz.c:6335:  if (dumb_mode && !getenv("AFL_HANG_TMOUT"))
+afl-fuzz.c:6778:#ifdef DEBUG_REGIONS
+afl-fuzz.c:6812:#ifdef DEBUG_REGIONS
+afl-fuzz.c:6927:#ifdef IGNORE_FINDS
+afl-fuzz.c:8705:#ifndef IGNORE_FINDS
+afl-fuzz.c:8828:#ifdef DEBUG_REGIONS
+afl-fuzz.c:9107:  if (strchr(fname, '/') || !(env_path = getenv("PATH"))) {
+afl-fuzz.c:9149:  if (getenv("AFL_SKIP_BIN_CHECK")) return;
+afl-fuzz.c:9183:#ifndef __APPLE__
+afl-fuzz.c:9238:  } else if (getenv("AFL_PERSISTENT")) {
+afl-fuzz.c:9250:  } else if (getenv("AFL_DEFER_FORKSRV")) {
+afl-fuzz.c:9297:  if (getenv("AFL_NO_UI")) {
+afl-fuzz.c:9412:#ifndef __sun
+afl-fuzz.c:9549:#ifdef __APPLE__
+afl-fuzz.c:9571:  if (!getenv("AFL_I_DONT_CARE_ABOUT_MISSING_CRASHES"))
+afl-fuzz.c:9599:    if (!getenv("AFL_I_DONT_CARE_ABOUT_MISSING_CRASHES"))
+afl-fuzz.c:9613:#ifdef __linux__
+afl-fuzz.c:9654:  if (getenv("AFL_SKIP_CPUFREQ")) return;
+afl-fuzz.c:9708:#if defined(__APPLE__) || defined(__FreeBSD__) || defined (__OpenBSD__)
+afl-fuzz.c:9714:#ifdef __APPLE__
+afl-fuzz.c:9729:#ifdef HAVE_AFFINITY
+afl-fuzz.c:9753:#if defined(__APPLE__) || defined(__FreeBSD__) || defined (__OpenBSD__)
+afl-fuzz.c:9841:  u8* x = getenv("ASAN_OPTIONS");
+afl-fuzz.c:9853:  x = getenv("MSAN_OPTIONS");
+afl-fuzz.c:9979:  tmp = getenv("AFL_PATH");
+afl-fuzz.c:10062:#ifndef AFL_LIB
+afl-fuzz.c:10073:  u8  exit_1 = !!getenv("AFL_BENCH_JUST_ONE");
+afl-fuzz.c:10235:        if (getenv("AFL_DUMB_FORKSRV")) dumb_mode = 2; else dumb_mode = 1;
+afl-fuzz.c:10438:  if (getenv("AFL_NO_FORKSRV"))    no_forkserver    = 1;
+afl-fuzz.c:10439:  if (getenv("AFL_NO_CPU_RED"))    no_cpu_meter_red = 1;
+afl-fuzz.c:10440:  if (getenv("AFL_NO_ARITH"))      no_arith         = 1;
+afl-fuzz.c:10441:  if (getenv("AFL_SHUFFLE_QUEUE")) shuffle_queue    = 1;
+afl-fuzz.c:10442:  if (getenv("AFL_FAST_CAL"))      fast_cal         = atoi(getenv("AFL_FAST_CAL"));
+afl-fuzz.c:10444:  if (getenv("AFL_HANG_TMOUT")) {
+afl-fuzz.c:10445:    hang_tmout = atoi(getenv("AFL_HANG_TMOUT"));
+afl-fuzz.c:10452:  if (getenv("AFL_PRELOAD")) {
+afl-fuzz.c:10453:    setenv("LD_PRELOAD", getenv("AFL_PRELOAD"), 1);
+afl-fuzz.c:10454:    setenv("DYLD_INSERT_LIBRARIES", getenv("AFL_PRELOAD"), 1);
+afl-fuzz.c:10457:  if (getenv("AFL_LD_PRELOAD"))
+afl-fuzz.c:10468:#ifdef HAVE_AFFINITY
+afl-fuzz.c:10641:        if (sync_id && queue_cycle == 1 && getenv("AFL_IMPORT_FIRST"))
+afl-gcc.c:66:  u8 *afl_path = getenv("AFL_PATH");
+afl-gcc.c:123:#if defined(__FreeBSD__) && defined(__x86_64__)
+afl-gcc.c:139:      u8* alt_cxx = getenv("AFL_CXX");
+afl-gcc.c:142:      u8* alt_cc = getenv("AFL_CC");
+afl-gcc.c:154:#ifdef __APPLE__
+afl-gcc.c:156:    if (!strcmp(name, "afl-g++")) cc_params[0] = getenv("AFL_CXX");
+afl-gcc.c:157:    else if (!strcmp(name, "afl-gcj")) cc_params[0] = getenv("AFL_GCJ");
+afl-gcc.c:158:    else cc_params[0] = getenv("AFL_CC");
+afl-gcc.c:174:      u8* alt_cxx = getenv("AFL_CXX");
+afl-gcc.c:177:      u8* alt_cc = getenv("AFL_GCJ");
+afl-gcc.c:180:      u8* alt_cc = getenv("AFL_CC");
+afl-gcc.c:204:#if defined(__FreeBSD__) && defined(__x86_64__)
+afl-gcc.c:223:  if (getenv("AFL_HARDEN")) {
+afl-gcc.c:238:  } else if (getenv("AFL_USE_ASAN")) {
+afl-gcc.c:240:    if (getenv("AFL_USE_MSAN"))
+afl-gcc.c:243:    if (getenv("AFL_HARDEN"))
+afl-gcc.c:249:  } else if (getenv("AFL_USE_MSAN")) {
+afl-gcc.c:251:    if (getenv("AFL_USE_ASAN"))
+afl-gcc.c:254:    if (getenv("AFL_HARDEN"))
+afl-gcc.c:263:  if (!getenv("AFL_DONT_OPTIMIZE")) {
+afl-gcc.c:265:#if defined(__FreeBSD__) && defined(__x86_64__)
+afl-gcc.c:291:  if (getenv("AFL_NO_BUILTIN")) {
+afl-gcc.c:312:  if (isatty(2) && !getenv("AFL_QUIET")) {
+afl-tmin.c:300:#ifdef RLIMIT_AS
+afl-tmin.c:689:      use_dir = getenv("TMPDIR");
+afl-tmin.c:700:  x = getenv("ASAN_OPTIONS");
+afl-tmin.c:712:  x = getenv("MSAN_OPTIONS");
+afl-tmin.c:736:  if (getenv("AFL_PRELOAD")) {
+afl-tmin.c:737:    setenv("LD_PRELOAD", getenv("AFL_PRELOAD"), 1);
+afl-tmin.c:738:    setenv("DYLD_INSERT_LIBRARIES", getenv("AFL_PRELOAD"), 1);
+afl-tmin.c:852:  if (strchr(fname, '/') || !(env_path = getenv("PATH"))) {
+afl-tmin.c:916:  tmp = getenv("AFL_PATH");
+afl-tmin.c:1122:  exact_mode = !!getenv("AFL_TMIN_EXACT");
+qemu_mode/patches/afl-qemu-cpu-inl.h:118:  char *id_str = getenv(SHM_ENV_VAR),
+qemu_mode/patches/afl-qemu-cpu-inl.h:119:       *inst_r = getenv("AFL_INST_RATIO");
+qemu_mode/patches/afl-qemu-cpu-inl.h:151:  if (getenv("AFL_INST_LIBS")) {
+khash.h:117:#ifndef __AC_KHASH_H
+khash.h:134:#if UINT_MAX == 0xffffffffu
+khash.h:136:#elif ULONG_MAX == 0xffffffffu
+khash.h:140:#if ULONG_MAX == ULLONG_MAX
+khash.h:146:#ifndef kh_inline
+khash.h:147:#ifdef _MSC_VER
+khash.h:154:#ifndef klib_unused
+khash.h:155:#if (defined __clang__ && __clang_major__ >= 3) || (defined __GNUC__ && __GNUC__ >= 3)
+khash.h:175:#ifndef kroundup32
+khash.h:179:#ifndef kcalloc
+khash.h:182:#ifndef kmalloc
+khash.h:185:#ifndef krealloc
+khash.h:188:#ifndef kfree
+klist.h:26:#ifndef _AC_KLIST_H
+klist.h:31:#ifndef klib_unused
+klist.h:32:#if (defined __clang__ && __clang_major__ >= 3) || (defined __GNUC__ && __GNUC__ >= 3)
+
+BUILD TARGETS
+Makefile:47:all: test_x86 $(PROGS) afl-as test_build all_done
+Makefile:51:test_x86:
+Makefile:59:test_x86:
+Makefile:64:afl-gcc: afl-gcc.c $(COMM_HDR) | test_x86
+Makefile:68:afl-as: afl-as.c afl-as.h $(COMM_HDR) | test_x86
+Makefile:72:afl-fuzz: afl-fuzz.c $(COMM_HDR) aflnet.o aflnet.h | test_x86
+Makefile:75:afl-replay: afl-replay.c $(COMM_HDR) aflnet.o aflnet.h | test_x86
+Makefile:78:aflnet-replay: aflnet-replay.c $(COMM_HDR) aflnet.o aflnet.h | test_x86
+Makefile:81:afl-showmap: afl-showmap.c $(COMM_HDR) | test_x86
+Makefile:84:afl-tmin: afl-tmin.c $(COMM_HDR) | test_x86
+Makefile:87:afl-analyze: afl-analyze.c $(COMM_HDR) | test_x86
+Makefile:90:afl-gotcpu: afl-gotcpu.c $(COMM_HDR) | test_x86
+Makefile:95:test_build: afl-gcc afl-as afl-showmap
+Makefile:106:test_build: afl-gcc afl-as afl-showmap
+Makefile:111:all_done: test_build
+Makefile:117:.NOTPARALLEL: clean
+Makefile:119:clean:
+Makefile:126:install: all
+Makefile:146:publish: clean
+libdislocator/Makefile:24:all: libdislocator.so
+libdislocator/Makefile:26:libdislocator.so: libdislocator.so.c ../config.h
+libdislocator/Makefile:29:.NOTPARALLEL: clean
+libdislocator/Makefile:31:clean:
+libdislocator/Makefile:35:install: all
+libtokencap/Makefile:24:all: libtokencap.so
+libtokencap/Makefile:26:libtokencap.so: libtokencap.so.c ../config.h
+libtokencap/Makefile:29:.NOTPARALLEL: clean
+libtokencap/Makefile:31:clean:
+libtokencap/Makefile:35:install: all
+llvm_mode/Makefile:69:all: test_deps $(PROGS) test_build all_done obj_section_rename
+llvm_mode/Makefile:71:test_deps:
+llvm_mode/Makefile:84:../afl-clang-fast: afl-clang-fast.c | test_deps
+llvm_mode/Makefile:88:../afl-llvm-pass.so: afl-llvm-pass.so.cc | test_deps
+llvm_mode/Makefile:91:$(CONTAINERS):
+llvm_mode/Makefile:96:$(MVPTREE):
+llvm_mode/Makefile:101:$(TLSH):
+llvm_mode/Makefile:109:../afl-llvm-rt-state-tracer.o: afl-llvm-rt-state-tracer.o.c $(CONTAINERS) $(TLSH) $(MVPTREE)
+llvm_mode/Makefile:121:../afl-llvm-rt.o: afl-llvm-rt.o.c | test_deps
+llvm_mode/Makefile:125:../afl-llvm-rt-32.o: afl-llvm-rt.o.c | test_deps
+llvm_mode/Makefile:129:../afl-llvm-rt-64.o: afl-llvm-rt.o.c | test_deps
+llvm_mode/Makefile:133:obj_section_rename:
+llvm_mode/Makefile:139:test_build: $(PROGS)
+llvm_mode/Makefile:150:all_done: test_build
+llvm_mode/Makefile:153:.NOTPARALLEL: clean
+llvm_mode/Makefile:155:clean:
+
+CLI PARSERS AND BASE CONFIGURATION
+afl-analyze.c:962:  while ((opt = getopt(argc,argv,"+i:f:m:t:eQ")) > 0)
+afl-fuzz.c:10086:  while ((opt = getopt(argc, argv, "+i:o:f:m:t:T:dnCB:S:M:x:QN:D:W:r:w:e:P:KEq:s:RFc:l:u:U:")) > 0)
+afl-showmap.c:637:  while ((opt = getopt(argc,argv,"+o:m:t:A:eqZQbc")) > 0)
+afl-tmin.c:989:  while ((opt = getopt(argc,argv,"+i:o:f:m:t:B:xeQ")) > 0)
+config.h:25:#define _HAVE_CONFIG_H
+config.h:31:#define VERSION             "2.56b"
+config.h:42:#define USE_COLOR
+config.h:46:#define FANCY_BOXES
+config.h:51:#define EXEC_TIMEOUT        1000
+config.h:55:#define EXEC_TM_ROUND       20
+config.h:59:#define WORD_SIZE_64 1
+config.h:72:#define MEM_LIMIT_QEMU      200
+config.h:77:#define CAL_CYCLES          8
+config.h:78:#define CAL_CYCLES_LONG     40
+config.h:82:#define TMOUT_LIMIT         250
+config.h:86:#define KEEP_UNIQUE_HANG    500
+config.h:87:#define KEEP_UNIQUE_CRASH   5000
+config.h:91:#define HAVOC_CYCLES        256
+config.h:92:#define HAVOC_CYCLES_INIT   1024
+config.h:97:#define HAVOC_MAX_MULT      16
+config.h:101:#define HAVOC_MIN           16
+config.h:112:#define HAVOC_STACK_POW2    7
+config.h:118:#define HAVOC_BLK_SMALL     32
+config.h:119:#define HAVOC_BLK_MEDIUM    128
+config.h:120:#define HAVOC_BLK_LARGE     1500
+config.h:124:#define HAVOC_BLK_XL        32768
+config.h:129:#define SKIP_TO_NEW_PROB    99 /* ...when there are new, pending favorites */
+config.h:130:#define SKIP_NFAV_OLD_PROB  95 /* ...no new favs, cur entry already fuzzed */
+config.h:131:#define SKIP_NFAV_NEW_PROB  75 /* ...no new favs, cur entry not fuzzed yet */
+config.h:135:#define SPLICE_CYCLES       15
+config.h:139:#define SPLICE_HAVOC        32
+config.h:143:#define ARITH_MAX           35
+config.h:148:#define TRIM_MIN_BYTES      4
+config.h:149:#define TRIM_START_STEPS    16
+config.h:150:#define TRIM_END_STEPS      1024
+config.h:154:#define MAX_FILE            (1 * 1024 * 1024)
+config.h:158:#define TMIN_MAX_FILE       (10 * 1024 * 1024)
+config.h:162:#define TMIN_SET_MIN_SIZE   4
+config.h:163:#define TMIN_SET_STEPS      128
+config.h:167:#define MAX_DICT_FILE       128
+config.h:171:#define MIN_AUTO_EXTRA      3
+config.h:172:#define MAX_AUTO_EXTRA      32
+config.h:178:#define MAX_DET_EXTRAS      200
+config.h:184:#define USE_AUTO_EXTRAS     50
+config.h:185:#define MAX_AUTO_EXTRAS     (USE_AUTO_EXTRAS * 10)
+config.h:191:#define EFF_MAP_SCALE2      3
+config.h:195:#define EFF_MIN_LEN         128
+config.h:200:#define EFF_MAX_PERC        90
+config.h:204:#define UI_TARGET_HZ        5
+config.h:208:#define STATS_UPDATE_SEC    60
+config.h:209:#define PLOT_UPDATE_SEC     5
+config.h:213:#define AVG_SMOOTHING       16
+config.h:217:#define SYNC_INTERVAL       5
+config.h:221:#define OUTPUT_GRACE        25
+config.h:229:#define INTERESTING_8 \
+config.h:240:#define INTERESTING_16 \
+config.h:252:#define INTERESTING_32 \
+config.h:270:#define RESEED_RNG          10000
+config.h:275:#define MAX_LINE            8192
+config.h:279:#define SHM_ENV_VAR         "__AFL_SHM_ID"
+config.h:283:#define CLANG_ENV_VAR       "__AFL_CLANG_MODE"
+config.h:284:#define AS_LOOP_ENV_VAR     "__AFL_AS_LOOPCHECK"
+config.h:285:#define PERSIST_ENV_VAR     "__AFL_PERSISTENT"
+config.h:286:#define DEFER_ENV_VAR       "__AFL_DEFER_FORKSRV"
+config.h:290:#define PERSIST_SIG         "##SIG_AFL_PERSISTENT##"
+config.h:291:#define DEFER_SIG           "##SIG_AFL_DEFER_FORKSRV##"
+config.h:295:#define EXEC_FAIL_SIG       0xfee1dead
+config.h:299:#define MSAN_ERROR          86
+config.h:304:#define FORKSRV_FD          198
+config.h:309:#define FORK_WAIT_MULT      10
+config.h:315:#define CAL_TMOUT_PERC      125
+config.h:316:#define CAL_TMOUT_ADD       50
+config.h:320:#define CAL_CHANCES         3
+config.h:328:#define MAP_SIZE_POW2       16
+config.h:329:#define MAP_SIZE            (1 << MAP_SIZE_POW2)
+config.h:331:#define STATE_STR_LEN 16
+config.h:335:#define MAX_ALLOC           0x40000000
+config.h:339:#define HASH_CONST          0xa5b35705
+config.h:343:#define  CTEST_TARGET_MS    5000
+config.h:344:#define  CTEST_CORE_TRG_MS  1000
+config.h:345:#define  CTEST_BUSY_CYCLES  (10 * 1000 * 1000)
+llvm_mode/state-tracer.h:2:#define _H_STATE_TRACER_
+llvm_mode/state-tracer.h:4:#define SHM_STATE_ENV_VAR "STATE_SHM_ID"
+llvm_mode/state-tracer.h:6:#define MVP_RADIUS_ENV_VAR "MVP_RADIUS"
+llvm_mode/state-tracer.h:7:#define MVP_CALIBRATION_ENV_VAR "MVP_CALIBRATION_SHM_ID"
+llvm_mode/state-tracer.h:8:#define AFL_OUTDIR_ENV_VAR "AFL_OUTDIR"
+llvm_mode/state-tracer.h:10:#define MIN_STACK_ALLOC_SIZE 64
+llvm_mode/state-tracer.h:12:#define TLSH_SIZE 72
+llvm_mode/state-tracer.h:14:#define MAX_NUM_STATES 100
+llvm_mode/state-tracer.h:15:#define MAX_REPETITIONS 1000
+llvm_mode/state-tracer.h:17:#define RATE_LIMIT 5

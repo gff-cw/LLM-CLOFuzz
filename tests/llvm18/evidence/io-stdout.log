@@ -1,0 +1,15 @@
+recv
+send
+recvfrom
+sendto
+recvmsg
+sendmsg
+read
+write
+fgets
+fprintf
+fread
+fwrite
+fclose
+plain-file
+close

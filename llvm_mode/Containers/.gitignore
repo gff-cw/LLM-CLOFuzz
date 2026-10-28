@@ -1,0 +1,15 @@
+.idea/*
+cmake-build-debug/*
+venv/*
+docs/*
+containers.a
+containers.so
+CMakeCache.txt
+CMakeFiles/*
+Containers
+ContainersTestDebug
+ContainersTestOptimized
+ContainersTestCoverage
+Containers.cbp
+cmake_install.cmake
+CMakeLists.txt

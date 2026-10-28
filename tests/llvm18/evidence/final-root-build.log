@@ -1,0 +1,34 @@
+[*] Checking for the ability to compile x86 code...
+[+] Everything seems to be working, ready to compile.
+/tmp/stateafl-deps/usr/bin/clang-18 -O3 -funroll-loops -Wall -D_FORTIFY_SOURCE=2 -g -Wno-pointer-sign -Wno-unused-result -DAFL_PATH=\"/usr/local/lib/afl\" -DDOC_PATH=\"/usr/local/share/doc/afl\" -DBIN_PATH=\"/usr/local/bin\" afl-gcc.c -o afl-gcc -ldl -lgvc -lcgraph -lm
+set -e; for i in afl-g++ afl-clang afl-clang++; do ln -sf afl-gcc $i; done
+/tmp/stateafl-deps/usr/bin/clang-18 -O3 -funroll-loops -Wall -D_FORTIFY_SOURCE=2 -g -Wno-pointer-sign -Wno-unused-result -DAFL_PATH=\"/usr/local/lib/afl\" -DDOC_PATH=\"/usr/local/share/doc/afl\" -DBIN_PATH=\"/usr/local/bin\" -I/tmp/stateafl-deps/usr/include  -c -o aflnet.o aflnet.c
+/tmp/stateafl-deps/usr/bin/clang-18 -O3 -funroll-loops -Wall -D_FORTIFY_SOURCE=2 -g -Wno-pointer-sign -Wno-unused-result -DAFL_PATH=\"/usr/local/lib/afl\" -DDOC_PATH=\"/usr/local/share/doc/afl\" -DBIN_PATH=\"/usr/local/bin\" afl-fuzz.c aflnet.o -o afl-fuzz -ldl -lgvc -lcgraph -lm
+afl-fuzz.c:2962:26: warning: passing 'volatile unsigned int[100]' to parameter of type 'const void *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+ 2962 |   memcpy(state_sequence, state_shared_ptr->seq, *state_count_ref * sizeof(unsigned int));
+      |                          ^~~~~~~~~~~~~~~~~~~~~
+/usr/include/x86_64-linux-gnu/bits/string_fortified.h:26:64: note: passing argument to parameter '__src' here
+   26 | __NTH (memcpy (void *__restrict __dest, const void *__restrict __src,
+      |                                                                ^
+afl-fuzz.c:4668:13: warning: unused function 'link_or_copy' [-Wunused-function]
+ 4668 | static void link_or_copy(u8* old_path, u8* new_path) {
+      |             ^~~~~~~~~~~~
+2 warnings generated.
+/tmp/stateafl-deps/usr/bin/clang-18 -O3 -funroll-loops -Wall -D_FORTIFY_SOURCE=2 -g -Wno-pointer-sign -Wno-unused-result -DAFL_PATH=\"/usr/local/lib/afl\" -DDOC_PATH=\"/usr/local/share/doc/afl\" -DBIN_PATH=\"/usr/local/bin\" afl-replay.c aflnet.o -o afl-replay -ldl -lgvc -lcgraph -lm
+/tmp/stateafl-deps/usr/bin/clang-18 -O3 -funroll-loops -Wall -D_FORTIFY_SOURCE=2 -g -Wno-pointer-sign -Wno-unused-result -DAFL_PATH=\"/usr/local/lib/afl\" -DDOC_PATH=\"/usr/local/share/doc/afl\" -DBIN_PATH=\"/usr/local/bin\" aflnet-replay.c aflnet.o -o aflnet-replay -ldl -lgvc -lcgraph -lm
+/tmp/stateafl-deps/usr/bin/clang-18 -O3 -funroll-loops -Wall -D_FORTIFY_SOURCE=2 -g -Wno-pointer-sign -Wno-unused-result -DAFL_PATH=\"/usr/local/lib/afl\" -DDOC_PATH=\"/usr/local/share/doc/afl\" -DBIN_PATH=\"/usr/local/bin\" afl-showmap.c -o afl-showmap -ldl -lgvc -lcgraph -lm
+/tmp/stateafl-deps/usr/bin/clang-18 -O3 -funroll-loops -Wall -D_FORTIFY_SOURCE=2 -g -Wno-pointer-sign -Wno-unused-result -DAFL_PATH=\"/usr/local/lib/afl\" -DDOC_PATH=\"/usr/local/share/doc/afl\" -DBIN_PATH=\"/usr/local/bin\" afl-tmin.c -o afl-tmin -ldl -lgvc -lcgraph -lm
+/tmp/stateafl-deps/usr/bin/clang-18 -O3 -funroll-loops -Wall -D_FORTIFY_SOURCE=2 -g -Wno-pointer-sign -Wno-unused-result -DAFL_PATH=\"/usr/local/lib/afl\" -DDOC_PATH=\"/usr/local/share/doc/afl\" -DBIN_PATH=\"/usr/local/bin\" afl-gotcpu.c -o afl-gotcpu -ldl -lgvc -lcgraph -lm
+afl-gotcpu.c:93:7: warning: variable 'loop_repeats' set but not used [-Wunused-but-set-variable]
+   93 |   s32 loop_repeats = 0;
+      |       ^
+1 warning generated.
+/tmp/stateafl-deps/usr/bin/clang-18 -O3 -funroll-loops -Wall -D_FORTIFY_SOURCE=2 -g -Wno-pointer-sign -Wno-unused-result -DAFL_PATH=\"/usr/local/lib/afl\" -DDOC_PATH=\"/usr/local/share/doc/afl\" -DBIN_PATH=\"/usr/local/bin\" afl-analyze.c -o afl-analyze -ldl -lgvc -lcgraph -lm
+/tmp/stateafl-deps/usr/bin/clang-18 -O3 -funroll-loops -Wall -D_FORTIFY_SOURCE=2 -g -Wno-pointer-sign -Wno-unused-result -DAFL_PATH=\"/usr/local/lib/afl\" -DDOC_PATH=\"/usr/local/share/doc/afl\" -DBIN_PATH=\"/usr/local/bin\" afl-as.c -o afl-as -ldl -lgvc -lcgraph -lm
+ln -sf afl-as as
+[*] Testing the CC wrapper and instrumentation output...
+unset AFL_USE_ASAN AFL_USE_MSAN; AFL_QUIET=1 AFL_CC=/tmp/stateafl-deps/usr/bin/clang-18 AFL_INST_RATIO=100 AFL_PATH=. ./afl-clang -O3 -funroll-loops -Wall -D_FORTIFY_SOURCE=2 -g -Wno-pointer-sign -Wno-unused-result -DAFL_PATH=\"/usr/local/lib/afl\" -DDOC_PATH=\"/usr/local/share/doc/afl\" -DBIN_PATH=\"/usr/local/bin\" test-instr.c -o test-instr -ldl -lgvc -lcgraph -lm
+./afl-showmap -m none -q -o .test-instr0 ./test-instr < /dev/null
+echo 1 | ./afl-showmap -m none -q -o .test-instr1 ./test-instr
+[+] All right, the instrumentation seems to be working!
+[+] All done! Be sure to review README - it's pretty short and useful.

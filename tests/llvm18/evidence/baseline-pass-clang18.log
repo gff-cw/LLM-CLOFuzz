@@ -1,0 +1,12 @@
+make: Entering directory '/tmp/stateafl-baseline/llvm_mode'
+[*] Checking for working 'llvm-config'...
+[*] Checking for working '/tmp/stateafl-deps/usr/bin/clang-18'...
+[*] Checking for '../afl-showmap'...
+[+] All set and ready to build.
+/tmp/stateafl-deps/usr/bin/clang++-18 `llvm-config-18 --cxxflags` -Wl,-znodelete -fno-rtti -fpic -O3 -funroll-loops -Wall -D_FORTIFY_SOURCE=2 -g -Wno-pointer-sign -DVERSION=\"2.56b\" -Wno-variadic-macros -shared afl-llvm-pass.so.cc -o ../afl-llvm-pass.so `llvm-config-18 --ldflags`
+afl-llvm-pass.so.cc:47:10: fatal error: 'llvm/Transforms/IPO/PassManagerBuilder.h' file not found
+   47 | #include "llvm/Transforms/IPO/PassManagerBuilder.h"
+      |          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+1 error generated.
+make: *** [Makefile:89: ../afl-llvm-pass.so] Error 1
+make: Leaving directory '/tmp/stateafl-baseline/llvm_mode'

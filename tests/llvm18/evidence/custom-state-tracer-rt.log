@@ -1,0 +1,48 @@
+OUTDIR: /home/weicresec/Desktop/stateafl/tests/llvm18/out/verified-suite/dynamic/custom-logs-hj7kjj8t
+STATE TRACER STARTED
+NO SHM (for testing)
+NEW STACK ALLOC: 0x7fffe9db3bc0 (256 bytes)
+NEW ALLOC [0]: 0x7fffe9db3bc0, 256
+NEW STACK ALLOC: 0x7fffe9db3ac0 (256 bytes)
+NEW ALLOC [1]: 0x7fffe9db3ac0, 256
+NEW HEAP ALLOC: 0x632c337228f0 (4096 bytes)
+NEW ALLOC [2]: 0x632c337228f0, 4096
+TRACE RECV (buf = 0x7fffe9db3bc0, size = 256)
+DETECTED I/O BUF AREA: addr = 0x7fffe9db3bc0, size = 256
+TRACE SEND (buf = 0x7fffe9db3ac0, size = 256)
+DUMPING ALLOC RECORD [2]: addr=0x632c337228f0 (size=4096 bytes)
+DUMPING ALLOC RECORD [1]: addr=0x7fffe9db3ac0 (size=256 bytes)
+DUMPING ALLOC RECORD [0]: addr=0x7fffe9db3bc0 (size=256 bytes)
+DETECTED I/O BUF AREA: addr = 0x7fffe9db3ac0, size = 256
+FREE HEAP ALLOC: 0x632c337228f0 (0 bytes)
+FREE ALLOC [2]: 0x632c337228f0
+FREE STACK ALLOC: 0x7fffe9db3ac0 (256 bytes)
+FREE ALLOC [1]: 0x7fffe9db3ac0
+FREE STACK ALLOC: 0x7fffe9db3bc0 (256 bytes)
+FREE ALLOC [0]: 0x7fffe9db3bc0
+# DUMPS: 3
+
+Latest iteration: 1
+Unable to read MVP Tree from file, initializing new one...
+SAVING STATE [# 0]: 0
+
+DUMPING [0x632c337228f0, id=2, iter_init=0, iter_end=1, iter_dumped=0]:
+ANALYZING: [0x632c337228f0, id=2, iter_init=0, iter_end=1, iter_dumped=0, size=4096]:
+STORING AREA: [start=0x632c337228f0, size=4096]
+
+DUMPING [0x7fffe9db3ac0, id=1, iter_init=0, iter_end=1, iter_dumped=0]:
+SKIPPING IGNORED AREA: [0x7fffe9db3ac0, id=1, iter_init=0, iter_end=1, iter_dumped=0]:
+
+DUMPING [0x7fffe9db3bc0, id=0, iter_init=0, iter_end=1, iter_dumped=0]:
+SKIPPING IGNORED AREA: [0x7fffe9db3bc0, id=0, iter_init=0, iter_end=1, iter_dumped=0]:
+TLSH HASH: 'T1D3817D3805326623E1A304BCB84395D0D8F76134A5818E4F9B177B25F815E60A2936F8'
+DATA SIZE: 4096
+MVP RADIUS: 100.000000
+QUERY MVP TREE - HASH NOT FOUND
+ADDING NEW HASH TO MVP TREE: state=1, hash='T1D3817D3805326623E1A304BCB84395D0D8F76134A5818E4F9B177B25F815E60A2936F8' (size=73)
+TLSH DISTANCE: 0
+COMPUTED STATE: 1
+SAVING STATE [# 1]: 00000001
+
+TOTAL STATES: 2
+WRITING MVP TREE TO FILE (/home/weicresec/Desktop/stateafl/tests/llvm18/out/verified-suite/dynamic/custom-logs-hj7kjj8t/.tree.mvp)...

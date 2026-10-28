@@ -1,0 +1,8 @@
+In file included from llvm_mode/afl-llvm-rt.o.c:30:
+In file included from llvm_mode/../config.h:27:
+In file included from llvm_mode/../types.h:28:
+In file included from /tmp/stateafl-deps/usr/lib/llvm-18/lib/clang/18/include/stdint.h:52:
+/usr/include/stdint.h:26:10: fatal error: 'bits/libc-header-start.h' file not found
+   26 | #include <bits/libc-header-start.h>
+      |          ^~~~~~~~~~~~~~~~~~~~~~~~~~
+1 error generated.

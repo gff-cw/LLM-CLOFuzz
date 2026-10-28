@@ -1,0 +1,50 @@
+afl-fuzz 2.56b by <lcamtuf@google.com>
+[+] Disabling the UI because AFL_NO_UI is set.
+[+] You have 4 CPU cores and 2 runnable tasks (utilization: 50%).
+[+] Try parallel jobs - see docs/parallel_fuzzing.txt.
+[!] WARNING: Not binding to a CPU core (AFL_NO_AFFINITY set).
+[*] Checking core_pattern...
+
+[-] Hmm, your system is configured to send core dump notifications to an
+    external utility. This will cause issues: there will be an extended delay
+    between stumbling upon a crash and having this information relayed to the
+    fuzzer via the standard waitpid() API.
+
+    To avoid having crashes misinterpreted as timeouts, please log in as root
+    and temporarily modify /proc/sys/kernel/core_pattern, like so:
+
+    echo core >/proc/sys/kernel/core_pattern
+[+] ASLR disabled for this process (ADDR_NO_RANDOMIZE).
+[*] Setting up output directories...
+[*] Scanning '/home/weicresec/Desktop/stateafl/tests/llvm18/out/system-toolchain/e2e/in'...
+[+] No auto-generated dictionary tokens to reuse.
+[*] Creating hard links for all input files...
+[*] Validating target binary...
+[*] Spinning up the fork server...
+[+] All right - fork server is up.
+[*] Spinning up the fork server...
+[+] All right - fork server is up.
+[*] Attempting dry run with 'id:000000,orig:abc'...
+    len = 6, map size = 43, exec speed = 95493 us
+[*] Attempting dry run with 'id:000001,orig:bac'...
+    len = 6, map size = 43, exec speed = 97423 us
+[!] WARNING: No new instrumentation output, test case may be useless.
+[+] Setting TLSH distance threshold to 5
+[+] Initializing IPSM by running the seed inputs
+[+] Running: id:000000,orig:abc
+[+] Running: id:000001,orig:bac
+[+] All test cases processed.
+
+[!] WARNING: The target binary is pretty slow! See docs/perf_tips.txt.
+[!] WARNING: Some test cases look useless. Consider using a smaller set.
+[+] Here are some useful stats:
+
+    Test case count : 1 favored, 0 variable, 2 total
+       Bitmap range : 43 to 43 bits (average: 43.00 bits)
+        Exec timing : 95.5k to 97.4k us (average: 96.5k us)
+
+[+] All set and ready to roll!
+
+
++++ Testing aborted by user +++
+[+] We're done here. Have a nice day!

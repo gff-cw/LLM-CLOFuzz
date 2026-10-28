@@ -1,0 +1,189 @@
+{
+  "passed": true,
+  "cases": [
+    {
+      "name": "default-c-version",
+      "returncode": 0,
+      "passed": true
+    },
+    {
+      "name": "default-cpp-version",
+      "returncode": 0,
+      "passed": true
+    },
+    {
+      "name": "plugin-export",
+      "returncode": 0,
+      "passed": true
+    },
+    {
+      "name": "driver",
+      "returncode": 0,
+      "passed": true
+    },
+    {
+      "name": "afl_cc-override",
+      "returncode": 0,
+      "passed": true
+    },
+    {
+      "name": "afl_cxx-override",
+      "returncode": 0,
+      "passed": true
+    },
+    {
+      "name": "harden-flags",
+      "returncode": 0,
+      "passed": true
+    },
+    {
+      "name": "asan-flags",
+      "returncode": 0,
+      "passed": true
+    },
+    {
+      "name": "msan-flags",
+      "returncode": 0,
+      "passed": true
+    },
+    {
+      "name": "builtin-flags",
+      "returncode": 0,
+      "passed": true
+    },
+    {
+      "name": "asan-msan-conflict",
+      "returncode": 1,
+      "passed": true
+    },
+    {
+      "name": "harden-asan-conflict",
+      "returncode": 1,
+      "passed": true
+    },
+    {
+      "name": "instrument-coverage",
+      "returncode": 0,
+      "passed": true
+    },
+    {
+      "name": "path-empty",
+      "returncode": 0,
+      "passed": true
+    },
+    {
+      "name": "path-one",
+      "returncode": 0,
+      "passed": true
+    },
+    {
+      "name": "ratio-0",
+      "returncode": 1,
+      "passed": true
+    },
+    {
+      "name": "ratio-101",
+      "returncode": 1,
+      "passed": true
+    },
+    {
+      "name": "ratio-invalid",
+      "returncode": 1,
+      "passed": true
+    },
+    {
+      "name": "ratio-1",
+      "returncode": 0,
+      "passed": true
+    },
+    {
+      "name": "ratio-100",
+      "returncode": 0,
+      "passed": true
+    },
+    {
+      "name": "c-object",
+      "returncode": 0,
+      "passed": true
+    },
+    {
+      "name": "c-link",
+      "returncode": 0,
+      "passed": true
+    },
+    {
+      "name": "c-execute",
+      "returncode": 0,
+      "passed": true
+    },
+    {
+      "name": "c-harden-build",
+      "returncode": 0,
+      "passed": true
+    },
+    {
+      "name": "c-harden-execute",
+      "returncode": 0,
+      "passed": true
+    },
+    {
+      "name": "c-asan-build",
+      "returncode": 0,
+      "passed": true
+    },
+    {
+      "name": "c-asan-execute",
+      "returncode": 0,
+      "passed": true
+    },
+    {
+      "name": "cpp-object",
+      "returncode": 0,
+      "passed": true
+    },
+    {
+      "name": "cpp-link",
+      "returncode": 0,
+      "passed": true
+    },
+    {
+      "name": "cpp-execute",
+      "returncode": 0,
+      "passed": true
+    },
+    {
+      "name": "cpp-harden-build",
+      "returncode": 0,
+      "passed": true
+    },
+    {
+      "name": "cpp-harden-execute",
+      "returncode": 0,
+      "passed": true
+    },
+    {
+      "name": "cpp-asan-build",
+      "returncode": 0,
+      "passed": true
+    },
+    {
+      "name": "cpp-asan-execute",
+      "returncode": 0,
+      "passed": true
+    },
+    {
+      "name": "msan-build",
+      "returncode": 0,
+      "passed": true
+    },
+    {
+      "name": "msan-execute",
+      "returncode": 0,
+      "passed": true
+    }
+  ],
+  "coverage_tuple_counts": [
+    3,
+    5
+  ]
+}

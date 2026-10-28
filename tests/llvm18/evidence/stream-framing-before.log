@@ -1,0 +1,2 @@
+{"mode": "coalesced", "reply_hex": "4f4b310a", "responses": ["OK1"]}
+{"mode": "fragmented", "reply_hex": "4f4b310a4f4b37e94f4b33104f4b37e94f4b35904f4b37e9", "responses": ["OK1", "OK7", "OK3", "OK7", "OK5", "OK7"]}

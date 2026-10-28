@@ -1,0 +1,40 @@
+[
+  {
+    "mode": "coalesced",
+    "command": [
+      "setarch",
+      "x86_64",
+      "-R",
+      "/home/weicresec/Desktop/stateafl/tests/llvm18/out/verified-suite/e2e/network_server",
+      "57657"
+    ],
+    "reply_hex": "4f4b310a4f4b32db4f4b34e8",
+    "sequence": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "iterations": 3,
+    "exit_code": 0
+  },
+  {
+    "mode": "fragmented",
+    "command": [
+      "setarch",
+      "x86_64",
+      "-R",
+      "/home/weicresec/Desktop/stateafl/tests/llvm18/out/verified-suite/e2e/network_server",
+      "33103"
+    ],
+    "reply_hex": "4f4b310a4f4b32db4f4b34e8",
+    "sequence": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "iterations": 3,
+    "exit_code": 0
+  }
+]

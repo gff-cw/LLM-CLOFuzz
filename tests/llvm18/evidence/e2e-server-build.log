@@ -1,0 +1,40 @@
+[+] FUNCTION LLVM: llvm.lifetime.start.p0
+[+] FUNCTION LLVM: llvm.lifetime.start.p0
+[+] FUNCTION LLVM: llvm.lifetime.start.p0
+[+] FUNCTION LLVM: llvm.lifetime.start.p0
+[+] FUNCTION LLVM: llvm.lifetime.start.p0
+[+] FUNCTION LLVM: llvm.lifetime.start.p0
+[+] Found function call: malloc
+
+[+] FUNCTION LLVM: llvm.lifetime.start.p0
+[+] Found function call: malloc
+
+[+] FUNCTION LLVM: llvm.lifetime.start.p0
+[+] FUNCTION LLVM: llvm.lifetime.start.p0
+[+] Found function call: recv
+
+[+] FUNCTION LLVM: llvm.lifetime.start.p0
+[+] Found function call: send
+
+[+] FUNCTION LLVM: llvm.lifetime.end.p0
+[+] FUNCTION LLVM: llvm.lifetime.end.p0
+[+] FUNCTION LLVM: llvm.lifetime.end.p0
+[+] Found function call: close
+
+[+] Found function call: close
+
+[+] Found function call: free
+
+[+] Found function call: free
+
+[+] FUNCTION LLVM: llvm.lifetime.end.p0
+[+] FUNCTION LLVM: llvm.lifetime.end.p0
+[+] FUNCTION LLVM: llvm.lifetime.end.p0
+[+] FUNCTION LLVM: llvm.lifetime.end.p0
+[+] FUNCTION LLVM: llvm.lifetime.end.p0
+[+] FUNCTION LLVM: llvm.lifetime.end.p0
+[+] FUNCTION LLVM: llvm.lifetime.end.p0
+[+] FUNCTION LLVM: llvm.lifetime.start.p0
+[+] FUNCTION LLVM: llvm.lifetime.start.p0
+[+] FUNCTION LLVM: llvm.lifetime.end.p0
+[+] FUNCTION LLVM: llvm.lifetime.end.p0

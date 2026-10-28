@@ -1,0 +1,35 @@
+Fri Oct 23 11:32:46 UTC 2026
+PRETTY_NAME="Ubuntu 24.04.4 LTS"
+NAME="Ubuntu"
+VERSION_ID="24.04"
+VERSION="24.04.4 LTS (Noble Numbat)"
+VERSION_CODENAME=noble
+ID=ubuntu
+ID_LIKE=debian
+HOME_URL="https://www.ubuntu.com/"
+SUPPORT_URL="https://help.ubuntu.com/"
+BUG_REPORT_URL="https://bugs.launchpad.net/ubuntu/"
+PRIVACY_POLICY_URL="https://www.ubuntu.com/legal/terms-and-policies/privacy-policy"
+UBUNTU_CODENAME=noble
+LOGO=ubuntu-logo
+18.1.3
+Ubuntu clang version 18.1.3 (1ubuntu1)
+Target: x86_64-pc-linux-gnu
+Thread model: posix
+InstalledDir: /tmp/stateafl-deps/usr/bin
+Ubuntu clang version 18.1.3 (1ubuntu1)
+Target: x86_64-pc-linux-gnu
+Thread model: posix
+InstalledDir: /tmp/stateafl-deps/usr/bin
+Ubuntu LLVM version 18.1.3
+  Optimized build.
+  Default target: x86_64-pc-linux-gnu
+  Host CPU: alderlake
+Ubuntu LLVM version 18.1.3
+  Optimized build.
+cmake version 3.28.3
+
+CMake suite maintained and supported by Kitware (kitware.com/cmake).
+ d7c0177b34b49f4831d7943c4be420a5733345ac llvm_mode/Containers (v1.2.0-7-gd7c0177)
+ bc229f6ebd73413a892d0c0d96fa6b360505e7ec llvm_mode/mvptree (heads/master)
+ fb38843a474ea2bd3a94400a3d61a37b403ca0b0 llvm_mode/tlsh (v3.4.5-189-gfb38843)
