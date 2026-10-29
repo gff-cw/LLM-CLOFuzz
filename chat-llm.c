@@ -269,6 +269,7 @@ char *chat_with_llm(char *prompt, char *model, int tries, float temperature)
 
     char default_url[512];
     char *url = default_url;
+    const char *custom_base = NULL;
 
     const char *endpoint = getenv("LLM_ENDPOINT");
     if (endpoint && *endpoint)
@@ -277,7 +278,7 @@ char *chat_with_llm(char *prompt, char *model, int tries, float temperature)
     }
     else
     {
-        const char *custom_base = (cfg->base_url[0] && strcmp(cfg->base_url, "https://api.openai.com/v1") != 0) ? cfg->base_url : getenv("OPENAI_BASE_URL");
+        custom_base = (cfg->base_url[0] && strcmp(cfg->base_url, "https://api.openai.com/v1") != 0) ? cfg->base_url : getenv("OPENAI_BASE_URL");
         if (!custom_base || !*custom_base) custom_base = getenv("OPENAI_API_BASE");
         if (!custom_base || !*custom_base) custom_base = getenv("LLM_BASE_URL");
         if (!custom_base || !*custom_base) custom_base = cfg->base_url;
