@@ -1,0 +1,112 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LLM-CLOFuzz Format Inventory",
+  "version": "1.0.0",
+  "contracts": {
+    "replay_container": {
+      "header_width_bytes": 4,
+      "endianness": "host_little_endian",
+      "record_header_type": "uint32_t",
+      "payload_binary_safe": true,
+      "null_terminated": false,
+      "zero_length_allowed": true,
+      "zero_length_interval": "end = start - 1",
+      "trailing_data_allowed": false,
+      "size_formula": "sum(4 + record_len_i)"
+    },
+    "raw_buffer": {
+      "framing": "none",
+      "explicit_length_required": true,
+      "null_terminated": false,
+      "multi_message_invertible_without_metadata": false
+    },
+    "region_metadata": {
+      "type": "region_t",
+      "coordinate_system": "closed_interval",
+      "start_field": "start_byte",
+      "end_field": "end_byte",
+      "bounds_formula": "end_byte == start_byte + len - 1",
+      "buffer_association_required": true,
+      "invalidation_triggers": [
+        "buffer_realloc",
+        "content_mutation",
+        "length_change",
+        "iteration_completion"
+      ]
+    }
+  },
+  "findings_audit": {
+    "F2-A": {
+      "location": "afl-fuzz.c:3341",
+      "status": "confirmed_offline",
+      "issue": "raw_read_of_replay_file",
+      "action": "explicit_unpack_replay_before_inspection"
+    },
+    "F2-B": {
+      "location": "afl-fuzz.c:3233",
+      "status": "confirmed_offline",
+      "issue": "raw_offsets_with_replay_buffer",
+      "action": "distinguish_replay_and_raw_coordinate_systems"
+    },
+    "F2-C": {
+      "location": "afl-fuzz.c:3353",
+      "status": "confirmed_offline",
+      "issue": "indexing_replay_buffer_with_raw_regions",
+      "action": "index_clean_raw_payload_array"
+    },
+    "F2-D": {
+      "location": "chat-llm.c:1230",
+      "status": "confirmed_offline",
+      "issue": "c_string_semantics_on_binary_data",
+      "action": "explicit_binary_lengths_and_safe_json_escaping"
+    },
+    "F2-E": {
+      "location": "chat-llm.c:998",
+      "status": "confirmed_offline",
+      "issue": "unframed_seed_writing",
+      "action": "write_seeds_with_4byte_replay_framing"
+    },
+    "F2-F": {
+      "location": "afl-fuzz.c:11235",
+      "status": "confirmed_offline",
+      "issue": "queue_input_expectation_mismatch",
+      "action": "preserve_replay_framing_across_all_initial_seeds"
+    },
+    "F3-A": {
+      "location": "afl-fuzz.c:11081",
+      "status": "confirmed_offline",
+      "issue": "runtime_override_to_generic",
+      "action": "safe_generic_extractor_with_format_awareness"
+    },
+    "F3-B": {
+      "location": "afl-fuzz.c:3222",
+      "status": "confirmed_offline",
+      "issue": "unverified_region_reuse",
+      "action": "verify_buffer_hash_and_bounds_before_reuse"
+    },
+    "F3-C": {
+      "location": "afl-fuzz.c:3235",
+      "status": "confirmed_offline",
+      "issue": "ambiguous_fallback_interpretation",
+      "action": "strict_replay_parsing_with_explicit_diagnostics"
+    },
+    "F3-D": {
+      "location": "afl-fuzz.c:7614",
+      "status": "confirmed_offline",
+      "issue": "metadata_loss_in_llm_mutation_branch",
+      "action": "regenerate_or_update_regions_post_mutation"
+    },
+    "F3-E": {
+      "location": "afl-fuzz.c:7705",
+      "status": "confirmed_offline",
+      "issue": "region_init_order_lag",
+      "action": "ensure_regions_valid_prior_to_usage"
+    },
+    "F3-F": {
+      "location": "afl-fuzz.c:9611",
+      "status": "confirmed_offline",
+      "issue": "stale_cleanup_exposure",
+      "action": "explicit_nullification_and_generation_counter"
+    }
+  }
+}
