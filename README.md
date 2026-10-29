@@ -43,6 +43,11 @@ AFLNet scheduling. The default instrumentation is StateAFL's own New PM plugin.
 See [the source audit](LLVM18_MIGRATION_AUDIT.md) and
 [the measured test report](LLVM18_TEST_REPORT.md) for scope and evidence.
 
+The separate [ChatAFL source audit](docs/CHATAFL_SOURCE_AUDIT.md) and
+[evaluation review](docs/CHATAFL_EVALUATION_REVIEW.md) document the three LLM
+mechanisms and their compatibility constraints. This is a research review;
+the LLM mechanisms have not been integrated or evaluated in this checkout.
+
 Use the existing system LLVM 18.1.3 toolchain. No separate LLVM download,
 versioned executable name, or manual installation into `/usr/lib/llvm-18` is
 required. Check that the normal commands on PATH match:

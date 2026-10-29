@@ -1567,7 +1567,7 @@ u32 save_kl_messages_to_file(klist_t(lms) *kl_messages, u8 *fname, u8 replay_ena
   u32 len = 0, message_size = 0;
   kliter_t(lms) *it;
 
-  s32 fd = open(fname, O_WRONLY | O_CREAT, 0600);
+  s32 fd = open(fname, O_WRONLY | O_CREAT | O_TRUNC, 0600);
   if (fd < 0) PFATAL("Unable to create file '%s'", fname);
 
   u32 message_count = 0;
@@ -1602,6 +1602,64 @@ u32 save_kl_messages_to_file(klist_t(lms) *kl_messages, u8 *fname, u8 replay_ena
   ck_free(mem);
 
   return len;
+}
+
+void save_responses_to_file(char *buffer, u32 buffer_len, u32 *response_bytes, u8 *fname, u32 max_count)
+{
+  if (!fname) return;
+  FILE *fresponses = fopen((char *)fname, "wb");
+  if (!fresponses) return;
+
+  int prev = 0;
+  fwrite(&max_count, 1, sizeof(u32), fresponses);
+  if (buffer && response_bytes) {
+    for (int i = 0; i < max_count; i++)
+    {
+      int diff = response_bytes[i] - prev;
+      if (diff < 0) diff = 0;
+      fwrite(&diff, sizeof(u32), 1, fresponses);
+      if (diff > 0 && prev + diff <= buffer_len) {
+        fwrite(buffer + prev, sizeof(char), diff, fresponses);
+      }
+      prev = response_bytes[i];
+    }
+  }
+
+  fclose(fresponses);
+}
+
+char **get_responses_from_file(u8 *fname, u32 **response_bytes, u32 *max_count, u32 *buffer_len)
+{
+  if (!fname || !response_bytes || !max_count || !buffer_len) return NULL;
+  FILE *fresponses = fopen((char *)fname, "rb");
+  if (fresponses == NULL)
+    return NULL;
+
+  if (fread(max_count, sizeof(u32), 1, fresponses) != 1 || *max_count == 0) {
+    fclose(fresponses);
+    return NULL;
+  }
+  char **buffer = ck_alloc(sizeof(char *) * max_count[0]);
+  response_bytes[0] = ck_alloc(sizeof(u32) * max_count[0]);
+  for (int i = 0; i < *max_count; i++)
+  {
+    int len = 0;
+    if (fread(&len, sizeof(u32), 1, fresponses) != 1 || len < 0) {
+      len = 0;
+    }
+    buffer_len[0] = buffer_len[0] + len;
+    (*response_bytes)[i] = buffer_len[0];
+    buffer[i] = ck_alloc(sizeof(char) * (len + 1));
+    if (len > 0) {
+      if (fread(buffer[i], sizeof(char), len, fresponses) != (size_t)len) {
+        // partial read, safe null terminator
+      }
+    }
+    buffer[i][len] = '\0';
+  }
+
+  fclose(fresponses);
+  return buffer;
 }
 
 region_t* convert_kl_messages_to_regions(klist_t(lms) *kl_messages, u32* region_count_ref, u32 max_count)

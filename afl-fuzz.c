@@ -68,6 +68,7 @@
 #include <sys/file.h>
 
 #include "aflnet.h"
+#include "chat-llm.h"
 #include <graphviz/gvc.h>
 #include <math.h>
 
@@ -467,6 +468,192 @@ kliter_t(lms) *M2_prev, *M2_next;
 //Function pointers pointing to Protocol-specific functions
 unsigned int* (*extract_response_codes)(unsigned char* buf, unsigned int buf_size, unsigned int* state_count_ref) = extract_response_state_tracer;
 region_t* (*extract_requests)(unsigned char* buf, unsigned int buf_size, unsigned int* region_count_ref) = extract_requests_generic;
+
+/* Track how long we don't observe interesting seeds */
+u32 uninteresting_times = 0;
+/* Track how much times we ask for breaking coverage plateau */
+u32 chat_times = 0;
+
+// Patterns generated from the Language Model
+klist_t(rang) * protocol_patterns;
+// Message types of the patterns generated from the Language model
+khash_t(strSet) * message_types_set;
+// Protocol name kept for prompts
+char *protocol_name;
+// Reward fields - To be used
+u32 reward_random;
+u32 reward_grammar;
+
+void setup_llm_grammars(void)
+{
+  ACTF("Getting grammars from LLM...");
+
+  khash_t(consistency_table) *const_table = kh_init(consistency_table);
+  char *first_question = NULL;
+  char *templates_prompt = construct_prompt_for_templates(protocol_name, &first_question);
+
+  for (int iter = 0; iter < TEMPLATE_CONSISTENCY_COUNT; iter++)
+  {
+    klist_t(gram) *grammar_list = kl_init(gram);
+
+    char *templates_answer = chat_with_llm(templates_prompt, "turbo", GRAMMAR_RETRIES, 0.5);
+    if (templates_answer == NULL)
+      goto free_templates_answer;
+
+    char *remaining_prompt = construct_prompt_for_remaining_templates(protocol_name, first_question, templates_answer);
+    char *remaining_templates = chat_with_llm(remaining_prompt, "turbo", GRAMMAR_RETRIES, 0.5);
+    if (remaining_templates == NULL)
+      goto free_remaining;
+
+    char *combined_templates = NULL;
+    asprintf(&combined_templates, "%s\n%s", templates_answer, remaining_templates);
+
+    char *grammar_output_path = alloc_printf("%s/protocol-grammars/llm-grammar-output-%d", out_dir, iter);
+    int grammar_output_fd = open(grammar_output_path, O_WRONLY | O_CREAT, 0600);
+    if (grammar_output_fd >= 0) {
+      ck_write(grammar_output_fd, combined_templates, strlen(combined_templates), grammar_output_path);
+      close(grammar_output_fd);
+    }
+    ck_free(grammar_output_path);
+
+    extract_message_grammars(combined_templates, grammar_list);
+
+    kliter_t(gram) * iter_gram;
+    for (iter_gram = kl_begin(grammar_list); iter_gram != kl_end(grammar_list); iter_gram = kl_next(iter_gram))
+    {
+      json_object *jobj = kl_val(iter_gram);
+      if (!jobj || !json_object_is_type(jobj, json_type_array) || json_object_array_length(jobj) == 0)
+        continue;
+
+      json_object *header = json_object_array_get_idx(jobj, 0);
+      if (!header) continue;
+
+      int absent;
+      const char *header_str = json_object_get_string(header);
+      if (!header_str || !*header_str) continue;
+
+      khiter_t k = kh_put(consistency_table, const_table, header_str, &absent);
+      if (absent)
+      {
+        khash_t(field_table) *field_table = kh_init(field_table);
+        kh_value(const_table, k) = field_table;
+      }
+
+      for (int i = 1; i < json_object_array_length(jobj); i++)
+      {
+        json_object *field_obj = json_object_array_get_idx(jobj, i);
+        if (!field_obj) continue;
+        const char *v = json_object_get_string(field_obj);
+        if (!v) continue;
+        khash_t(field_table) *field_table = kh_value(const_table, k);
+        khiter_t field_k = kh_put(field_table, field_table, v, &absent);
+        if (absent)
+        {
+          kh_value(field_table, field_k) = 0;
+        }
+        kh_value(field_table, field_k)++;
+      }
+    }
+    kl_destroy_gram(grammar_list);
+
+    free(combined_templates);
+    free(remaining_templates);
+
+  free_remaining:
+    if (remaining_prompt) free(remaining_prompt);
+
+  free_templates_answer:
+    if (templates_answer) free(templates_answer);
+  }
+
+  int pattern_index = 0;
+  for (khiter_t con_t_iter = kh_begin(const_table); con_t_iter != kh_end(const_table); ++con_t_iter)
+  {
+    if (kh_exist(const_table, con_t_iter))
+    {
+      pcre2_code **patterns = ck_alloc(2 * sizeof(pcre2_code *));
+
+      khash_t(field_table) *field_table = kh_value(const_table, con_t_iter);
+
+      json_object *header_v = json_object_new_string(kh_key(const_table, con_t_iter));
+      const char *header_str = json_object_to_json_string(header_v);
+
+      char *pattern_path = alloc_printf("%s/protocol-grammars/pattern-%d", out_dir, pattern_index);
+      pattern_index++;
+      int pattern_fd = open(pattern_path, O_WRONLY | O_CREAT, 0600);
+
+      char *message_type = extract_message_pattern(header_str, field_table, patterns, pattern_fd, pattern_path);
+      if (message_type != NULL)
+      {
+        int discard;
+        kh_put(strSet, message_types_set, message_type, &discard);
+        *kl_pushp(rang, protocol_patterns) = patterns;
+      }
+      else
+      {
+        ck_free(patterns);
+      }
+
+      json_object_put(header_v);
+      if (pattern_fd >= 0) close(pattern_fd);
+      ck_free(pattern_path);
+    }
+  }
+
+  if (first_question) free(first_question);
+  if (templates_prompt) free(templates_prompt);
+}
+
+range_list parse_buffer(char *buf, size_t buf_len)
+{
+  range_list best_decomposition;
+  kv_init(best_decomposition);
+  kliter_t(rang) * iter_rang;
+  // Find a valid decomposition of the buffer, according to a header pattern
+  if (protocol_patterns) {
+    for (iter_rang = kl_begin(protocol_patterns); iter_rang != kl_end(protocol_patterns); iter_rang = kl_next(iter_rang))
+    {
+      pcre2_code **patterns = kl_val(iter_rang);
+      if (!patterns) continue;
+      pcre2_code *header_pattern = patterns[0];
+      pcre2_code *fields_pattern = patterns[1];
+
+      if (header_pattern == NULL || fields_pattern == NULL) continue;
+
+      range_list header_groups = starts_with(buf, buf_len, header_pattern);
+
+      if (kv_size(header_groups) == 0)
+      {
+        kv_destroy(header_groups);
+        continue;
+      }
+      else
+      {
+        range header_match = kv_pop(header_groups);
+        char *offsetted_line = buf;
+        size_t offsetted_len = buf_len;
+        range_list dyn_ranges = get_mutable_ranges(offsetted_line, offsetted_len, header_match.len, fields_pattern);
+
+        for (int i = 0; i < kv_size(dyn_ranges); i++)
+        {
+          kv_push(range, header_groups, kv_A(dyn_ranges, i));
+        }
+        kv_destroy(dyn_ranges);
+
+        best_decomposition = header_groups;
+        break;
+      }
+    }
+  }
+
+  if (kv_size(best_decomposition) == 0)
+  {
+    // Graceful degradation
+    range v = {.start = 0, .len = buf_len, .mutable = 1};
+    kv_push(range, best_decomposition, v);
+  }
+  return best_decomposition;
+}
 
 /* Initialize the implemented state machine as a graphviz graph */
 void setup_ipsm()
@@ -996,6 +1183,10 @@ void update_state_aware_variables(struct queue_entry *q, u8 dry_run, char** argv
 
     ck_free(temp_str);
     ck_free(fname);
+
+    u8 *responses_fname = alloc_printf("%s/responses-ipsm/id:%s", out_dir, basename(q->fname));
+    save_responses_to_file(response_buf, response_buf_size, response_bytes, responses_fname, messages_sent);
+    ck_free(responses_fname);
 
     //Update the IPSM graph
     if (state_count > 1) {
@@ -2746,7 +2937,7 @@ EXP_ST void setup_shm(void) {
 
   trace_bits = shmat(shm_id, NULL, 0);
 
-  if (!trace_bits) PFATAL("shmat() failed");
+  if (trace_bits == (void *)-1 || !trace_bits) PFATAL("shmat() failed");
 
 
   shm_state_id = shmget(IPC_PRIVATE, sizeof(struct state_shared), IPC_CREAT | IPC_EXCL | 0600);
@@ -2761,7 +2952,7 @@ EXP_ST void setup_shm(void) {
 
   state_shared_ptr = shmat(shm_state_id, NULL, 0);
 
-  if (!state_shared_ptr) PFATAL("shmat() failed");
+  if (state_shared_ptr == (void *)-1 || !state_shared_ptr) PFATAL("shmat() failed");
 
 
 #ifndef DISABLE_TLSH_CALIBRATION
@@ -2772,7 +2963,7 @@ EXP_ST void setup_shm(void) {
 
   calib_shm = shmat(mvp_calibration_shm_id, NULL, 0);
 
-  if (!calib_shm) PFATAL("shmat() failed");
+  if (calib_shm == (void *)-1 || !calib_shm) PFATAL("shmat() failed");
 
   calib_shm->enabled = 1;
   calib_shm->initialized = 0;
@@ -2954,11 +3145,23 @@ void tlsh_set_distance() {
 
 unsigned int* extract_response_state_tracer(unsigned char* buf, unsigned int buf_size, unsigned int* state_count_ref) {
 
+  if (!state_count_ref) return NULL;
+  if (!state_shared_ptr) {
+    *state_count_ref = 0;
+    return NULL;
+  }
+
   unsigned int state_tracer_count_all = state_shared_ptr->seq_len;
+  if (state_tracer_count_all > MAX_NUM_STATES) {
+    state_tracer_count_all = MAX_NUM_STATES;
+  }
 
   *state_count_ref = state_tracer_count_all;
+  if (state_tracer_count_all == 0) {
+    return NULL;
+  }
 
-  unsigned int * state_sequence = ck_alloc( (*state_count_ref)*sizeof(int) );
+  unsigned int * state_sequence = ck_alloc( (*state_count_ref)*sizeof(unsigned int) );
   memcpy(state_sequence, state_shared_ptr->seq, *state_count_ref * sizeof(unsigned int));
 
 
@@ -2967,8 +3170,10 @@ unsigned int* extract_response_state_tracer(unsigned char* buf, unsigned int buf
   fprintf(log_state_tracer, "\nstate_count: %d\n", *state_count_ref);
   fprintf(log_state_tracer, "state_sequence: ");
 
-  for(int i=0; i<*state_count_ref; i++)
-    fprintf(log_state_tracer, " 0x%02X", state_sequence[i]);
+  if (state_sequence) {
+    for(int i=0; i<*state_count_ref; i++)
+      fprintf(log_state_tracer, " 0x%02X", state_sequence[i]);
+  }
 
   fprintf(log_state_tracer, "\n");
 #endif
@@ -3029,15 +3234,16 @@ region_t* extract_requests_generic(unsigned char* buf, unsigned int buf_size, un
 
   while(byte_count < buf_size) {
 
-    if(byte_count + 4 >= buf_size) {
-      PFATAL("AFLNet - Erroreous message length in input file");
+    if(buf_size - byte_count < sizeof(unsigned int)) {
+      PFATAL("AFLNet - Erroneous message length in input file");
     }
 
-    unsigned int next_message_len = *((unsigned int *)(void *)&buf[byte_count]);
+    unsigned int next_message_len;
+    memcpy(&next_message_len, &buf[byte_count], sizeof(unsigned int));
 
     byte_count += sizeof(unsigned int);
 
-    if(byte_count + next_message_len > buf_size) {
+    if(next_message_len > buf_size - byte_count) {
       PFATAL("AFLNet - Erroneous message length in input file (2)");
     }
 
@@ -3046,7 +3252,7 @@ region_t* extract_requests_generic(unsigned char* buf, unsigned int buf_size, un
     regions = (region_t *)ck_realloc(regions, region_count * sizeof(region_t));
 
     regions[region_count - 1].start_byte = cur_start;
-    regions[region_count - 1].end_byte = cur_start + next_message_len - 1;
+    regions[region_count - 1].end_byte = (next_message_len > 0) ? (int)(cur_start + next_message_len - 1) : ((int)cur_start - 1);
     regions[region_count - 1].state_sequence = NULL;
     regions[region_count - 1].state_count = 0;
 
@@ -3086,6 +3292,186 @@ static void setup_post(void) {
 
   OKF("Postprocessor installed successfully.");
 
+}
+
+
+void get_seeds_with_messsage_types(const char *in_dir, khash_t(strSet) * message_types_set)
+{
+  struct dirent **nl_files;
+  int nl_cnt = scandir(in_dir, &nl_files, NULL, alphasort);
+  if (nl_cnt < 0)
+  {
+    WARNF("Error in reading the directory %s", in_dir);
+    return;
+  }
+
+  // traverse the directory to read the files
+  for (int i = 0; i < nl_cnt; i++)
+  {
+    char *nl_file_name = nl_files[i]->d_name;
+    // skip the . and .. files and files whose name includes "enriched"
+    if (strcmp(nl_file_name, ".") == 0 || strcmp(nl_file_name, "..") == 0 || strstr(nl_file_name, "enriched") != NULL)
+    {
+      continue;
+    }
+    char *nl_file_path = malloc(strlen(in_dir) + strlen(nl_file_name) + 2);
+    if (!nl_file_path) continue;
+    strcpy(nl_file_path, in_dir);
+    strcat(nl_file_path, "/");
+    strcat(nl_file_path, nl_file_name);
+
+    FILE *nl_file = fopen(nl_file_path, "r");
+    if (nl_file == NULL)
+    {
+      WARNF("Error in opening the file %s", nl_file_path);
+      free(nl_file_path);
+      continue;
+    }
+
+    // read the whole file into a buffer
+    fseek(nl_file, 0, SEEK_END);
+    long fsize_signed = ftell(nl_file);
+    if (fsize_signed <= 0) {
+      fclose(nl_file);
+      free(nl_file_path);
+      continue;
+    }
+    size_t fsize = (size_t)fsize_signed;
+    fseek(nl_file, 0, SEEK_SET);
+    char *nl_file_content = malloc(fsize + 1);
+    if (!nl_file_content) {
+      fclose(nl_file);
+      free(nl_file_path);
+      continue;
+    }
+    size_t rbytes = fread(nl_file_content, 1, fsize, nl_file);
+    nl_file_content[rbytes] = '\0';
+    fclose(nl_file);
+    free(nl_file_path);
+
+    u32 region_count = 0;
+    region_t *regions = (*extract_requests)((unsigned char *)nl_file_content, rbytes, &region_count);
+
+    khash_t(strSet) *messages = duplicate_hash(message_types_set); // duplicate the message set
+
+    if (regions) {
+      for (int j = 0; j < region_count; j++)
+      { 
+        // remove all messages that are observed
+        int header_len = 0;
+        while (regions[j].start_byte + header_len < regions[j].end_byte 
+        && nl_file_content[regions[j].start_byte + header_len] != ' ' 
+        && nl_file_content[regions[j].start_byte + header_len] != '\r' 
+        && nl_file_content[regions[j].start_byte + header_len] != '\n'
+        && nl_file_content[regions[j].start_byte + header_len] != '\\')
+        {
+          header_len++;
+        }
+
+        char *header = ck_alloc(header_len + 1);
+        memcpy(header, nl_file_content + regions[j].start_byte, header_len);
+        header[header_len] = '\0';
+
+        khiter_t k = kh_get(strSet, messages, header);
+        if (k != kh_end(messages) && kh_exist(messages, k))
+        {
+          kh_del(strSet, messages, k);
+        }
+        ck_free(header);
+      }
+      ck_free(regions);
+    }
+
+    if(kh_size(messages) == 0) 
+    {
+      kh_destroy(strSet, messages);
+      free(nl_file_content);
+      // No missing message types, cannot enrich
+      WARNF("Message %s already has all message types. Skipping enrichment", nl_file_name);
+      continue;
+    }
+
+    while(kh_size(messages) > MAX_ENRICHMENT_CORPUS_SIZE) 
+    {
+      khiter_t x = UR(kh_end(messages));
+      if (x != kh_end(messages) && kh_exist(messages, x))
+      {
+        kh_del(strSet, messages, x);
+      }
+    }
+
+    message_set_list message_subsets = message_combinations(messages, MAX_ENRICHMENT_MESSAGE_TYPES);
+
+    for(int idx = 0; idx < kv_size(message_subsets); idx++) {
+
+      khash_t(strSet)* subset = kv_A(message_subsets, idx); 
+
+      // Try enriching the sequence
+      char *client_request_answer = enrich_sequence(nl_file_content, subset);
+
+      if (client_request_answer == NULL)
+        continue;
+
+      // Check whether the client_request_answer is the same as the nl_file_content or if the client_request_answer is empty
+      char *formatted_nl_file_content = format_string(nl_file_content);
+      char *unescaped_client_requests = unescape_string(client_request_answer);
+      char *formatted_unescaped_client_requests = format_string(unescaped_client_requests);
+      if (formatted_unescaped_client_requests == NULL || strcmp(formatted_unescaped_client_requests, formatted_nl_file_content) == 0)
+      {
+        printf("## Skip the same seed\n");
+        if (unescaped_client_requests) free(unescaped_client_requests);
+        free(client_request_answer);
+        continue;
+      }
+      free(client_request_answer);
+
+      char *formatted_client_requests = format_request_message(unescaped_client_requests);
+      if (formatted_client_requests != unescaped_client_requests) {
+        free(unescaped_client_requests);
+      }
+
+      // Create the file in the same directory with the name enriched_<idx>_<file_name>
+      char *enriched_file_name = malloc(strlen(nl_file_name) + 10 + 20);
+      if (enriched_file_name) {
+        strcpy(enriched_file_name, "enriched_");
+        sprintf(enriched_file_name + 9, "%d_", idx);
+        strcat(enriched_file_name, nl_file_name);
+        char *enriched_file_path = malloc(strlen(in_dir) + strlen(enriched_file_name) + 2);
+        if (enriched_file_path) {
+          strcpy(enriched_file_path, in_dir);
+          strcat(enriched_file_path, "/");
+          strcat(enriched_file_path, enriched_file_name);
+
+          write_new_seeds(enriched_file_path, formatted_client_requests);
+          free(enriched_file_path);
+        }
+        free(enriched_file_name);
+      }
+
+      free(formatted_client_requests);
+    }
+
+    for(int idx = 0; idx < kv_size(message_subsets); idx++) {
+      khash_t(strSet)* subset = kv_A(message_subsets, idx);
+      kh_destroy(strSet, subset);
+    } 
+    kv_destroy(message_subsets);
+
+    kh_destroy(strSet, messages);
+    free(nl_file_content);
+  }
+
+  for (int i = 0; i < nl_cnt; i++) {
+    free(nl_files[i]);
+  }
+  free(nl_files);
+}
+
+/* Enrich the testcases before startup */
+static void enrich_testcases(void)
+{
+  ACTF("Enriching test cases from LLM...");
+  get_seeds_with_messsage_types(in_dir, message_types_set);
 }
 
 
@@ -5310,13 +5696,14 @@ static void write_stats_file(double bitmap_cvg, double stability, double eps) {
 
 static void maybe_update_plot_file(double bitmap_cvg, double eps) {
 
-  static u32 prev_qp, prev_pf, prev_pnf, prev_ce, prev_md;
+  static u32 prev_qp, prev_pf, prev_pnf, prev_ce, prev_md, prev_chat_times;
   static u64 prev_qc, prev_uc, prev_uh;
 
   if (prev_qp == queued_paths && prev_pf == pending_favored &&
       prev_pnf == pending_not_fuzzed && prev_ce == current_entry &&
       prev_qc == queue_cycle && prev_uc == unique_crashes &&
-      prev_uh == unique_hangs && prev_md == max_depth) return;
+      prev_uh == unique_hangs && prev_md == max_depth &&
+      prev_chat_times == chat_times) return;
 
   prev_qp  = queued_paths;
   prev_pf  = pending_favored;
@@ -5326,18 +5713,19 @@ static void maybe_update_plot_file(double bitmap_cvg, double eps) {
   prev_uc  = unique_crashes;
   prev_uh  = unique_hangs;
   prev_md  = max_depth;
+  prev_chat_times = chat_times;
 
   /* Fields in the file:
 
      unix_time, cycles_done, cur_path, paths_total, paths_not_fuzzed,
      favored_not_fuzzed, unique_crashes, unique_hangs, max_depth,
-     execs_per_sec */
+     execs_per_sec, chat_times */
 
   fprintf(plot_file,
-          "%llu, %llu, %u, %u, %u, %u, %0.02f%%, %llu, %llu, %u, %0.02f\n",
+          "%llu, %llu, %u, %u, %u, %u, %0.02f%%, %llu, %llu, %u, %0.02f, %d\n",
           get_cur_time() / 1000, queue_cycle - 1, current_entry, queued_paths,
           pending_not_fuzzed, pending_favored, bitmap_cvg, unique_crashes,
-          unique_hangs, max_depth, eps); /* ignore errors */
+          unique_hangs, max_depth, eps, chat_times); /* ignore errors */
 
   fflush(plot_file);
 
@@ -5692,6 +6080,21 @@ static void maybe_delete_out_dir(void) {
 
   /* Delete the old replayable-new-ipsm-paths folder */
   fn = alloc_printf("%s/replayable-new-ipsm-paths", out_dir);
+  if (delete_files(fn, "")) goto dir_cleanup_failed;
+  ck_free(fn);
+
+  /* Delete the old responses-ipsm folder */
+  fn = alloc_printf("%s/responses-ipsm", out_dir);
+  if (delete_files(fn, "")) goto dir_cleanup_failed;
+  ck_free(fn);
+
+  /* Delete the old protocol-grammars folder */
+  fn = alloc_printf("%s/protocol-grammars", out_dir);
+  if (delete_files(fn, "")) goto dir_cleanup_failed;
+  ck_free(fn);
+
+  /* Delete the old stall-interactions folder */
+  fn = alloc_printf("%s/stall-interactions", out_dir);
   if (delete_files(fn, "")) goto dir_cleanup_failed;
   ck_free(fn);
 
@@ -6463,7 +6866,15 @@ EXP_ST u8 common_fuzz_stuff(char** argv, u8* out_buf, u32 len) {
 
   /* This handles FAULT_ERROR for us: */
 
-  queued_discovered += save_if_interesting(argv, out_buf, len, fault);
+  u8 is_interesting = save_if_interesting(argv, out_buf, len, fault);
+
+  if (is_interesting) {
+    uninteresting_times = 0;
+  } else {
+    uninteresting_times++;
+  }
+
+  queued_discovered += is_interesting;
 
   if (!(stage_cur % stats_update_freq) || stage_cur + 1 == stage_max)
     show_stats();
@@ -6925,6 +7336,12 @@ static u8 fuzz_one(char** argv) {
   u8  a_collect[MAX_AUTO_EXTRA];
   u32 a_len = 0;
 
+  range *ranges = NULL;
+  range_list original_ranges;
+  kv_init(original_ranges);
+  region_t* pre_havoc_regions = NULL;
+  unsigned int pre_havoc_region_count = 0;
+
 #ifdef IGNORE_FINDS
 
   /* In IGNORE_FINDS mode, skip any entries that weren't in the
@@ -7056,6 +7473,200 @@ AFLNET_REGIONS_SELECTION:;
       M2_next = it;
     }
     count++;
+  }
+
+  if (protocol_selected && protocol_name && uninteresting_times >= UNINTERESTING_THRESHOLD && chat_times < CHATTING_THRESHOLD)
+  {
+    uninteresting_times = 0;
+    // Fuzzing is stalled - ask LLM for help by taking the current sequence and if it has a prefix,
+    // ask the LLM to generate a possibly correct next message
+    u32 *response_bytes_temp = NULL;
+    u32 buffer_len = 0;
+
+    u32 response_count = 0;
+    char *response_fname = alloc_printf("%s/responses-ipsm/id:%s", out_dir, basename(queue_cur->fname));
+    char **responses_temp = get_responses_from_file((u8 *)response_fname, &response_bytes_temp, &response_count, &buffer_len);
+    if (responses_temp != NULL)
+    {
+      chat_times++;
+
+      char *history = NULL;
+      u32 history_len = 0;
+      char *examples = NULL;
+      int examples_len = 0;
+      kliter_t(lms) *it_pref = kl_begin(kl_messages);
+      int i = 0;
+      int empty = 1;
+      int prev_len = 0;
+      for (; i < response_count && it_pref != M2_prev; i++, it_pref = kl_next(it_pref))
+      {
+        empty = 0;
+
+        json_object *request_v = json_object_new_string_len(kl_val(it_pref)->mdata, kl_val(it_pref)->msize);
+        char *request_orig = strdup(json_object_to_json_string(request_v));
+        json_object_put(request_v);
+        char *request = request_orig;
+        int request_len = strlen(request);
+        if (request_len >= 2) {
+          request_len -= 2;
+          request++;
+        }
+        for (int j = 0; j < request_len; j++)
+        {
+          if (!isprint((unsigned char)request[j]) || request[j] < 0 || request[j] >= 127)
+            request[j] = ' ';
+        }
+
+        int resp_chunk_len = response_bytes_temp[i] - prev_len;
+        if (resp_chunk_len < 0) resp_chunk_len = 0;
+        json_object *response_v = json_object_new_string_len(responses_temp[i], resp_chunk_len);
+        char *response_orig = strdup(json_object_to_json_string(response_v));
+        json_object_put(response_v);
+        prev_len = response_bytes_temp[i];
+        char *response = response_orig;
+        int response_len = strlen(response);
+        if (response_len >= 2) {
+          response_len -= 2;
+          response++;
+        }
+
+        for (int j = 0; j < response_len; j++)
+        {
+          if (!isprint((unsigned char)response[j]) || response[j] < 0 || response[j] >= 127)
+            response[j] = ' ';
+        }
+
+        if (i == 0)
+        {
+          examples_len = asprintf(&examples, "Request-1:\\n%.*s\\nRequest-2:\\n%.*s\\n", request_len, request, request_len, request);
+        }
+
+        history = ck_realloc(history, history_len + request_len);
+        memcpy(history + history_len, request, request_len);
+        history_len += request_len;
+
+        history = ck_realloc(history, history_len + response_len);
+        memcpy(history + history_len, response, response_len);
+        history_len += response_len;
+
+        free(request_orig);
+        free(response_orig);
+      }
+
+      if (!empty)
+      {
+        history = ck_realloc(history, history_len + 1);
+        history[history_len] = '\0';
+
+        // Trim the strings to ensure the prompt is not too big
+        if (history_len > HISTORY_PROMPT_LENGTH)
+        {
+          int offset = history_len - HISTORY_PROMPT_LENGTH;
+          if (history[offset - 1] == '\\')
+          {
+            offset++;
+          }
+          char *history_temp = ck_strdup(history + offset);
+          ck_free(history);
+          history = history_temp;
+          history_len = history_len - offset;
+        }
+
+        if (examples_len > EXAMPLES_PROMPT_LENGTH)
+        {
+          int offset = examples_len - EXAMPLES_PROMPT_LENGTH;
+          if (examples[offset - 1] == '\\')
+          {
+            offset++;
+          }
+          char *examples_temp = strdup(examples + offset);
+          free(examples);
+          examples = examples_temp;
+          examples_len = examples_len - offset;
+        }
+
+        char *stall_prompt = construct_prompt_stall(protocol_name, examples, history);
+        char *stall_response = chat_with_llm(stall_prompt, "turbo", STALL_RETRIES, 1.5);
+
+        {
+          char *stall_prompt_path = alloc_printf("%s/stall-interactions/prompt-%d", out_dir, chat_times);
+          int stall_prompt_fd = open(stall_prompt_path, O_WRONLY | O_CREAT, 0600);
+          if (stall_prompt_fd >= 0) {
+            ck_write(stall_prompt_fd, stall_prompt, strlen(stall_prompt), stall_prompt_path);
+            close(stall_prompt_fd);
+          }
+          ck_free(stall_prompt_path);
+        }
+
+        if (stall_response == NULL)
+          goto free_stall;
+
+        {
+          char *stall_response_path = alloc_printf("%s/stall-interactions/response-%d", out_dir, chat_times);
+          int stall_response_fd = open(stall_response_path, O_WRONLY | O_CREAT, 0600);
+          if (stall_response_fd >= 0) {
+            ck_write(stall_response_fd, stall_response, strlen(stall_response), stall_response_path);
+            close(stall_response_fd);
+          }
+          ck_free(stall_response_path);
+        }
+
+        char *stall_message = extract_stalled_message(stall_response, strlen(stall_response));
+
+        if (stall_message == NULL)
+          goto free_stall;
+
+        stall_message = format_request_message(stall_message);
+
+        if (stall_message != NULL)
+        {
+          if (common_fuzz_stuff(argv, stall_message, strlen(stall_message)))
+          {
+            splicing_with = -1;
+
+            if (!stop_soon && !queue_cur->cal_failed && !queue_cur->was_fuzzed)
+            {
+              queue_cur->was_fuzzed = 1;
+              was_fuzzed_map[get_state_index(target_state_id)][queue_cur->index] = 1;
+              pending_not_fuzzed--;
+              if (queue_cur->favored)
+                pending_favored--;
+            }
+
+            ck_free(stall_message);
+            free(stall_response);
+            free(stall_prompt);
+            ck_free(history);
+            if (examples) free(examples);
+            ck_free(response_fname);
+            for (u32 ri = 0; ri < response_count; ri++) {
+              if (responses_temp[ri]) ck_free(responses_temp[ri]);
+            }
+            ck_free(responses_temp);
+            if (response_bytes_temp) ck_free(response_bytes_temp);
+
+            delete_kl_messages(kl_messages);
+
+            return ret_val;
+          }
+
+          ck_free(stall_message);
+        }
+
+        free(stall_response);
+      free_stall:
+        free(stall_prompt);
+        ck_free(history);
+        if (examples) free(examples);
+      }
+
+      for (u32 ri = 0; ri < response_count; ri++) {
+        if (responses_temp[ri]) ck_free(responses_temp[ri]);
+      }
+      ck_free(responses_temp);
+      if (response_bytes_temp) ck_free(response_bytes_temp);
+    }
+    ck_free(response_fname);
   }
 
   /* Construct the buffer to be mutated and update out_buf */
@@ -8117,9 +8728,39 @@ havoc_stage:
   havoc_queued = queued_paths;
 
   //Update regions to track mutations
-  unsigned int pre_havoc_region_count = mutated_region_count;
-  region_t* pre_havoc_regions = ck_alloc(pre_havoc_region_count * sizeof(region_t));
+  pre_havoc_region_count = mutated_region_count;
+  pre_havoc_regions = ck_alloc(pre_havoc_region_count * sizeof(region_t));
   memcpy(pre_havoc_regions, mutated_regions, pre_havoc_region_count * sizeof(region_t));
+
+  kv_init(original_ranges);
+
+  double epsilon = UR(100) / 100.0;
+
+  int is_exploration = epsilon < EPSILON_CHOICE;
+  if (is_exploration)
+  {
+    if (!splice_cycle) {
+      stage_name = "havoc explore";
+      stage_short = "havoc_explore";
+    }
+    // exploration - fully random search
+    range v = {.len = temp_len, .start = 0, .mutable = 1};
+    kv_push(range, original_ranges, v);
+  }
+  else
+  {
+    if (!splice_cycle) {
+      stage_name = "havoc exploit";
+      stage_short = "havoc_exploit";
+    }
+    // exploitation - utilize the grammars we have
+
+    original_ranges = parse_buffer((char *)out_buf, temp_len);
+  }
+
+  int rc = kv_size(original_ranges);
+  ranges = ck_alloc(rc * sizeof(range));
+  memcpy(ranges, original_ranges.a, rc * sizeof(range));
 
   /* We essentially just do several thousand runs (depending on perf_score)
      where we take the input file and make random stacked tweaks. */
@@ -8132,36 +8773,42 @@ havoc_stage:
 
     for (i = 0; i < use_stacking; i++) {
 
+      u32 range_choice = UR(rc);
+
       switch (UR(15 + 2 + (region_level_mutation ? 4 : 0))) {
 
         case 0:
 
           /* Flip a single bit somewhere. Spooky! */
+          if (ranges[range_choice].len < 1) break;
 
-          FLIP_BIT(out_buf, UR(temp_len << 3));
+          FLIP_BIT((out_buf + ranges[range_choice].start), UR(ranges[range_choice].len << 3));
           break;
 
         case 1:
 
           /* Set byte to interesting value. */
+          if (ranges[range_choice].len < 1) break;
 
-          out_buf[UR(temp_len)] = interesting_8[UR(sizeof(interesting_8))];
+          out_buf[ranges[range_choice].start + UR(ranges[range_choice].len)] = interesting_8[UR(sizeof(interesting_8))];
           break;
 
         case 2:
 
           /* Set word to interesting value, randomly choosing endian. */
 
-          if (temp_len < 2) break;
+          if (ranges[range_choice].len < 2) break;
 
           if (UR(2)) {
 
-            *(u16*)(out_buf + UR(temp_len - 1)) =
+            s32 offset = ranges[range_choice].start + UR(ranges[range_choice].len - 1);
+            *(u16*)(out_buf + offset) =
               interesting_16[UR(sizeof(interesting_16) >> 1)];
 
           } else {
 
-            *(u16*)(out_buf + UR(temp_len - 1)) = SWAP16(
+            s32 offset = ranges[range_choice].start + UR(ranges[range_choice].len - 1);
+            *(u16*)(out_buf + offset) = SWAP16(
               interesting_16[UR(sizeof(interesting_16) >> 1)]);
 
           }
@@ -8172,16 +8819,18 @@ havoc_stage:
 
           /* Set dword to interesting value, randomly choosing endian. */
 
-          if (temp_len < 4) break;
+          if (ranges[range_choice].len < 4) break;
 
           if (UR(2)) {
 
-            *(u32*)(out_buf + UR(temp_len - 3)) =
+            s32 offset = ranges[range_choice].start + UR(ranges[range_choice].len - 3);
+            *(u32*)(out_buf + offset) =
               interesting_32[UR(sizeof(interesting_32) >> 2)];
 
           } else {
 
-            *(u32*)(out_buf + UR(temp_len - 3)) = SWAP32(
+            s32 offset = ranges[range_choice].start + UR(ranges[range_choice].len - 3);
+            *(u32*)(out_buf + offset) = SWAP32(
               interesting_32[UR(sizeof(interesting_32) >> 2)]);
 
           }
@@ -8191,32 +8840,34 @@ havoc_stage:
         case 4:
 
           /* Randomly subtract from byte. */
+          if (ranges[range_choice].len < 1) break;
 
-          out_buf[UR(temp_len)] -= 1 + UR(ARITH_MAX);
+          out_buf[ranges[range_choice].start + UR(ranges[range_choice].len)] -= 1 + UR(ARITH_MAX);
           break;
 
         case 5:
 
           /* Randomly add to byte. */
+          if (ranges[range_choice].len < 1) break;
 
-          out_buf[UR(temp_len)] += 1 + UR(ARITH_MAX);
+          out_buf[ranges[range_choice].start + UR(ranges[range_choice].len)] += 1 + UR(ARITH_MAX);
           break;
 
         case 6:
 
           /* Randomly subtract from word, random endian. */
 
-          if (temp_len < 2) break;
+          if (ranges[range_choice].len < 2) break;
 
           if (UR(2)) {
 
-            u32 pos = UR(temp_len - 1);
+            u32 pos = ranges[range_choice].start + UR(ranges[range_choice].len - 1);
 
             *(u16*)(out_buf + pos) -= 1 + UR(ARITH_MAX);
 
           } else {
 
-            u32 pos = UR(temp_len - 1);
+            u32 pos = ranges[range_choice].start + UR(ranges[range_choice].len - 1);
             u16 num = 1 + UR(ARITH_MAX);
 
             *(u16*)(out_buf + pos) =
@@ -8230,17 +8881,17 @@ havoc_stage:
 
           /* Randomly add to word, random endian. */
 
-          if (temp_len < 2) break;
+          if (ranges[range_choice].len < 2) break;
 
           if (UR(2)) {
 
-            u32 pos = UR(temp_len - 1);
+            u32 pos = ranges[range_choice].start + UR(ranges[range_choice].len - 1);
 
             *(u16*)(out_buf + pos) += 1 + UR(ARITH_MAX);
 
           } else {
 
-            u32 pos = UR(temp_len - 1);
+            u32 pos = ranges[range_choice].start + UR(ranges[range_choice].len - 1);
             u16 num = 1 + UR(ARITH_MAX);
 
             *(u16*)(out_buf + pos) =
@@ -8254,17 +8905,17 @@ havoc_stage:
 
           /* Randomly subtract from dword, random endian. */
 
-          if (temp_len < 4) break;
+          if (ranges[range_choice].len < 4) break;
 
           if (UR(2)) {
 
-            u32 pos = UR(temp_len - 3);
+            u32 pos = ranges[range_choice].start + UR(ranges[range_choice].len - 3);
 
             *(u32*)(out_buf + pos) -= 1 + UR(ARITH_MAX);
 
           } else {
 
-            u32 pos = UR(temp_len - 3);
+            u32 pos = ranges[range_choice].start + UR(ranges[range_choice].len - 3);
             u32 num = 1 + UR(ARITH_MAX);
 
             *(u32*)(out_buf + pos) =
@@ -8278,17 +8929,17 @@ havoc_stage:
 
           /* Randomly add to dword, random endian. */
 
-          if (temp_len < 4) break;
+          if (ranges[range_choice].len < 4) break;
 
           if (UR(2)) {
 
-            u32 pos = UR(temp_len - 3);
+            u32 pos = ranges[range_choice].start + UR(ranges[range_choice].len - 3);
 
             *(u32*)(out_buf + pos) += 1 + UR(ARITH_MAX);
 
           } else {
 
-            u32 pos = UR(temp_len - 3);
+            u32 pos = ranges[range_choice].start + UR(ranges[range_choice].len - 3);
             u32 num = 1 + UR(ARITH_MAX);
 
             *(u32*)(out_buf + pos) =
@@ -8300,33 +8951,33 @@ havoc_stage:
 
         case 10:
 
-          /* Just set a random byte to a random value. Because,
-             why not. We use XOR with 1-255 to eliminate the
-             possibility of a no-op. */
+          /* Just set a random byte to a random value. */
+          if (ranges[range_choice].len < 1) break;
 
-          out_buf[UR(temp_len)] ^= 1 + UR(255);
+          out_buf[ranges[range_choice].start + UR(ranges[range_choice].len)] ^= 1 + UR(255);
           break;
 
         case 11 ... 12: {
 
-            /* Delete bytes. We're making this a bit more likely
-               than insertion (the next option) in hopes of keeping
-               files reasonably small. */
+            /* Delete bytes. */
 
             u32 del_from, del_len;
 
-            if (temp_len < 2) break;
+            if (ranges[range_choice].len < 2) break;
 
-            /* Don't delete too much. */
+            del_len = choose_block_len(ranges[range_choice].len - 1);
 
-            del_len = choose_block_len(temp_len - 1);
-
-            del_from = UR(temp_len - del_len + 1);
+            del_from = ranges[range_choice].start + UR(ranges[range_choice].len - del_len + 1);
 
             memmove(out_buf + del_from, out_buf + del_from + del_len,
                     temp_len - del_from - del_len);
 
             temp_len -= del_len;
+
+            for (int ri = range_choice + 1; ri < rc; ri++) {
+              ranges[ri].start -= del_len;
+            }
+            ranges[range_choice].len -= del_len;
 
             /* Update mutated regions */
             regions_remove_bytes(mutated_regions, mutated_region_count, del_from, del_len);
@@ -8357,7 +9008,7 @@ havoc_stage:
 
             }
 
-            clone_to   = UR(temp_len);
+            clone_to = ranges[range_choice].start + (ranges[range_choice].len == 0 ? 0 : UR(ranges[range_choice].len));
 
             new_buf = ck_alloc_nozero(temp_len + clone_len);
 
@@ -8381,6 +9032,11 @@ havoc_stage:
             out_buf = new_buf;
             temp_len += clone_len;
 
+            for (int ri = range_choice + 1; ri < rc; ri++) {
+              ranges[ri].start += clone_len;
+            }
+            ranges[range_choice].len += clone_len;
+
             /* Update mutated regions */
             regions_add_bytes(mutated_regions, mutated_region_count, clone_to, clone_len);
 
@@ -8395,12 +9051,12 @@ havoc_stage:
 
             u32 copy_from, copy_to, copy_len;
 
-            if (temp_len < 2) break;
+            if (ranges[range_choice].len < 2) break;
 
-            copy_len  = choose_block_len(temp_len - 1);
+            copy_len  = choose_block_len(ranges[range_choice].len - 1);
 
             copy_from = UR(temp_len - copy_len + 1);
-            copy_to   = UR(temp_len - copy_len + 1);
+            copy_to   = ranges[range_choice].start + UR(ranges[range_choice].len - copy_len + 1);
 
             if (UR(4)) {
 
@@ -8431,9 +9087,9 @@ havoc_stage:
               u32 extra_len = a_extras[use_extra].len;
               u32 insert_at;
 
-              if (extra_len > temp_len) break;
+              if (extra_len > ranges[range_choice].len) break;
 
-              insert_at = UR(temp_len - extra_len + 1);
+              insert_at = ranges[range_choice].start + UR(ranges[range_choice].len - extra_len + 1);
               memcpy(out_buf + insert_at, a_extras[use_extra].data, extra_len);
 
             } else {
@@ -8444,9 +9100,9 @@ havoc_stage:
               u32 extra_len = extras[use_extra].len;
               u32 insert_at;
 
-              if (extra_len > temp_len) break;
+              if (extra_len > ranges[range_choice].len) break;
 
-              insert_at = UR(temp_len - extra_len + 1);
+              insert_at = ranges[range_choice].start + UR(ranges[range_choice].len - extra_len + 1);
               memcpy(out_buf + insert_at, extras[use_extra].data, extra_len);
 
             }
@@ -8458,7 +9114,7 @@ havoc_stage:
         case 16: {
             if (extras_cnt + a_extras_cnt == 0) break;
 
-            u32 use_extra, extra_len, insert_at = UR(temp_len + 1);
+            u32 use_extra, extra_len, insert_at = ranges[range_choice].start + UR(ranges[range_choice].len + 1);
             u8* new_buf;
 
             /* Insert an extra. Do the same dice-rolling stuff as for the
@@ -8504,6 +9160,11 @@ havoc_stage:
             out_buf   = new_buf;
             temp_len += extra_len;
 
+            for (int ri = range_choice + 1; ri < rc; ri++) {
+              ranges[ri].start += extra_len;
+            }
+            ranges[range_choice].len += extra_len;
+
             /* Update mutated regions */
             regions_add_bytes(mutated_regions, mutated_region_count, insert_at, extra_len);
 
@@ -8520,8 +9181,16 @@ havoc_stage:
 
             //replace the current region
             ck_free(out_buf);
+            ck_free(ranges);
+
             out_buf = new_buf;
             temp_len = src_region_len;
+
+            range_list temp_ranges = parse_buffer((char *)out_buf, temp_len);
+            rc = kv_size(temp_ranges);
+            ranges = ck_alloc(rc * sizeof(range));
+            memcpy(ranges, temp_ranges.a, rc * sizeof(range));
+            kv_destroy(temp_ranges);
 
             /* Update mutated regions */
             ck_free(mutated_regions);
@@ -8556,6 +9225,10 @@ havoc_stage:
             ck_free(src_region);
             out_buf = new_buf;
             temp_len += src_region_len;
+
+            for (int ri = 0; ri < rc; ri++) {
+              ranges[ri].start += src_region_len;
+            }
 
             /* Update mutated regions */
             region_t* new_regions = ck_alloc((mutated_region_count + 1) * sizeof(region_t));
@@ -8620,17 +9293,34 @@ havoc_stage:
 
         /* Duplicate the current region */
         case 20: {
-            if (temp_len * 2 >= MAX_FILE) break;
+            if (temp_len + ranges[range_choice].len >= MAX_FILE) break;
 
-            u8* new_buf = ck_alloc_nozero(temp_len * 2);
+            u8* new_buf = ck_alloc_nozero(temp_len + ranges[range_choice].len);
+            u8* start_dest = new_buf;
+            u8* start_src = out_buf;
 
-            memcpy(new_buf, out_buf, temp_len);
+            memcpy(start_dest, start_src, ranges[range_choice].start);
+            start_dest += ranges[range_choice].start;
+            start_src += ranges[range_choice].start;
 
-            memcpy(&new_buf[temp_len], out_buf, temp_len);
+            memcpy(start_dest, start_src, ranges[range_choice].len);
+            start_dest += ranges[range_choice].len;
+
+            memcpy(start_dest, start_src, ranges[range_choice].len);
+            start_dest += ranges[range_choice].len;
+            start_src += ranges[range_choice].len;
+
+            memcpy(start_dest, start_src,
+                   temp_len - (ranges[range_choice].start + ranges[range_choice].len));
 
             ck_free(out_buf);
             out_buf = new_buf;
-            temp_len += temp_len;
+            temp_len += ranges[range_choice].len;
+
+            for (int ri = range_choice + 1; ri < rc; ri++) {
+              ranges[ri].start += ranges[range_choice].len;
+            }
+            ranges[range_choice].len *= 2;
 
             /* Update mutated regions */
             int old_len = temp_len/2;
@@ -8664,7 +9354,13 @@ havoc_stage:
 
     if (temp_len < len) out_buf = ck_realloc(out_buf, len);
     temp_len = len;
+
+    if (rc != kv_size(original_ranges))
+      ranges = ck_realloc(ranges, kv_size(original_ranges) * sizeof(range));
+    rc = kv_size(original_ranges);
+
     memcpy(out_buf, in_buf, len);
+    memcpy(ranges, original_ranges.a, rc * sizeof(range));
 
     /* Restore mutated regions */
     ck_free(mutated_regions);
@@ -8689,9 +9385,19 @@ havoc_stage:
 
   }
 
-  ck_free(pre_havoc_regions);
-  pre_havoc_regions = NULL;
-  pre_havoc_region_count = 0;
+  if (original_ranges.a) {
+    kv_destroy(original_ranges);
+    original_ranges.a = NULL;
+  }
+  if (ranges) {
+    ck_free(ranges);
+    ranges = NULL;
+  }
+  if (pre_havoc_regions) {
+    ck_free(pre_havoc_regions);
+    pre_havoc_regions = NULL;
+    pre_havoc_region_count = 0;
+  }
 
   new_hit_cnt = queued_paths + unique_crashes;
 
@@ -8869,6 +9575,19 @@ retry_splicing:
 abandon_entry:
 
   splicing_with = -1;
+
+  if (pre_havoc_regions) {
+    ck_free(pre_havoc_regions);
+    pre_havoc_regions = NULL;
+  }
+  if (ranges) {
+    ck_free(ranges);
+    ranges = NULL;
+  }
+  if (original_ranges.a) {
+    kv_destroy(original_ranges);
+    original_ranges.a = NULL;
+  }
 
   /* Update pending_not_fuzzed count if we made it through the calibration
      cycle and have not seen this entry before. */
@@ -9500,6 +10219,21 @@ EXP_ST void setup_dirs_fds(void) {
   if (mkdir(tmp, 0700)) PFATAL("Unable to create '%s'", tmp);
   ck_free(tmp);
 
+  /* All output from the LLM and resulting grammars -- for debugging purposes. */
+  tmp = alloc_printf("%s/protocol-grammars", out_dir);
+  if (mkdir(tmp, 0700)) PFATAL("Unable to create '%s'", tmp);
+  ck_free(tmp);
+
+  /* All output from the LLM's help for unblocking the state stall -- for debugging purposes.  */
+  tmp = alloc_printf("%s/stall-interactions", out_dir);
+  if (mkdir(tmp, 0700)) PFATAL("Unable to create '%s'", tmp);
+  ck_free(tmp);
+
+  /* All recorded responses over the implemented state machine. */
+  tmp = alloc_printf("%s/responses-ipsm", out_dir);
+  if (mkdir(tmp, 0700)) PFATAL("Unable to create '%s'", tmp);
+  ck_free(tmp);
+
   /* Generally useful file descriptors. */
 
   dev_null_fd = open("/dev/null", O_RDWR);
@@ -9520,7 +10254,7 @@ EXP_ST void setup_dirs_fds(void) {
 
   fprintf(plot_file, "# unix_time, cycles_done, cur_path, paths_total, "
                      "pending_total, pending_favs, map_size, unique_crashes, "
-                     "unique_hangs, max_depth, execs_per_sec\n");
+                     "unique_hangs, max_depth, execs_per_sec, chat_times\n");
                      /* ignore errors */
 
 }
@@ -10347,6 +11081,7 @@ int main(int argc, char** argv) {
         orig_extract_requests = extract_requests;
         extract_requests = &extract_requests_generic;
 
+        protocol_name = ck_strdup(optarg);
         protocol_selected = 1;
 
         break;
@@ -10488,6 +11223,16 @@ int main(int argc, char** argv) {
   setup_ipsm();
 
   setup_dirs_fds();
+
+  if (protocol_selected)
+  {
+    protocol_patterns = kl_init(rang);
+    message_types_set = kh_init(strSet);
+
+    setup_llm_grammars();
+    enrich_testcases();
+  }
+
   read_testcases();
   load_auto();
 
