@@ -997,29 +997,46 @@ char *unescape_string(const char *input)
 
 void write_new_seeds(char *enriched_file, char *contents)
 {
-    FILE *fp = fopen(enriched_file, "w");
+    FILE *fp = fopen(enriched_file, "wb");
     if (fp == NULL)
     {
         printf("Error in opening the file %s\n", enriched_file);
-        exit(1);
+        return;
     }
 
-    // remove the newline and whiltespace in the beginning of the string if any
+    // remove the newline and whitespace in the beginning of the string if any
     while (contents[0] == '\n' || contents[0] == ' ' || contents[0] == '\t' || contents[0] == '\r')
     {
         contents++;
     }
 
-    // Check if last 4 characters of the client_request_answer string are \r\n\r\n
-    // If not, add them
     int len = strlen(contents);
-    if (len < 4 || contents[len - 1] != '\n' || contents[len - 2] != '\r' || contents[len - 3] != '\n' || contents[len - 4] != '\r')
+    if (len == 0)
     {
-        fprintf(fp, "%s\r\n\r\n", contents);
+        fclose(fp);
+        return;
     }
-    else
+
+    /* Write with 4-byte replay framing per message */
+    char *p = contents;
+    char *end = contents + len;
+    while (p < end)
     {
-        fprintf(fp, "%s", contents);
+        char *sep = strstr(p, "\r\n\r\n");
+        size_t msg_len;
+        if (sep != NULL && sep + 4 <= end)
+        {
+            msg_len = (sep + 4) - p;
+        }
+        else
+        {
+            msg_len = end - p;
+        }
+
+        uint32_t u32_len = (uint32_t)msg_len;
+        fwrite(&u32_len, sizeof(uint32_t), 1, fp);
+        fwrite(p, 1, msg_len, fp);
+        p += msg_len;
     }
 
     fclose(fp);

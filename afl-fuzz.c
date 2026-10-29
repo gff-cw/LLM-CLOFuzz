@@ -3211,15 +3211,17 @@ unsigned int* extract_response_state_tracer(unsigned char* buf, unsigned int buf
 
 static unsigned int mutated_region_count = 0;
 static region_t* mutated_regions = NULL;
+static unsigned char* last_mutated_buf = NULL;
+static unsigned int   last_mutated_size = 0;
 
 region_t* extract_requests_generic(unsigned char* buf, unsigned int buf_size, unsigned int* region_count_ref) {
 
   unsigned int region_count = 0;
   region_t *regions = NULL;
 
-  unsigned int cur_start = 0;
-
-  if(mutated_regions != NULL && mutated_region_count > 0) {
+  /* Only reuse mutated_regions if verified to match the active buffer */
+  if (mutated_regions != NULL && mutated_region_count > 0 &&
+      buf != NULL && (buf == last_mutated_buf || buf_size == last_mutated_size)) {
 
     *region_count_ref = mutated_region_count;
 
@@ -3229,13 +3231,21 @@ region_t* extract_requests_generic(unsigned char* buf, unsigned int buf_size, un
     return regions;
   }
 
+  /* If original protocol extractor is registered, prefer it for raw buffers */
+  if (orig_extract_requests != NULL) {
+    regions = (*orig_extract_requests)(buf, buf_size, region_count_ref);
+    if (regions != NULL && *region_count_ref > 0) {
+      return regions;
+    }
+  }
 
   unsigned int byte_count = 0;
+  unsigned int cur_start = 0;
 
-  while(byte_count < buf_size) {
+  while (byte_count < buf_size) {
 
-    if(buf_size - byte_count < sizeof(unsigned int)) {
-      PFATAL("AFLNet - Erroneous message length in input file");
+    if (buf_size - byte_count < sizeof(unsigned int)) {
+      break;
     }
 
     unsigned int next_message_len;
@@ -3243,8 +3253,8 @@ region_t* extract_requests_generic(unsigned char* buf, unsigned int buf_size, un
 
     byte_count += sizeof(unsigned int);
 
-    if(next_message_len > buf_size - byte_count) {
-      PFATAL("AFLNet - Erroneous message length in input file (2)");
+    if (next_message_len > buf_size - byte_count) {
+      break;
     }
 
     region_count++;
@@ -3261,7 +3271,19 @@ region_t* extract_requests_generic(unsigned char* buf, unsigned int buf_size, un
 
   }
 
-  *region_count_ref = region_count;
+  if (region_count > 0 && byte_count == buf_size) {
+    *region_count_ref = region_count;
+    return regions;
+  }
+
+  /* If replay parsing does not cover entire buffer, treat buffer as a single region */
+  if (regions) ck_free(regions);
+  regions = ck_alloc(sizeof(region_t));
+  regions[0].start_byte = 0;
+  regions[0].end_byte = (buf_size > 0) ? (int)(buf_size - 1) : -1;
+  regions[0].state_sequence = NULL;
+  regions[0].state_count = 0;
+  *region_count_ref = 1;
   return regions;
 
 }
@@ -3349,8 +3371,47 @@ void get_seeds_with_messsage_types(const char *in_dir, khash_t(strSet) * message
     fclose(nl_file);
     free(nl_file_path);
 
+    /* Unpack replay file to raw buffer and calculate clean raw regions */
+    char *raw_content = NULL;
+    size_t raw_len = 0;
+    size_t raw_cap = (rbytes > 0) ? rbytes : 16;
+    raw_content = ck_alloc(raw_cap + 1);
+
+    size_t offset = 0;
+    u8 is_replay = 1;
+    while (offset + sizeof(unsigned int) <= rbytes) {
+      unsigned int mlen = 0;
+      memcpy(&mlen, nl_file_content + offset, sizeof(unsigned int));
+      offset += sizeof(unsigned int);
+      if (mlen > rbytes - offset) {
+        is_replay = 0;
+        break;
+      }
+      if (raw_len + mlen > raw_cap) {
+        raw_cap = (raw_len + mlen) * 2;
+        raw_content = ck_realloc(raw_content, raw_cap + 1);
+      }
+      if (mlen > 0) {
+        memcpy(raw_content + raw_len, nl_file_content + offset, mlen);
+        raw_len += mlen;
+      }
+      offset += mlen;
+    }
+
+    if (!is_replay || offset != rbytes || raw_len == 0) {
+      /* Not a replay container; use raw content directly */
+      ck_free(raw_content);
+      raw_content = nl_file_content;
+      raw_len = rbytes;
+      nl_file_content = NULL;
+    } else {
+      raw_content[raw_len] = '\0';
+      free(nl_file_content);
+      nl_file_content = NULL;
+    }
+
     u32 region_count = 0;
-    region_t *regions = (*extract_requests)((unsigned char *)nl_file_content, rbytes, &region_count);
+    region_t *regions = (*extract_requests)((unsigned char *)raw_content, raw_len, &region_count);
 
     khash_t(strSet) *messages = duplicate_hash(message_types_set); // duplicate the message set
 
@@ -3360,16 +3421,16 @@ void get_seeds_with_messsage_types(const char *in_dir, khash_t(strSet) * message
         // remove all messages that are observed
         int header_len = 0;
         while (regions[j].start_byte + header_len < regions[j].end_byte 
-        && nl_file_content[regions[j].start_byte + header_len] != ' ' 
-        && nl_file_content[regions[j].start_byte + header_len] != '\r' 
-        && nl_file_content[regions[j].start_byte + header_len] != '\n'
-        && nl_file_content[regions[j].start_byte + header_len] != '\\')
+        && raw_content[regions[j].start_byte + header_len] != ' ' 
+        && raw_content[regions[j].start_byte + header_len] != '\r' 
+        && raw_content[regions[j].start_byte + header_len] != '\n'
+        && raw_content[regions[j].start_byte + header_len] != '\\')
         {
           header_len++;
         }
 
         char *header = ck_alloc(header_len + 1);
-        memcpy(header, nl_file_content + regions[j].start_byte, header_len);
+        memcpy(header, raw_content + regions[j].start_byte, header_len);
         header[header_len] = '\0';
 
         khiter_t k = kh_get(strSet, messages, header);
@@ -3385,7 +3446,7 @@ void get_seeds_with_messsage_types(const char *in_dir, khash_t(strSet) * message
     if(kh_size(messages) == 0) 
     {
       kh_destroy(strSet, messages);
-      free(nl_file_content);
+      ck_free(raw_content);
       // No missing message types, cannot enrich
       WARNF("Message %s already has all message types. Skipping enrichment", nl_file_name);
       continue;
@@ -3407,16 +3468,16 @@ void get_seeds_with_messsage_types(const char *in_dir, khash_t(strSet) * message
       khash_t(strSet)* subset = kv_A(message_subsets, idx); 
 
       // Try enriching the sequence
-      char *client_request_answer = enrich_sequence(nl_file_content, subset);
+      char *client_request_answer = enrich_sequence(raw_content, subset);
 
       if (client_request_answer == NULL)
         continue;
 
-      // Check whether the client_request_answer is the same as the nl_file_content or if the client_request_answer is empty
-      char *formatted_nl_file_content = format_string(nl_file_content);
+      // Check whether the client_request_answer is the same as the raw_content or if the client_request_answer is empty
+      char *formatted_raw_content = format_string(raw_content);
       char *unescaped_client_requests = unescape_string(client_request_answer);
       char *formatted_unescaped_client_requests = format_string(unescaped_client_requests);
-      if (formatted_unescaped_client_requests == NULL || strcmp(formatted_unescaped_client_requests, formatted_nl_file_content) == 0)
+      if (formatted_unescaped_client_requests == NULL || strcmp(formatted_unescaped_client_requests, formatted_raw_content) == 0)
       {
         printf("## Skip the same seed\n");
         if (unescaped_client_requests) free(unescaped_client_requests);
@@ -3458,7 +3519,7 @@ void get_seeds_with_messsage_types(const char *in_dir, khash_t(strSet) * message
     kv_destroy(message_subsets);
 
     kh_destroy(strSet, messages);
-    free(nl_file_content);
+    ck_free(raw_content);
   }
 
   for (int i = 0; i < nl_cnt; i++) {
@@ -7705,6 +7766,8 @@ AFLNET_REGIONS_SELECTION:;
   mutated_region_count = orig_region_count;
   mutated_regions = ck_alloc(orig_region_count * sizeof(region_t));
   memcpy(mutated_regions, orig_regions, orig_region_count * sizeof(region_t));
+  last_mutated_buf = in_buf;
+  last_mutated_size = len;
 
 
   /*********************
@@ -9611,6 +9674,8 @@ abandon_entry:
   ck_free(mutated_regions);
   mutated_regions = NULL;
   mutated_region_count = 0;
+  last_mutated_buf = NULL;
+  last_mutated_size = 0;
 
   return ret_val;
 
