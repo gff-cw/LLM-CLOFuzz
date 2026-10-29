@@ -1,3 +1,0 @@
-{
-  "message": "PLAY rtsp://127.0.0.1:8554/live.sdp RTSP/1.0\r\nCSeq: 4\r\nSession: 000022B8\r\n\r\n"
-}
