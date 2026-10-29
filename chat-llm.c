@@ -855,6 +855,7 @@ void get_protocol_message_types(char *state_prompt, khash_t(strSet) * states_set
 khash_t(strSet) * duplicate_hash(khash_t(strSet) * set)
 {
     khash_t(strSet) *new_set = kh_init(strSet);
+    if (!set) return new_set;
 
     for (khiter_t k = kh_begin(set); k != kh_end(set); ++k)
     {

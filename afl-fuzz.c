@@ -7475,7 +7475,7 @@ AFLNET_REGIONS_SELECTION:;
     count++;
   }
 
-  if (uninteresting_times >= UNINTERESTING_THRESHOLD && chat_times < CHATTING_THRESHOLD)
+  if (protocol_selected && protocol_name && uninteresting_times >= UNINTERESTING_THRESHOLD && chat_times < CHATTING_THRESHOLD)
   {
     uninteresting_times = 0;
     // Fuzzing is stalled - ask LLM for help by taking the current sequence and if it has a prefix,
@@ -9385,12 +9385,19 @@ havoc_stage:
 
   }
 
-  kv_destroy(original_ranges);
-  ck_free(ranges);
-  ranges = NULL;
-  ck_free(pre_havoc_regions);
-  pre_havoc_regions = NULL;
-  pre_havoc_region_count = 0;
+  if (original_ranges.a) {
+    kv_destroy(original_ranges);
+    original_ranges.a = NULL;
+  }
+  if (ranges) {
+    ck_free(ranges);
+    ranges = NULL;
+  }
+  if (pre_havoc_regions) {
+    ck_free(pre_havoc_regions);
+    pre_havoc_regions = NULL;
+    pre_havoc_region_count = 0;
+  }
 
   new_hit_cnt = queued_paths + unique_crashes;
 
@@ -9577,7 +9584,10 @@ abandon_entry:
     ck_free(ranges);
     ranges = NULL;
   }
-  kv_destroy(original_ranges);
+  if (original_ranges.a) {
+    kv_destroy(original_ranges);
+    original_ranges.a = NULL;
+  }
 
   /* Update pending_not_fuzzed count if we made it through the calibration
      cycle and have not seen this entry before. */
