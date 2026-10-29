@@ -31,3 +31,6 @@ afl-llvm-rt.o
 /state-tracer-rt.log
 /tlsh.log
 /tests/llvm18/__pycache__/
+__pycache__/
+*.pyc
+*.exe

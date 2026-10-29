@@ -1,0 +1,10 @@
+{
+  "id": "cmpl-test-002",
+  "object": "text_completion",
+  "choices": [
+    {
+      "text": "\nGET: [\"GET <<VALUE>> HTTP/1.1\\r\\n\", \"Host: <<VALUE>>\\r\\n\", \"\\r\\n\"]",
+      "index": 0
+    }
+  ]
+}
