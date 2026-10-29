@@ -104,8 +104,14 @@ kliter_t(lms) *get_last_message(klist_t(lms) *kl_messages);
 /* Save a list of messages to a file. If replay_enabled is set, the file will be structured for replaying. Otherwise, just save the raw data */
 u32 save_kl_messages_to_file(klist_t(lms) *kl_messages, u8 *fname, u8 replay_enabled, u32 max_count);
 
+/* Save a list of responses to a file. */
+void save_responses_to_file(char* buffer,u32 buffer_len,u32 *response_bytes,u8 *fname,u32 max_count);
+
 /* Convert back a linked list of messages to regions to maintain the message sequence structure as much as possible */
 region_t* convert_kl_messages_to_regions(klist_t(lms) *kl_messages, u32* region_count_ref, u32 max_count);
+
+/* Load responses from a file. */
+char** get_responses_from_file(u8 *fname,u32 **response_bytes,u32* max_count,u32 *buffer_len);
 
 // Utility functions
 
