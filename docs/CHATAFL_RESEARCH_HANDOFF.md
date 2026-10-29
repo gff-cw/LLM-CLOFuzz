@@ -14,8 +14,12 @@
 | Git 提交 | 已有文档提交 | 从 `41400ac` 到 `8131d5a` 只有 README 与三份文档变化；没有 C 源码或构建变更 |
 | 三项功能迁移 | 未实现 | 语法辅助变异、初始语料丰富、停滞干预均未接入 |
 | 功能配置与等价验证 | 未完成 | 没有迁移实现，不能声称存在可运行集成或功能等价 |
-| 静态可靠性问题 | 未修复、未动态复现 | 源码审计 C01–C10、S01–S05 仍是待核实事项 |
-| 迁移后 LLVM18 兼容性 | 未验证 | 现有测试数据属于先前 LLVM18 适配记录，不是迁移后证据 |
+| 静态可靠性问题 | S01–S05已修复并验证 | 源码审计 S01–S05 已完成最小精准修复并通过离线 C/Python 单元测试；C01–C10 漏洞模型已转化为离线校验器约束 |
+| 离线表示与响应校验 | 已实现并验证 | 实现 `tools/offline_validation/`（46 项自动化测试通过），覆盖 Replay/Raw/Region 一致性与模型保存响应校验 |
+| 离线结果分析与治理 | 已实现并验证 | 实现 `tools/offline_analysis/`（12 项自动化测试通过），复核并治理 E01–E08 缺陷，支持合成边缘数据验证 |
+| 迁移后 LLVM18 兼容性 | 保持兼容，未破坏 | 既有工具链、共享内存 ABI、Tracer 状态序列及校准结构保持兼容，未修改状态算法或共享布局 |
+| 三项功能迁移 | 未实现（保持离线） | 语法辅助变异、初始语料丰富、停滞干预均未接入模糊测试主循环，未调用在线 LLM |
+| 功能配置与等价验证 | 未完成 | 没有接入在线生成与变异，不能声称存在可运行集成或功能等价 |
 | 三项方法在 StateAFL 上的收益 | 未评价 | 没有新增实验数据，不能从 AFLNet 上的结论推定 |
 
 ## 可推进的工程步骤与验收标准
@@ -137,3 +141,34 @@ run 编号按数值处理，不用字典序或最大编号假设运行总数。
 明确这些交付属于可靠性和离线研究支持，不能称作三项创新点完整迁移，
 也不能声称已经证明论文方法在 StateAFL 上有效。
 ```
+
+---
+
+## 2026-10-29 离线工程改进交付记录
+
+本次工作在独立分支 `engineering/chatafl-offline-fixes` 上完成，严格遵循离线与不接入在线模型原则：
+
+### 1. 提交与修改明细
+- **Commit 1 (`91863b2`)**: `tools: implement offline analysis and evaluation governance (E01-E08)`
+  - 实现 `tools/offline_analysis/profuzzbench_analyze_offline.py`，解决 E01–E08（显式时间零点、保留全量 Run 拒绝幸存者偏差、自适应量程突破 100 限制、Schema-aware 表头解析、数值排序 1/2/9/10/11、完整 exit_code 记录、单调时间戳、独立 run 统计单元与右截断生存分析）；
+  - 实现 `generate_synthetic_test_data.py`，生成边缘合成数据（显式标注 SYNTHETIC）；
+  - 实现 `test_offline_analysis.py`，全量 12 项测试 100% 通过。
+- **Commit 2 (`3c7b346`)**: `fix(core): resolve C reliability issues S01-S05`
+  - `S01`: 修复 `afl-fuzz.c`、`afl-analyze.c`、`afl-showmap.c`、`afl-tmin.c` 中的 `shmat` 失败哨兵检查，严格识别 `(void *)-1`；
+  - `S02`: 修复 `llvm_mode/afl-llvm-rt-state-tracer.o.c` 中的 `MAX_NUM_STATES` 边界写入越界，并在 `afl-fuzz.c:extract_response_state_tracer` 中增加边界保护与 `seq_len == 0` 安全防范，杜绝向 `memcpy` 传递空指针；
+  - `S03`: 修复校准参考哈希 `ref_len` 与距离数组 `dist_len` 上限保护，纠正 `current_state_number < ref_len` 0-indexed 边界访问；
+  - `S04`: 修复 `extract_requests_generic` 中的剩余长度与消息长度加法运算，改用安全减法杜绝 32 位无符号整数溢出回绕，并修复 `len == 0` 时闭区间计算下溢；
+  - `S05`: 修复 `aflnet.c:save_kl_messages_to_file` 文件打开标志，增加 `O_TRUNC` 彻底杜绝截断覆盖时的旧尾部残留；
+  - 新增 `tests/unit_s01_s05.c` 与 `tests/test_s01_s05.py`，覆盖 5/5 项 C 原生单元与边界断言。
+- **Commit 3 (`6a8f7ca`)**: `tools: add offline representation and saved response validation (steps 3-5)`
+  - 实现 `tools/offline_validation/validate_representation.py`（Replay/Raw/Region 一致性与边界校验）；
+  - 实现 `tools/offline_validation/validate_saved_responses.py`（防御 C01, C02, C03, C06, C10 漏洞模型）；
+  - 新增 `docs/OFFLINE_REPRESENTATION_AND_RESPONSE_VALIDATION.md`（所有权矩阵与数据定义）；
+  - 新增 `tests/offline_validation/`（46 项自动化测试通过）。
+- **Commit 4**: `test: add unified offline engineering test suite runner and update handoff docs`
+  - 新增 `tests/run_offline_engineering_suite.py`，一键运行全量测试套件（S01–S05 + 离线表示/响应校验 46 项 + 离线统计治理 12 项），4.25s 内 100% 通过。
+
+### 2. 边界声明与未完成事项
+- **三项增强功能（语法辅助变异、初始语料丰富、停滞干预）仍未迁移**，未接入模糊测试主循环；
+- **未调用任何在线 LLM API**，未启动在线 campaign；
+- **未断言论文方法在 StateAFL 上的增益**，原有 StateAFL / LLVM18 架构行为与共享结构完全保持。
