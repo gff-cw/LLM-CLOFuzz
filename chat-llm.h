@@ -14,6 +14,16 @@ Similarly 1700 is for the example request in the seed enrichment
 
 #define OPENAI_TOKEN "1"
 #define DEFAULT_LLM_MODEL "gpt-6.1-sol"
+#define DEFAULT_LLM_CONFIG_FILE "llm_config.json"
+
+typedef struct {
+    char model[128];
+    char base_url[512];
+    char api_key[512];
+    long timeout;
+    int max_tokens;
+    int loaded;
+} llm_config_t;
 
 #define MAX_PROMPT_LENGTH 2048
 #define EXAMPLES_PROMPT_LENGTH 400
@@ -65,8 +75,12 @@ KHASH_MAP_INIT_STR(strMap, int)
 KHASH_MAP_INIT_STR(field_table, int);
 KHASH_INIT(consistency_table, const char *, khash_t(field_table) *, 1, kh_str_hash_func, kh_str_hash_equal);
 
+int load_llm_config(const char *path);
+const llm_config_t *get_llm_config(void);
 void set_target_llm_model(const char *model);
 const char *get_target_llm_model(void);
+const char *get_target_llm_base_url(void);
+const char *get_target_llm_api_key(void);
 char *chat_with_llm(char *prompt, char *model, int tries, float temperature);
 char *construct_prompt_for_templates(char *protocol_name, char **final_msg);
 char *construct_prompt_for_remaining_templates(char *protocol_name, char *templates_prompt, char *templates_answer);

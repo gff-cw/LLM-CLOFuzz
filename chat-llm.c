@@ -42,40 +42,217 @@ static size_t chat_with_llm_helper(void *contents, size_t size, size_t nmemb, vo
     return realsize;
 }
 
-static char target_llm_model[128] = {0};
+static llm_config_t g_llm_config = {
+    .model = DEFAULT_LLM_MODEL,
+    .base_url = "https://api.openai.com/v1",
+    .api_key = "",
+    .timeout = 60,
+    .max_tokens = 2048,
+    .loaded = 0
+};
+
+int load_llm_config(const char *path)
+{
+    const char *candidate_paths[5] = {NULL};
+    int count = 0;
+
+    if (path && *path)
+        candidate_paths[count++] = path;
+
+    const char *env_cfg = getenv("LLM_CONFIG_FILE");
+    if (!env_cfg || !*env_cfg) env_cfg = getenv("AFL_LLM_CONFIG");
+    if (env_cfg && *env_cfg)
+        candidate_paths[count++] = env_cfg;
+
+    candidate_paths[count++] = "llm_config.json";
+    candidate_paths[count++] = "../llm_config.json";
+    candidate_paths[count++] = "llm_config.cfg";
+
+    const char *found_path = NULL;
+    for (int i = 0; i < count; i++)
+    {
+        if (candidate_paths[i] && access(candidate_paths[i], R_OK) == 0)
+        {
+            found_path = candidate_paths[i];
+            break;
+        }
+    }
+
+    if (!found_path)
+    {
+        const char *m = getenv("LLM_MODEL");
+        if (!m || !*m) m = getenv("OPENAI_MODEL");
+        if (m && *m)
+        {
+            strncpy(g_llm_config.model, m, sizeof(g_llm_config.model) - 1);
+            g_llm_config.model[sizeof(g_llm_config.model) - 1] = '\0';
+        }
+
+        const char *u = getenv("OPENAI_BASE_URL");
+        if (!u || !*u) u = getenv("OPENAI_API_BASE");
+        if (!u || !*u) u = getenv("LLM_BASE_URL");
+        if (u && *u)
+        {
+            strncpy(g_llm_config.base_url, u, sizeof(g_llm_config.base_url) - 1);
+            g_llm_config.base_url[sizeof(g_llm_config.base_url) - 1] = '\0';
+        }
+
+        const char *k = getenv("OPENAI_API_KEY");
+        if (!k || !*k) k = getenv("LLM_API_KEY");
+        if (k && *k)
+        {
+            strncpy(g_llm_config.api_key, k, sizeof(g_llm_config.api_key) - 1);
+            g_llm_config.api_key[sizeof(g_llm_config.api_key) - 1] = '\0';
+        }
+
+        g_llm_config.loaded = 1;
+        printf("[*] Note: 'llm_config.json' not found in working directory; using defaults / env (Model: %s)\n", g_llm_config.model);
+        return 0;
+    }
+
+    /* Try parsing as JSON first */
+    json_object *root = json_object_from_file(found_path);
+    if (root && json_object_is_type(root, json_type_object))
+    {
+        json_object *val = NULL;
+        if (json_object_object_get_ex(root, "model", &val) && json_object_is_type(val, json_type_string))
+        {
+            strncpy(g_llm_config.model, json_object_get_string(val), sizeof(g_llm_config.model) - 1);
+            g_llm_config.model[sizeof(g_llm_config.model) - 1] = '\0';
+        }
+
+        if (json_object_object_get_ex(root, "base_url", &val) && json_object_is_type(val, json_type_string))
+        {
+            strncpy(g_llm_config.base_url, json_object_get_string(val), sizeof(g_llm_config.base_url) - 1);
+            g_llm_config.base_url[sizeof(g_llm_config.base_url) - 1] = '\0';
+        }
+
+        if (json_object_object_get_ex(root, "api_key", &val) && json_object_is_type(val, json_type_string))
+        {
+            strncpy(g_llm_config.api_key, json_object_get_string(val), sizeof(g_llm_config.api_key) - 1);
+            g_llm_config.api_key[sizeof(g_llm_config.api_key) - 1] = '\0';
+        }
+
+        if (json_object_object_get_ex(root, "timeout", &val) && json_object_is_type(val, json_type_int))
+        {
+            g_llm_config.timeout = (long)json_object_get_int64(val);
+        }
+
+        if (json_object_object_get_ex(root, "max_tokens", &val) && json_object_is_type(val, json_type_int))
+        {
+            g_llm_config.max_tokens = json_object_get_int(val);
+        }
+
+        json_object_put(root);
+        g_llm_config.loaded = 1;
+
+        printf("[+] Loaded LLM configuration from '%s':\n", found_path);
+        printf("    Model    : %s\n", g_llm_config.model);
+        printf("    Base URL : %s\n", g_llm_config.base_url[0] ? g_llm_config.base_url : "(default)");
+        printf("    API Key  : %s\n", (g_llm_config.api_key[0] && strcmp(g_llm_config.api_key, "YOUR_API_KEY_HERE") != 0) ? "[Configured in file]" : "[Unset / Template]");
+        if (g_llm_config.timeout > 0)
+            printf("    Timeout  : %ld seconds\n", g_llm_config.timeout);
+        if (g_llm_config.max_tokens > 0)
+            printf("    MaxTokens: %d\n", g_llm_config.max_tokens);
+        return 1;
+    }
+
+    if (root) json_object_put(root);
+
+    /* Secondary fallback: parse key = value lines */
+    FILE *fp = fopen(found_path, "r");
+    if (fp)
+    {
+        char line[1024];
+        while (fgets(line, sizeof(line), fp))
+        {
+            char *p = line;
+            while (*p == ' ' || *p == '\t') p++;
+            if (*p == '#' || *p == ';' || *p == '\n' || *p == '\r' || *p == '\0') continue;
+
+            char *eq = strchr(p, '=');
+            if (!eq) eq = strchr(p, ':');
+            if (eq)
+            {
+                *eq = '\0';
+                char *k = p;
+                char *v = eq + 1;
+                char *kend = k + strlen(k) - 1;
+                while (kend >= k && (*kend == ' ' || *kend == '\t' || *kend == '\"' || *kend == '\'')) *kend-- = '\0';
+                while (*v == ' ' || *v == '\t' || *v == '\"' || *v == '\'') v++;
+                char *vend = v + strlen(v) - 1;
+                while (vend >= v && (*vend == ' ' || *vend == '\t' || *vend == '\r' || *vend == '\n' || *vend == '\"' || *vend == '\'')) *vend-- = '\0';
+
+                if (strcasecmp(k, "model") == 0)
+                    strncpy(g_llm_config.model, v, sizeof(g_llm_config.model) - 1);
+                else if (strcasecmp(k, "base_url") == 0 || strcasecmp(k, "url") == 0)
+                    strncpy(g_llm_config.base_url, v, sizeof(g_llm_config.base_url) - 1);
+                else if (strcasecmp(k, "api_key") == 0 || strcasecmp(k, "key") == 0 || strcasecmp(k, "token") == 0)
+                    strncpy(g_llm_config.api_key, v, sizeof(g_llm_config.api_key) - 1);
+                else if (strcasecmp(k, "timeout") == 0)
+                    g_llm_config.timeout = atol(v);
+                else if (strcasecmp(k, "max_tokens") == 0)
+                    g_llm_config.max_tokens = atoi(v);
+            }
+        }
+        fclose(fp);
+        g_llm_config.loaded = 1;
+        printf("[+] Loaded LLM config (text format) from '%s':\n", found_path);
+        printf("    Model    : %s\n", g_llm_config.model);
+        printf("    Base URL : %s\n", g_llm_config.base_url[0] ? g_llm_config.base_url : "(default)");
+        printf("    API Key  : %s\n", (g_llm_config.api_key[0] && strcmp(g_llm_config.api_key, "YOUR_API_KEY_HERE") != 0) ? "[Configured in file]" : "[Unset / Template]");
+        return 1;
+    }
+
+    g_llm_config.loaded = 1;
+    return 0;
+}
+
+const llm_config_t *get_llm_config(void)
+{
+    if (!g_llm_config.loaded)
+        load_llm_config(NULL);
+    return &g_llm_config;
+}
 
 void set_target_llm_model(const char *model)
 {
     if (model && *model)
     {
-        strncpy(target_llm_model, model, sizeof(target_llm_model) - 1);
-        target_llm_model[sizeof(target_llm_model) - 1] = '\0';
+        strncpy(g_llm_config.model, model, sizeof(g_llm_config.model) - 1);
+        g_llm_config.model[sizeof(g_llm_config.model) - 1] = '\0';
     }
 }
 
 const char *get_target_llm_model(void)
 {
-    if (target_llm_model[0])
-        return target_llm_model;
+    const llm_config_t *cfg = get_llm_config();
+    if (cfg->model[0])
+        return cfg->model;
+    return DEFAULT_LLM_MODEL;
+}
 
-    const char *env_model = getenv("LLM_MODEL");
-    if (!env_model || !*env_model) env_model = getenv("OPENAI_MODEL");
-    if (!env_model || !*env_model) env_model = getenv("AFL_LLM_MODEL");
-    if (env_model && *env_model)
-    {
-        strncpy(target_llm_model, env_model, sizeof(target_llm_model) - 1);
-        target_llm_model[sizeof(target_llm_model) - 1] = '\0';
-        return target_llm_model;
-    }
+const char *get_target_llm_base_url(void)
+{
+    const llm_config_t *cfg = get_llm_config();
+    if (cfg->base_url[0])
+        return cfg->base_url;
+    return "https://api.openai.com/v1";
+}
 
-    strncpy(target_llm_model, DEFAULT_LLM_MODEL, sizeof(target_llm_model) - 1);
-    target_llm_model[sizeof(target_llm_model) - 1] = '\0';
-    return target_llm_model;
+const char *get_target_llm_api_key(void)
+{
+    const llm_config_t *cfg = get_llm_config();
+    if (cfg->api_key[0])
+        return cfg->api_key;
+    return "";
 }
 
 char *chat_with_llm(char *prompt, char *model, int tries, float temperature)
 {
     if (!prompt) return NULL;
+
+    const llm_config_t *cfg = get_llm_config();
 
     const char *active_model = NULL;
     if (model && strcmp(model, "turbo") != 0 && strcmp(model, "instruct") != 0)
@@ -100,9 +277,10 @@ char *chat_with_llm(char *prompt, char *model, int tries, float temperature)
     }
     else
     {
-        const char *custom_base = getenv("OPENAI_BASE_URL");
+        const char *custom_base = (cfg->base_url[0] && strcmp(cfg->base_url, "https://api.openai.com/v1") != 0) ? cfg->base_url : getenv("OPENAI_BASE_URL");
         if (!custom_base || !*custom_base) custom_base = getenv("OPENAI_API_BASE");
         if (!custom_base || !*custom_base) custom_base = getenv("LLM_BASE_URL");
+        if (!custom_base || !*custom_base) custom_base = cfg->base_url;
 
         if (custom_base && *custom_base)
         {
@@ -127,27 +305,27 @@ char *chat_with_llm(char *prompt, char *model, int tries, float temperature)
         }
     }
 
-    const char *token = getenv("OPENAI_API_KEY");
+    const char *token = (cfg->api_key[0] && strcmp(cfg->api_key, "YOUR_API_KEY_HERE") != 0) ? cfg->api_key : getenv("OPENAI_API_KEY");
     if (!token || !*token) token = getenv("LLM_API_KEY");
     if (!token || !*token) token = getenv("OPENAI_TOKEN");
 
     char auth_header[512] = {0};
-    if (token && *token && strcmp(token, "1") != 0)
+    if (token && *token && strcmp(token, "1") != 0 && strcmp(token, "YOUR_API_KEY_HERE") != 0)
     {
         snprintf(auth_header, sizeof(auth_header), "Authorization: Bearer %s", token);
     }
-    else if (!getenv("OPENAI_BASE_URL") && !getenv("OPENAI_API_BASE") && !getenv("LLM_BASE_URL") && !getenv("LLM_ENDPOINT"))
+    else if (!custom_base && !getenv("LLM_ENDPOINT"))
     {
         static int warned_token = 0;
         if (!warned_token)
         {
-            printf("[-] Warning: Neither OPENAI_API_KEY nor LLM_API_KEY is configured. Skipping LLM request.\n");
+            printf("[-] Warning: No valid API Key configured in 'llm_config.json' or OPENAI_API_KEY. Skipping LLM request.\n");
             warned_token = 1;
         }
         return NULL;
     }
 
-    int max_tokens = MAX_TOKENS;
+    int max_tokens = cfg->max_tokens > 0 ? cfg->max_tokens : MAX_TOKENS;
     const char *env_max_tokens = getenv("LLM_MAX_TOKENS");
     if (env_max_tokens && atoi(env_max_tokens) > 0)
         max_tokens = atoi(env_max_tokens);
@@ -195,7 +373,7 @@ char *chat_with_llm(char *prompt, char *model, int tries, float temperature)
     char *data = strdup(json_payload ? json_payload : "{}");
     json_object_put(request_obj);
 
-    long timeout_sec = 60L;
+    long timeout_sec = cfg->timeout > 0 ? cfg->timeout : 60L;
     const char *env_timeout = getenv("LLM_TIMEOUT");
     if (env_timeout && atol(env_timeout) > 0)
         timeout_sec = atol(env_timeout);
