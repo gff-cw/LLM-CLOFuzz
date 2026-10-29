@@ -42,71 +42,209 @@ static size_t chat_with_llm_helper(void *contents, size_t size, size_t nmemb, vo
     return realsize;
 }
 
+static char target_llm_model[128] = {0};
+
+void set_target_llm_model(const char *model)
+{
+    if (model && *model)
+    {
+        strncpy(target_llm_model, model, sizeof(target_llm_model) - 1);
+        target_llm_model[sizeof(target_llm_model) - 1] = '\0';
+    }
+}
+
+const char *get_target_llm_model(void)
+{
+    if (target_llm_model[0])
+        return target_llm_model;
+
+    const char *env_model = getenv("LLM_MODEL");
+    if (!env_model || !*env_model) env_model = getenv("OPENAI_MODEL");
+    if (!env_model || !*env_model) env_model = getenv("AFL_LLM_MODEL");
+    if (env_model && *env_model)
+    {
+        strncpy(target_llm_model, env_model, sizeof(target_llm_model) - 1);
+        target_llm_model[sizeof(target_llm_model) - 1] = '\0';
+        return target_llm_model;
+    }
+
+    strncpy(target_llm_model, DEFAULT_LLM_MODEL, sizeof(target_llm_model) - 1);
+    target_llm_model[sizeof(target_llm_model) - 1] = '\0';
+    return target_llm_model;
+}
+
 char *chat_with_llm(char *prompt, char *model, int tries, float temperature)
 {
-    CURL *curl;
-    CURLcode res = CURLE_OK;
-    char *answer = NULL;
+    if (!prompt) return NULL;
+
+    const char *active_model = NULL;
+    if (model && strcmp(model, "turbo") != 0 && strcmp(model, "instruct") != 0)
+        active_model = model;
+    else
+        active_model = get_target_llm_model();
+
+    int is_legacy_instruct = 0;
+    if (strcmp(active_model, "gpt-3.5-turbo-instruct") == 0 ||
+        (strstr(active_model, "instruct") && !strstr(active_model, "chat")))
+    {
+        is_legacy_instruct = 1;
+    }
+
     char default_url[512];
     char *url = default_url;
 
-    char *custom_base = getenv("OPENAI_API_BASE");
-    if (!custom_base || !*custom_base) custom_base = getenv("OPENAI_BASE_URL");
-
-    if (custom_base && *custom_base)
+    const char *endpoint = getenv("LLM_ENDPOINT");
+    if (endpoint && *endpoint)
     {
-        if (strcmp(model, "instruct") == 0)
-            snprintf(default_url, sizeof(default_url), "%s/completions", custom_base);
-        else
-            snprintf(default_url, sizeof(default_url), "%s/chat/completions", custom_base);
+        url = (char *)endpoint;
     }
     else
     {
-        if (strcmp(model, "instruct") == 0)
-            url = "https://api.openai.com/v1/completions";
+        const char *custom_base = getenv("OPENAI_BASE_URL");
+        if (!custom_base || !*custom_base) custom_base = getenv("OPENAI_API_BASE");
+        if (!custom_base || !*custom_base) custom_base = getenv("LLM_BASE_URL");
+
+        if (custom_base && *custom_base)
+        {
+            char clean_base[256];
+            strncpy(clean_base, custom_base, sizeof(clean_base) - 1);
+            clean_base[sizeof(clean_base) - 1] = '\0';
+            size_t blen = strlen(clean_base);
+            while (blen > 0 && clean_base[blen - 1] == '/')
+                clean_base[--blen] = '\0';
+
+            if (is_legacy_instruct)
+                snprintf(default_url, sizeof(default_url), "%s/completions", clean_base);
+            else
+                snprintf(default_url, sizeof(default_url), "%s/chat/completions", clean_base);
+        }
         else
-            url = "https://api.openai.com/v1/chat/completions";
+        {
+            if (is_legacy_instruct)
+                url = "https://api.openai.com/v1/completions";
+            else
+                url = "https://api.openai.com/v1/chat/completions";
+        }
     }
 
-    char *token = getenv("OPENAI_API_KEY");
+    const char *token = getenv("OPENAI_API_KEY");
+    if (!token || !*token) token = getenv("LLM_API_KEY");
     if (!token || !*token) token = getenv("OPENAI_TOKEN");
-    if (!token || !*token) token = OPENAI_TOKEN;
 
-    char auth_header[512];
-    snprintf(auth_header, sizeof(auth_header), "Authorization: Bearer %s", token);
-
-    char *content_header = "Content-Type: application/json";
-    char *accept_header = "Accept: application/json";
-    char *data = NULL;
-    if (strcmp(model, "instruct") == 0)
+    char auth_header[512] = {0};
+    if (token && *token && strcmp(token, "1") != 0)
     {
-        asprintf(&data, "{\"model\": \"gpt-3.5-turbo-instruct\", \"prompt\": \"%s\", \"max_tokens\": %d, \"temperature\": %f}", prompt, MAX_TOKENS, temperature);
+        snprintf(auth_header, sizeof(auth_header), "Authorization: Bearer %s", token);
+    }
+    else if (!getenv("OPENAI_BASE_URL") && !getenv("OPENAI_API_BASE") && !getenv("LLM_BASE_URL") && !getenv("LLM_ENDPOINT"))
+    {
+        static int warned_token = 0;
+        if (!warned_token)
+        {
+            printf("[-] Warning: Neither OPENAI_API_KEY nor LLM_API_KEY is configured. Skipping LLM request.\n");
+            warned_token = 1;
+        }
+        return NULL;
+    }
+
+    int max_tokens = MAX_TOKENS;
+    const char *env_max_tokens = getenv("LLM_MAX_TOKENS");
+    if (env_max_tokens && atoi(env_max_tokens) > 0)
+        max_tokens = atoi(env_max_tokens);
+
+    json_object *request_obj = json_object_new_object();
+    json_object_object_add(request_obj, "model", json_object_new_string(active_model));
+    json_object_object_add(request_obj, "max_tokens", json_object_new_int(max_tokens));
+    json_object_object_add(request_obj, "temperature", json_object_new_double(temperature));
+
+    if (is_legacy_instruct)
+    {
+        json_object_object_add(request_obj, "prompt", json_object_new_string(prompt));
     }
     else
     {
-        asprintf(&data, "{\"model\": \"gpt-3.5-turbo\",\"messages\": %s, \"max_tokens\": %d, \"temperature\": %f}", prompt, MAX_TOKENS, temperature);
+        json_object *messages_obj = NULL;
+        if (prompt[0] == '[')
+        {
+            messages_obj = json_tokener_parse(prompt);
+            if (!messages_obj || !json_object_is_type(messages_obj, json_type_array))
+            {
+                if (messages_obj) json_object_put(messages_obj);
+                messages_obj = NULL;
+            }
+        }
+
+        if (!messages_obj)
+        {
+            messages_obj = json_object_new_array();
+            json_object *sys_msg = json_object_new_object();
+            json_object_object_add(sys_msg, "role", json_object_new_string("system"));
+            json_object_object_add(sys_msg, "content", json_object_new_string("You are a helpful assistant for network protocol fuzzing and message format extraction."));
+            json_object_array_add(messages_obj, sys_msg);
+
+            json_object *user_msg = json_object_new_object();
+            json_object_object_add(user_msg, "role", json_object_new_string("user"));
+            json_object_object_add(user_msg, "content", json_object_new_string(prompt));
+            json_object_array_add(messages_obj, user_msg);
+        }
+
+        json_object_object_add(request_obj, "messages", messages_obj);
     }
+
+    const char *json_payload = json_object_to_json_string(request_obj);
+    char *data = strdup(json_payload ? json_payload : "{}");
+    json_object_put(request_obj);
+
+    long timeout_sec = 60L;
+    const char *env_timeout = getenv("LLM_TIMEOUT");
+    if (env_timeout && atol(env_timeout) > 0)
+        timeout_sec = atol(env_timeout);
+
+    long connect_timeout_sec = 15L;
+    const char *env_connect_timeout = getenv("LLM_CONNECT_TIMEOUT");
+    if (env_connect_timeout && atol(env_connect_timeout) > 0)
+        connect_timeout_sec = atol(env_connect_timeout);
+
+    CURL *curl;
+    CURLcode res = CURLE_OK;
+    char *answer = NULL;
+
     curl_global_init(CURL_GLOBAL_DEFAULT);
     do
     {
         struct MemoryStruct chunk;
-
-        chunk.memory = malloc(1); /* will be grown as needed by the realloc above */
-        chunk.size = 0;           /* no data at this point */
+        chunk.memory = malloc(1);
+        chunk.size = 0;
 
         curl = curl_easy_init();
         if (curl)
         {
             struct curl_slist *headers = NULL;
-            headers = curl_slist_append(headers, auth_header);
-            headers = curl_slist_append(headers, content_header);
-            headers = curl_slist_append(headers, accept_header);
+            if (auth_header[0])
+                headers = curl_slist_append(headers, auth_header);
+            headers = curl_slist_append(headers, "Content-Type: application/json");
+            headers = curl_slist_append(headers, "Accept: application/json");
+
+            const char *org_id = getenv("OPENAI_ORG_ID");
+            if (org_id && *org_id)
+            {
+                char org_header[256];
+                snprintf(org_header, sizeof(org_header), "OpenAI-Organization: %s", org_id);
+                headers = curl_slist_append(headers, org_header);
+            }
+            const char *project_id = getenv("OPENAI_PROJECT_ID");
+            if (project_id && *project_id)
+            {
+                char proj_header[256];
+                snprintf(proj_header, sizeof(proj_header), "OpenAI-Project: %s", project_id);
+                headers = curl_slist_append(headers, proj_header);
+            }
 
             curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
             curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data);
             curl_easy_setopt(curl, CURLOPT_URL, url);
-            curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 15L);
-            curl_easy_setopt(curl, CURLOPT_TIMEOUT, 60L);
+            curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, connect_timeout_sec);
+            curl_easy_setopt(curl, CURLOPT_TIMEOUT, timeout_sec);
             curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, chat_with_llm_helper);
             curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&chunk);
 
@@ -115,31 +253,37 @@ char *chat_with_llm(char *prompt, char *model, int tries, float temperature)
             if (res == CURLE_OK)
             {
                 json_object *jobj = json_tokener_parse(chunk.memory);
-
-                // Check if the "choices" key exists
-                if (jobj && json_object_object_get_ex(jobj, "choices", NULL))
+                if (jobj)
                 {
-                    json_object *choices = json_object_object_get(jobj, "choices");
-                    if (choices && json_object_array_length(choices) > 0)
+                    json_object *err_obj = NULL;
+                    if (json_object_object_get_ex(jobj, "error", &err_obj))
+                    {
+                        const char *err_str = json_object_to_json_string(err_obj);
+                        printf("[-] LLM API error [%s]: %s\n", active_model, err_str ? err_str : "Unknown");
+                    }
+
+                    json_object *choices = NULL;
+                    if (json_object_object_get_ex(jobj, "choices", &choices) &&
+                        json_object_is_type(choices, json_type_array) &&
+                        json_object_array_length(choices) > 0)
                     {
                         json_object *first_choice = json_object_array_get_idx(choices, 0);
                         const char *data_str = NULL;
 
-                        // The answer begins with a newline character, so we remove it
-                        if (strcmp(model, "instruct") == 0)
+                        json_object *msg_obj = NULL;
+                        json_object *content_obj = NULL;
+                        json_object *text_obj = NULL;
+
+                        if (json_object_object_get_ex(first_choice, "message", &msg_obj) &&
+                            json_object_object_get_ex(msg_obj, "content", &content_obj))
                         {
-                            json_object *jobj4 = json_object_object_get(first_choice, "text");
-                            if (jobj4) data_str = json_object_get_string(jobj4);
+                            data_str = json_object_get_string(content_obj);
                         }
-                        else
+                        else if (json_object_object_get_ex(first_choice, "text", &text_obj))
                         {
-                            json_object *jobj4 = json_object_object_get(first_choice, "message");
-                            if (jobj4)
-                            {
-                                json_object *jobj5 = json_object_object_get(jobj4, "content");
-                                if (jobj5) data_str = json_object_get_string(jobj5);
-                            }
+                            data_str = json_object_get_string(text_obj);
                         }
+
                         if (data_str)
                         {
                             if (data_str[0] == '\n')
@@ -147,17 +291,17 @@ char *chat_with_llm(char *prompt, char *model, int tries, float temperature)
                             answer = strdup(data_str);
                         }
                     }
+                    json_object_put(jobj);
                 }
                 else
                 {
-                    printf("Error response is: %s\n", chunk.memory ? chunk.memory : "NULL");
-                    sleep(2); // Sleep for a small amount of time to ensure that the service can recover
+                    printf("[-] Failed to parse LLM JSON response for model %s: %s\n", active_model, chunk.memory ? chunk.memory : "NULL");
+                    sleep(2);
                 }
-                if (jobj) json_object_put(jobj);
             }
             else
             {
-                printf("Error: %s\n", curl_easy_strerror(res));
+                printf("[-] CURL error contacting LLM (%s): %s\n", url, curl_easy_strerror(res));
             }
 
             curl_slist_free_all(headers);
@@ -990,7 +1134,11 @@ char *enrich_sequence(char *sequence, khash_t(strSet) * missing_message_types)
     int sequence_len = strlen(sequence_escaped_str);
     if (sequence_len > 0 && sequence_escaped_str[sequence_len - 1] == '"')
         sequence_len--;
-    int allowed_tokens = (MAX_TOKENS - strlen(prompt_template) - missing_fields_len);
+    int ctx_limit = MAX_TOKENS;
+    const char *env_ctx = getenv("LLM_MAX_TOKENS");
+    if (env_ctx && atoi(env_ctx) > 0) ctx_limit = atoi(env_ctx);
+
+    int allowed_tokens = (ctx_limit - strlen(prompt_template) - missing_fields_len);
     if (sequence_len > allowed_tokens)
     {
         sequence_len = allowed_tokens;

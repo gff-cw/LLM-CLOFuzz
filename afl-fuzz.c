@@ -10087,7 +10087,8 @@ static void usage(u8* argv0) {
        "  -F            - enable false negative reduction mode (see README.md)\n"
        "  -c cleanup    - name or full path to the server cleanup script (see README.md)\n"
        "  -q algo       - state selection algorithm (See aflnet.h for all available options)\n"
-       "  -s algo       - seed selection algorithm (See aflnet.h for all available options)\n\n"
+       "  -s algo       - seed selection algorithm (See aflnet.h for all available options)\n"
+       "  -L model      - LLM model name (default: gpt-6.1-sol or env LLM_MODEL/OPENAI_MODEL)\n\n"
 
        "Other stuff:\n\n"
 
@@ -10825,7 +10826,7 @@ int main(int argc, char** argv) {
   gettimeofday(&tv, &tz);
   srandom(tv.tv_sec ^ tv.tv_usec ^ getpid());
 
-  while ((opt = getopt(argc, argv, "+i:o:f:m:t:T:dnCB:S:M:x:QN:D:W:r:w:e:P:KEq:s:RFc:l:u:U:")) > 0)
+  while ((opt = getopt(argc, argv, "+i:o:f:m:t:T:dnCB:S:M:x:QN:D:W:r:w:e:P:KEq:s:RFc:l:u:U:L:")) > 0)
 
     switch (opt) {
 
@@ -11150,6 +11151,12 @@ int main(int argc, char** argv) {
 
           break;
 
+      case 'L': /* LLM model name */
+
+          if (!optarg || !*optarg) FATAL("Empty model name passed to -L");
+          set_target_llm_model(optarg);
+          break;
+
       default:
 
         usage(argv[0]);
@@ -11229,6 +11236,7 @@ int main(int argc, char** argv) {
     protocol_patterns = kl_init(rang);
     message_types_set = kh_init(strSet);
 
+    ACTF("Target LLM model: %s", get_target_llm_model());
     setup_llm_grammars();
     enrich_testcases();
   }
