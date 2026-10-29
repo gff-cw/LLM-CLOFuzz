@@ -37,6 +37,14 @@ CFLAGS     += -Wall -D_FORTIFY_SOURCE=2 -g -Wno-pointer-sign -Wno-unused-result 
 	      -DAFL_PATH=\"$(HELPER_PATH)\" -DDOC_PATH=\"$(DOC_PATH)\" \
 	      -DBIN_PATH=\"$(BIN_PATH)\"
 
+ifneq ("$(wildcard $(HOME)/.local/include)","")
+  CFLAGS   += -I$(HOME)/.local/include
+endif
+
+ifneq ("$(wildcard $(HOME)/.local/lib)","")
+  LDFLAGS  += -L$(HOME)/.local/lib
+endif
+
 ifneq "$(filter Linux GNU%,$(shell uname))" ""
   LDFLAGS  += -ldl -lgvc -lcgraph -lm
 endif

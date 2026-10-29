@@ -11,7 +11,9 @@ afl-replay
 afl-showmap
 afl-tmin
 aflnet-replay
+aflnet-client
 aflnet.o
+chat-llm.o
 as
 
 # Binaries produced by "make -C llvm_mode"
@@ -34,3 +36,8 @@ afl-llvm-rt.o
 __pycache__/
 *.pyc
 *.exe
+
+# Format audit binaries
+/tools/format_audit/replay_tool
+/tools/format_audit/test_replay_codec
+/tools/format_audit/test_region_checker
