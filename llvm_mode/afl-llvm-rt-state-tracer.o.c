@@ -1360,14 +1360,16 @@ unsigned int compute_state_value(Tlsh * t, int data_size, MVPTree * tree, unsign
 
       LOG_DEBUG("APPENDING HASH TO REFERENCE SEQUENCE FOR CALIBRATION: %d\n", calib_shm->ref_len);
 
-      strcpy(calib_shm->ref_state_seq[calib_shm->ref_len], tlsh_hash);
-      calib_shm->ref_len++;
+      if (calib_shm->ref_len < MAX_NUM_STATES && tlsh_hash) {
+        snprintf(calib_shm->ref_state_seq[calib_shm->ref_len], sizeof(calib_shm->ref_state_seq[calib_shm->ref_len]), "%s", tlsh_hash);
+        calib_shm->ref_len++;
+      }
     }
     else {
 
       //int current_state_number = state_shared_ptr->seq_len - 1;
 
-      if(current_state_number <= calib_shm->ref_len) {
+      if(current_state_number < (unsigned int)calib_shm->ref_len && current_state_number < MAX_NUM_STATES) {
 
         Tlsh * ref_tlsh = Tlsh_new();
 
@@ -1377,8 +1379,10 @@ unsigned int compute_state_value(Tlsh * t, int data_size, MVPTree * tree, unsign
 
         LOG_DEBUG("TLSH DISTANCE FROM REF: %d\n", diff);
 
-        calib_shm->dist[calib_shm->dist_len] = diff;
-        calib_shm->dist_len++;
+        if (calib_shm->dist_len < (MAX_NUM_STATES * MAX_REPETITIONS)) {
+          calib_shm->dist[calib_shm->dist_len] = diff;
+          calib_shm->dist_len++;
+        }
 
         Tlsh_delete(ref_tlsh);
       }
@@ -1675,12 +1679,18 @@ void end_state_tracer() {
 
       LOG_INFO("SAVING STATE [# %d]: %08x\n", current_state_number, current_state_value);
 
-      *state_sequence = current_state_value;
-      state_sequence++;
+      if (current_state_number < MAX_NUM_STATES) {
+        *state_sequence = current_state_value;
+        state_sequence++;
+      }
       current_state_number++;
 
       // update state sequence length
-      state_shared_ptr->seq_len = current_state_number;
+      if (current_state_number <= MAX_NUM_STATES) {
+        state_shared_ptr->seq_len = current_state_number;
+      } else {
+        state_shared_ptr->seq_len = MAX_NUM_STATES;
+      }
 
       current_state_value = 0;
 
@@ -1797,13 +1807,14 @@ void end_state_tracer() {
 
   // save the last state of the sequence
   current_state_value = compute_state_value(tlsh, curr_state_buffer_data, tree, &unique_states, current_state_number-1);
-  *state_sequence = current_state_value;
+  if (current_state_number < MAX_NUM_STATES) {
+    *state_sequence = current_state_value;
+    state_shared_ptr->seq_len = current_state_number + 1;
+  } else {
+    state_shared_ptr->seq_len = MAX_NUM_STATES;
+  }
 
   LOG_INFO("SAVING STATE [# %d]: %08x\n\n", current_state_number, current_state_value);
-
-
-  // save the state sequence length
-  state_shared_ptr->seq_len = current_state_number+1;
 
   LOG_DEBUG("TOTAL STATES: %d\n", state_shared_ptr->seq_len);
 

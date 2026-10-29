@@ -2746,7 +2746,7 @@ EXP_ST void setup_shm(void) {
 
   trace_bits = shmat(shm_id, NULL, 0);
 
-  if (!trace_bits) PFATAL("shmat() failed");
+  if (trace_bits == (void *)-1 || !trace_bits) PFATAL("shmat() failed");
 
 
   shm_state_id = shmget(IPC_PRIVATE, sizeof(struct state_shared), IPC_CREAT | IPC_EXCL | 0600);
@@ -2761,7 +2761,7 @@ EXP_ST void setup_shm(void) {
 
   state_shared_ptr = shmat(shm_state_id, NULL, 0);
 
-  if (!state_shared_ptr) PFATAL("shmat() failed");
+  if (state_shared_ptr == (void *)-1 || !state_shared_ptr) PFATAL("shmat() failed");
 
 
 #ifndef DISABLE_TLSH_CALIBRATION
@@ -2772,7 +2772,7 @@ EXP_ST void setup_shm(void) {
 
   calib_shm = shmat(mvp_calibration_shm_id, NULL, 0);
 
-  if (!calib_shm) PFATAL("shmat() failed");
+  if (calib_shm == (void *)-1 || !calib_shm) PFATAL("shmat() failed");
 
   calib_shm->enabled = 1;
   calib_shm->initialized = 0;
@@ -2954,11 +2954,23 @@ void tlsh_set_distance() {
 
 unsigned int* extract_response_state_tracer(unsigned char* buf, unsigned int buf_size, unsigned int* state_count_ref) {
 
+  if (!state_count_ref) return NULL;
+  if (!state_shared_ptr) {
+    *state_count_ref = 0;
+    return NULL;
+  }
+
   unsigned int state_tracer_count_all = state_shared_ptr->seq_len;
+  if (state_tracer_count_all > MAX_NUM_STATES) {
+    state_tracer_count_all = MAX_NUM_STATES;
+  }
 
   *state_count_ref = state_tracer_count_all;
+  if (state_tracer_count_all == 0) {
+    return NULL;
+  }
 
-  unsigned int * state_sequence = ck_alloc( (*state_count_ref)*sizeof(int) );
+  unsigned int * state_sequence = ck_alloc( (*state_count_ref)*sizeof(unsigned int) );
   memcpy(state_sequence, state_shared_ptr->seq, *state_count_ref * sizeof(unsigned int));
 
 
@@ -2967,8 +2979,10 @@ unsigned int* extract_response_state_tracer(unsigned char* buf, unsigned int buf
   fprintf(log_state_tracer, "\nstate_count: %d\n", *state_count_ref);
   fprintf(log_state_tracer, "state_sequence: ");
 
-  for(int i=0; i<*state_count_ref; i++)
-    fprintf(log_state_tracer, " 0x%02X", state_sequence[i]);
+  if (state_sequence) {
+    for(int i=0; i<*state_count_ref; i++)
+      fprintf(log_state_tracer, " 0x%02X", state_sequence[i]);
+  }
 
   fprintf(log_state_tracer, "\n");
 #endif
@@ -3029,15 +3043,16 @@ region_t* extract_requests_generic(unsigned char* buf, unsigned int buf_size, un
 
   while(byte_count < buf_size) {
 
-    if(byte_count + 4 >= buf_size) {
-      PFATAL("AFLNet - Erroreous message length in input file");
+    if(buf_size - byte_count < sizeof(unsigned int)) {
+      PFATAL("AFLNet - Erroneous message length in input file");
     }
 
-    unsigned int next_message_len = *((unsigned int *)(void *)&buf[byte_count]);
+    unsigned int next_message_len;
+    memcpy(&next_message_len, &buf[byte_count], sizeof(unsigned int));
 
     byte_count += sizeof(unsigned int);
 
-    if(byte_count + next_message_len > buf_size) {
+    if(next_message_len > buf_size - byte_count) {
       PFATAL("AFLNet - Erroneous message length in input file (2)");
     }
 
@@ -3046,7 +3061,7 @@ region_t* extract_requests_generic(unsigned char* buf, unsigned int buf_size, un
     regions = (region_t *)ck_realloc(regions, region_count * sizeof(region_t));
 
     regions[region_count - 1].start_byte = cur_start;
-    regions[region_count - 1].end_byte = cur_start + next_message_len - 1;
+    regions[region_count - 1].end_byte = (next_message_len > 0) ? (int)(cur_start + next_message_len - 1) : ((int)cur_start - 1);
     regions[region_count - 1].state_sequence = NULL;
     regions[region_count - 1].state_count = 0;
 
