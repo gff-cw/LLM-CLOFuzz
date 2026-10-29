@@ -53,16 +53,11 @@ static llm_config_t g_llm_config = {
 
 int load_llm_config(const char *path)
 {
-    const char *candidate_paths[5] = {NULL};
+    const char *candidate_paths[4] = {NULL};
     int count = 0;
 
     if (path && *path)
         candidate_paths[count++] = path;
-
-    const char *env_cfg = getenv("LLM_CONFIG_FILE");
-    if (!env_cfg || !*env_cfg) env_cfg = getenv("AFL_LLM_CONFIG");
-    if (env_cfg && *env_cfg)
-        candidate_paths[count++] = env_cfg;
 
     candidate_paths[count++] = "llm_config.json";
     candidate_paths[count++] = "../llm_config.json";
@@ -80,33 +75,8 @@ int load_llm_config(const char *path)
 
     if (!found_path)
     {
-        const char *m = getenv("LLM_MODEL");
-        if (!m || !*m) m = getenv("OPENAI_MODEL");
-        if (m && *m)
-        {
-            strncpy(g_llm_config.model, m, sizeof(g_llm_config.model) - 1);
-            g_llm_config.model[sizeof(g_llm_config.model) - 1] = '\0';
-        }
-
-        const char *u = getenv("OPENAI_BASE_URL");
-        if (!u || !*u) u = getenv("OPENAI_API_BASE");
-        if (!u || !*u) u = getenv("LLM_BASE_URL");
-        if (u && *u)
-        {
-            strncpy(g_llm_config.base_url, u, sizeof(g_llm_config.base_url) - 1);
-            g_llm_config.base_url[sizeof(g_llm_config.base_url) - 1] = '\0';
-        }
-
-        const char *k = getenv("OPENAI_API_KEY");
-        if (!k || !*k) k = getenv("LLM_API_KEY");
-        if (k && *k)
-        {
-            strncpy(g_llm_config.api_key, k, sizeof(g_llm_config.api_key) - 1);
-            g_llm_config.api_key[sizeof(g_llm_config.api_key) - 1] = '\0';
-        }
-
         g_llm_config.loaded = 1;
-        printf("[*] Note: 'llm_config.json' not found in working directory; using defaults / env (Model: %s)\n", g_llm_config.model);
+        printf("[-] Warning: 'llm_config.json' not found in working directory; using default configuration (Model: %s)\n", g_llm_config.model);
         return 0;
     }
 
@@ -269,67 +239,41 @@ char *chat_with_llm(char *prompt, char *model, int tries, float temperature)
 
     char default_url[512];
     char *url = default_url;
-    const char *custom_base = NULL;
 
-    const char *endpoint = getenv("LLM_ENDPOINT");
-    if (endpoint && *endpoint)
-    {
-        url = (char *)endpoint;
-    }
+    const char *base_url = (cfg->base_url[0]) ? cfg->base_url : "https://api.openai.com/v1";
+    int is_custom_base = (cfg->base_url[0] && strcmp(cfg->base_url, "https://api.openai.com/v1") != 0);
+
+    char clean_base[256];
+    strncpy(clean_base, base_url, sizeof(clean_base) - 1);
+    clean_base[sizeof(clean_base) - 1] = '\0';
+    size_t blen = strlen(clean_base);
+    while (blen > 0 && clean_base[blen - 1] == '/')
+        clean_base[--blen] = '\0';
+
+    if (is_legacy_instruct)
+        snprintf(default_url, sizeof(default_url), "%s/completions", clean_base);
     else
-    {
-        custom_base = (cfg->base_url[0] && strcmp(cfg->base_url, "https://api.openai.com/v1") != 0) ? cfg->base_url : getenv("OPENAI_BASE_URL");
-        if (!custom_base || !*custom_base) custom_base = getenv("OPENAI_API_BASE");
-        if (!custom_base || !*custom_base) custom_base = getenv("LLM_BASE_URL");
-        if (!custom_base || !*custom_base) custom_base = cfg->base_url;
+        snprintf(default_url, sizeof(default_url), "%s/chat/completions", clean_base);
 
-        if (custom_base && *custom_base)
-        {
-            char clean_base[256];
-            strncpy(clean_base, custom_base, sizeof(clean_base) - 1);
-            clean_base[sizeof(clean_base) - 1] = '\0';
-            size_t blen = strlen(clean_base);
-            while (blen > 0 && clean_base[blen - 1] == '/')
-                clean_base[--blen] = '\0';
-
-            if (is_legacy_instruct)
-                snprintf(default_url, sizeof(default_url), "%s/completions", clean_base);
-            else
-                snprintf(default_url, sizeof(default_url), "%s/chat/completions", clean_base);
-        }
-        else
-        {
-            if (is_legacy_instruct)
-                url = "https://api.openai.com/v1/completions";
-            else
-                url = "https://api.openai.com/v1/chat/completions";
-        }
-    }
-
-    const char *token = (cfg->api_key[0] && strcmp(cfg->api_key, "YOUR_API_KEY_HERE") != 0) ? cfg->api_key : getenv("OPENAI_API_KEY");
-    if (!token || !*token) token = getenv("LLM_API_KEY");
-    if (!token || !*token) token = getenv("OPENAI_TOKEN");
+    const char *token = (cfg->api_key[0] && strcmp(cfg->api_key, "YOUR_API_KEY_HERE") != 0) ? cfg->api_key : NULL;
 
     char auth_header[512] = {0};
-    if (token && *token && strcmp(token, "1") != 0 && strcmp(token, "YOUR_API_KEY_HERE") != 0)
+    if (token && *token)
     {
         snprintf(auth_header, sizeof(auth_header), "Authorization: Bearer %s", token);
     }
-    else if (!custom_base && !getenv("LLM_ENDPOINT"))
+    else if (!is_custom_base)
     {
         static int warned_token = 0;
         if (!warned_token)
         {
-            printf("[-] Warning: No valid API Key configured in 'llm_config.json' or OPENAI_API_KEY. Skipping LLM request.\n");
+            printf("[-] Warning: No valid API Key configured in 'llm_config.json'. Skipping LLM request.\n");
             warned_token = 1;
         }
         return NULL;
     }
 
     int max_tokens = cfg->max_tokens > 0 ? cfg->max_tokens : MAX_TOKENS;
-    const char *env_max_tokens = getenv("LLM_MAX_TOKENS");
-    if (env_max_tokens && atoi(env_max_tokens) > 0)
-        max_tokens = atoi(env_max_tokens);
 
     json_object *request_obj = json_object_new_object();
     json_object_object_add(request_obj, "model", json_object_new_string(active_model));
@@ -375,14 +319,7 @@ char *chat_with_llm(char *prompt, char *model, int tries, float temperature)
     json_object_put(request_obj);
 
     long timeout_sec = cfg->timeout > 0 ? cfg->timeout : 60L;
-    const char *env_timeout = getenv("LLM_TIMEOUT");
-    if (env_timeout && atol(env_timeout) > 0)
-        timeout_sec = atol(env_timeout);
-
     long connect_timeout_sec = 15L;
-    const char *env_connect_timeout = getenv("LLM_CONNECT_TIMEOUT");
-    if (env_connect_timeout && atol(env_connect_timeout) > 0)
-        connect_timeout_sec = atol(env_connect_timeout);
 
     CURL *curl;
     CURLcode res = CURLE_OK;
@@ -403,21 +340,6 @@ char *chat_with_llm(char *prompt, char *model, int tries, float temperature)
                 headers = curl_slist_append(headers, auth_header);
             headers = curl_slist_append(headers, "Content-Type: application/json");
             headers = curl_slist_append(headers, "Accept: application/json");
-
-            const char *org_id = getenv("OPENAI_ORG_ID");
-            if (org_id && *org_id)
-            {
-                char org_header[256];
-                snprintf(org_header, sizeof(org_header), "OpenAI-Organization: %s", org_id);
-                headers = curl_slist_append(headers, org_header);
-            }
-            const char *project_id = getenv("OPENAI_PROJECT_ID");
-            if (project_id && *project_id)
-            {
-                char proj_header[256];
-                snprintf(proj_header, sizeof(proj_header), "OpenAI-Project: %s", project_id);
-                headers = curl_slist_append(headers, proj_header);
-            }
 
             curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
             curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data);
@@ -1313,9 +1235,8 @@ char *enrich_sequence(char *sequence, khash_t(strSet) * missing_message_types)
     int sequence_len = strlen(sequence_escaped_str);
     if (sequence_len > 0 && sequence_escaped_str[sequence_len - 1] == '"')
         sequence_len--;
-    int ctx_limit = MAX_TOKENS;
-    const char *env_ctx = getenv("LLM_MAX_TOKENS");
-    if (env_ctx && atoi(env_ctx) > 0) ctx_limit = atoi(env_ctx);
+    const llm_config_t *cfg = get_llm_config();
+    int ctx_limit = (cfg && cfg->max_tokens > 0) ? cfg->max_tokens : MAX_TOKENS;
 
     int allowed_tokens = (ctx_limit - strlen(prompt_template) - missing_fields_len);
     if (sequence_len > allowed_tokens)

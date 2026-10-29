@@ -12,7 +12,6 @@ We give at most 400 for the examples and 1300 for the stall prompt
 Similarly 1700 is for the example request in the seed enrichment
 */
 
-#define OPENAI_TOKEN "1"
 #define DEFAULT_LLM_MODEL "gpt-6.1-sol"
 #define DEFAULT_LLM_CONFIG_FILE "llm_config.json"
 
