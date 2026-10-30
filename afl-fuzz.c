@@ -3394,7 +3394,7 @@ void get_seeds_with_messsage_types(const char *in_dir, khash_t(strSet) * message
     }
     size_t fsize = (size_t)fsize_signed;
     fseek(nl_file, 0, SEEK_SET);
-    char *nl_file_content = malloc(fsize + 1);
+    char *nl_file_content = ck_alloc(fsize + 1);
     if (!nl_file_content) {
       fclose(nl_file);
       free(nl_file_path);
@@ -3440,7 +3440,7 @@ void get_seeds_with_messsage_types(const char *in_dir, khash_t(strSet) * message
       nl_file_content = NULL;
     } else {
       raw_content[raw_len] = '\0';
-      free(nl_file_content);
+      ck_free(nl_file_content);
       nl_file_content = NULL;
     }
 
@@ -3521,9 +3521,7 @@ void get_seeds_with_messsage_types(const char *in_dir, khash_t(strSet) * message
       free(client_request_answer);
 
       char *formatted_client_requests = format_request_message(unescaped_client_requests);
-      if (formatted_client_requests != unescaped_client_requests) {
-        free(unescaped_client_requests);
-      }
+      free(unescaped_client_requests);
 
       // Create the file in the same directory with the name enriched_<idx>_<file_name>
       char *enriched_file_name = malloc(strlen(nl_file_name) + 10 + 20);
@@ -3543,7 +3541,7 @@ void get_seeds_with_messsage_types(const char *in_dir, khash_t(strSet) * message
         free(enriched_file_name);
       }
 
-      free(formatted_client_requests);
+      ck_free(formatted_client_requests);
     }
 
     for(int idx = 0; idx < kv_size(message_subsets); idx++) {
@@ -7752,12 +7750,13 @@ AFLNET_REGIONS_SELECTION:;
           ck_free(stall_response_path);
         }
 
-        char *stall_message = extract_stalled_message(stall_response, strlen(stall_response));
+        char *stall_message_raw = extract_stalled_message(stall_response, strlen(stall_response));
 
-        if (stall_message == NULL)
+        if (stall_message_raw == NULL)
           goto free_stall;
 
-        stall_message = format_request_message(stall_message);
+        char *stall_message = format_request_message(stall_message_raw);
+        free(stall_message_raw);
 
         if (stall_message != NULL)
         {

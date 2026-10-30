@@ -520,6 +520,7 @@ char *extract_stalled_message(char *message, size_t message_len)
 
 char *format_request_message(char *message)
 {
+    if (!message) return NULL;
 
     int message_len = strlen(message);
     int max_len = message_len;
@@ -569,7 +570,6 @@ char *format_request_message(char *message)
         max_len++;
     }
     res[res_len++] = '\0';
-    free(message);
     return res;
 }
 
