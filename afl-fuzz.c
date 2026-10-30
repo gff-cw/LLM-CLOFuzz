@@ -3210,25 +3210,59 @@ unsigned int* extract_response_state_tracer(unsigned char* buf, unsigned int buf
 }
 
 static unsigned int mutated_region_count = 0;
-static region_t* mutated_regions = NULL;
-static unsigned char* last_mutated_buf = NULL;
-static unsigned int   last_mutated_size = 0;
+static region_t*    mutated_regions = NULL;
+static const unsigned char* active_mutated_buf = NULL;
+static unsigned int         active_mutated_size = 0;
+
+static inline void set_active_mutated_target(const unsigned char* buf, unsigned int size) {
+  active_mutated_buf = buf;
+  active_mutated_size = size;
+}
+
+static inline void clear_active_mutated_target(void) {
+  active_mutated_buf = NULL;
+  active_mutated_size = 0;
+}
+
+static inline u8 is_active_mutated_target(const unsigned char* buf, unsigned int size) {
+  return (active_mutated_buf != NULL && buf == active_mutated_buf && size == active_mutated_size);
+}
+
+/* Strict geometric partition verification (must match REGION_CHECK_STRICT_PARTITION contract) */
+static u8 validate_mutated_regions(const region_t *regions, unsigned int count, unsigned int expected_size) {
+  if (!regions || count == 0 || expected_size == 0) return 0;
+  if (regions[0].start_byte != 0) return 0;
+
+  for (unsigned int i = 0; i < count; i++) {
+    if (regions[i].start_byte < 0) return 0;
+    if (regions[i].end_byte < regions[i].start_byte) return 0;
+    if ((unsigned int)regions[i].end_byte >= expected_size) return 0;
+
+    if (i > 0) {
+      if (regions[i].start_byte != regions[i - 1].end_byte + 1) return 0;
+    }
+  }
+
+  return ((unsigned int)regions[count - 1].end_byte == expected_size - 1);
+}
 
 region_t* extract_requests_generic(unsigned char* buf, unsigned int buf_size, unsigned int* region_count_ref) {
 
   unsigned int region_count = 0;
   region_t *regions = NULL;
 
-  /* Only reuse mutated_regions if verified to match the active buffer */
+  /* Only reuse mutated_regions if verified to match the active mutated buffer with strict geometric partition */
   if (mutated_regions != NULL && mutated_region_count > 0 &&
-      buf != NULL && (buf == last_mutated_buf || buf_size == last_mutated_size)) {
+      buf != NULL && is_active_mutated_target(buf, buf_size)) {
 
-    *region_count_ref = mutated_region_count;
+    if (validate_mutated_regions(mutated_regions, mutated_region_count, buf_size)) {
+      *region_count_ref = mutated_region_count;
 
-    regions = ck_alloc(mutated_region_count * sizeof(region_t));
-    memcpy(regions, mutated_regions, mutated_region_count * sizeof(region_t));
+      regions = ck_alloc(mutated_region_count * sizeof(region_t));
+      memcpy(regions, mutated_regions, mutated_region_count * sizeof(region_t));
 
-    return regions;
+      return regions;
+    }
   }
 
   /* If original protocol extractor is registered, prefer it for raw buffers */
@@ -6869,7 +6903,9 @@ EXP_ST u8 common_fuzz_stuff(char** argv, u8* out_buf, u32 len) {
 
   // parse the out_buf into messages
   u32 region_count;
+  set_active_mutated_target(out_buf, len);
   region_t *regions = (*extract_requests)(out_buf, len, &region_count);
+  clear_active_mutated_target();
   if (!region_count) PFATAL("AFLNet Region count cannot be Zero");
 
   // update kl_messages linked list
@@ -7809,9 +7845,13 @@ AFLNET_REGIONS_SELECTION:;
 
   mutated_region_count = orig_region_count;
   mutated_regions = ck_alloc(orig_region_count * sizeof(region_t));
-  memcpy(mutated_regions, orig_regions, orig_region_count * sizeof(region_t));
-  last_mutated_buf = in_buf;
-  last_mutated_size = len;
+  u32 base_offset = (orig_region_count > 0) ? (u32)orig_regions[0].start_byte : 0;
+  for (u32 ri = 0; ri < orig_region_count; ri++) {
+    mutated_regions[ri].start_byte = orig_regions[ri].start_byte - base_offset;
+    mutated_regions[ri].end_byte   = orig_regions[ri].end_byte - base_offset;
+    mutated_regions[ri].state_count = orig_regions[ri].state_count;
+    mutated_regions[ri].state_sequence = orig_regions[ri].state_sequence;
+  }
 
 
   /*********************
@@ -9608,7 +9648,13 @@ retry_splicing:
     ck_free(mutated_regions);
     mutated_region_count = orig_region_count;
     mutated_regions = ck_alloc(mutated_region_count * sizeof(region_t));
-    memcpy(mutated_regions, orig_regions, orig_region_count * sizeof(region_t));
+    u32 base_offset = (orig_region_count > 0) ? (u32)orig_regions[0].start_byte : 0;
+    for (u32 ri = 0; ri < orig_region_count; ri++) {
+      mutated_regions[ri].start_byte = orig_regions[ri].start_byte - base_offset;
+      mutated_regions[ri].end_byte   = orig_regions[ri].end_byte - base_offset;
+      mutated_regions[ri].state_count = orig_regions[ri].state_count;
+      mutated_regions[ri].state_sequence = orig_regions[ri].state_sequence;
+    }
 
 
     /* Update mutated regions */
@@ -9718,8 +9764,7 @@ abandon_entry:
   ck_free(mutated_regions);
   mutated_regions = NULL;
   mutated_region_count = 0;
-  last_mutated_buf = NULL;
-  last_mutated_size = 0;
+  clear_active_mutated_target();
 
   return ret_val;
 
