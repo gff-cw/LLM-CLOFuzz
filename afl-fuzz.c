@@ -5142,50 +5142,62 @@ static void link_or_copy(u8* old_path, u8* new_path) {
 
 static u32 convert_from_replay_to_raw(u8* old_path, u8* new_path) {
 
-  FILE * sfd, * dfd;
-  char * buf = NULL;
-  unsigned int size;
-  u32 len = 0;
+  FILE *sfd = fopen(old_path, "rb");
+  if (!sfd) PFATAL("Unable to open '%s'", old_path);
 
-  //unsigned int packet_count = 0;
+  fseek(sfd, 0, SEEK_END);
+  long fsize_s = ftell(sfd);
+  if (fsize_s < 0) PFATAL("Unable to ftell '%s'", old_path);
+  size_t fsize = (size_t)fsize_s;
+  fseek(sfd, 0, SEEK_SET);
 
-  sfd = fopen(old_path, "rb");
-  if (sfd == NULL) PFATAL("Unable to open '%s'", old_path);
+  char *in_mem = ck_alloc(fsize + 1);
+  if (fsize > 0 && fread(in_mem, 1, fsize, sfd) != fsize) {
+    PFATAL("AFLNet - Unable to read input file '%s'", old_path);
+  }
+  fclose(sfd);
 
-  dfd = fopen(new_path, "wb");
-  if (dfd == NULL) PFATAL("Unable to create '%s'", new_path);
-
-
-  while(!feof(sfd)) {
-
-    if (buf) {ck_free(buf); buf = NULL;}
-
-    clearerr(sfd);
-    if (fread(&size, sizeof(unsigned int), 1, sfd) > 0) {
-
-      //packet_count++;
-      //fprintf(stderr,"\nSize of the current packet %d is  %d\n", packet_count, size);
-      buf = (char *)ck_alloc(size);
-
-      clearerr(sfd);
-      fread(buf, size, 1, sfd);
-
-      if(feof(sfd) || ferror(sfd)) { PFATAL("AFLNet - Unable to read input file"); }
-
-      clearerr(dfd);
-      fwrite(buf, size, 1, dfd);
-
-      len += size;
-
-      if(feof(dfd) || ferror(dfd)) { PFATAL("AFLNet - Unable to write input file in output dir"); }
+  /* Verify whether in_mem strictly matches Replay framing */
+  size_t offset = 0;
+  u8 is_replay = (fsize >= sizeof(unsigned int));
+  while (offset + sizeof(unsigned int) <= fsize) {
+    unsigned int mlen = 0;
+    memcpy(&mlen, in_mem + offset, sizeof(unsigned int));
+    offset += sizeof(unsigned int);
+    if (mlen > fsize - offset) {
+      is_replay = 0;
+      break;
     }
-    else { if(ferror(sfd)) PFATAL("AFLNet - Unable to read message len from input file"); }
+    offset += mlen;
+  }
+  if (offset != fsize || fsize == 0) is_replay = 0;
+
+  FILE *dfd = fopen(new_path, "wb");
+  if (!dfd) PFATAL("Unable to create '%s'", new_path);
+
+  u32 len = 0;
+  if (is_replay) {
+    offset = 0;
+    while (offset + sizeof(unsigned int) <= fsize) {
+      unsigned int mlen = 0;
+      memcpy(&mlen, in_mem + offset, sizeof(unsigned int));
+      offset += sizeof(unsigned int);
+      if (mlen > 0) {
+        if (fwrite(in_mem + offset, 1, mlen, dfd) != mlen)
+          PFATAL("AFLNet - Unable to write input file in output dir");
+        len += mlen;
+        offset += mlen;
+      }
+    }
+  } else {
+    /* If already raw content, preserve it directly */
+    if (fsize > 0 && fwrite(in_mem, 1, fsize, dfd) != fsize)
+      PFATAL("AFLNet - Unable to write input file in output dir");
+    len = fsize;
   }
 
-
-  ck_free(buf);
-  fclose(sfd);
   fclose(dfd);
+  ck_free(in_mem);
 
   return len;
 
@@ -5203,6 +5215,8 @@ static void pivot_inputs(void) {
   u32 id = 0;
 
   ACTF("Creating hard links for all input files...");
+
+  max_seed_region_count = 0;
 
   while (q) {
 
@@ -5272,6 +5286,36 @@ static void pivot_inputs(void) {
     ck_free(q->fname);
     q->fname = nfn;
     q->len = len;
+
+    /* Synchronize region metadata with the newly created raw file */
+    if (q->regions) {
+      for (u32 i = 0; i < q->region_count; i++) {
+        if (q->regions[i].state_sequence) ck_free(q->regions[i].state_sequence);
+      }
+      ck_free(q->regions);
+      q->regions = NULL;
+      q->region_count = 0;
+    }
+
+    FILE *rfp = fopen(q->fname, "rb");
+    if (rfp) {
+      unsigned char *raw_buf = (unsigned char *)ck_alloc(len + 1);
+      if (len == 0 || fread(raw_buf, 1, len, rfp) == len) {
+        raw_buf[len] = '\0';
+        q->regions = (*extract_requests)(raw_buf, len, &q->region_count);
+      }
+      ck_free(raw_buf);
+      fclose(rfp);
+    }
+
+    if (q->region_count > max_seed_region_count) {
+      max_seed_region_count = q->region_count;
+    }
+
+    /* Save the updated regions information for debugging */
+    u8 *rfn = alloc_printf("%s/regions/%s", out_dir, basename(q->fname));
+    save_regions_to_file(q->regions, q->region_count, rfn);
+    ck_free(rfn);
 
     /* Make sure that the passed_det value carries over, too. */
 
