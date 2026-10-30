@@ -997,6 +997,8 @@ char *unescape_string(const char *input)
 
 void write_new_seeds(char *enriched_file, char *contents)
 {
+    if (enriched_file == NULL || contents == NULL) return;
+
     FILE *fp = fopen(enriched_file, "wb");
     if (fp == NULL)
     {
@@ -1017,27 +1019,9 @@ void write_new_seeds(char *enriched_file, char *contents)
         return;
     }
 
-    /* Write with 4-byte replay framing per message */
-    char *p = contents;
-    char *end = contents + len;
-    while (p < end)
-    {
-        char *sep = strstr(p, "\r\n\r\n");
-        size_t msg_len;
-        if (sep != NULL && sep + 4 <= end)
-        {
-            msg_len = (sep + 4) - p;
-        }
-        else
-        {
-            msg_len = end - p;
-        }
-
-        uint32_t u32_len = (uint32_t)msg_len;
-        fwrite(&u32_len, sizeof(uint32_t), 1, fp);
-        fwrite(p, 1, msg_len, fp);
-        p += msg_len;
-    }
+    /* Write pure raw stream without artificial \r\n\r\n replay framing.
+       Boundary identification is handled by protocol-specific extract_requests. */
+    fwrite(contents, 1, len, fp);
 
     fclose(fp);
 }
