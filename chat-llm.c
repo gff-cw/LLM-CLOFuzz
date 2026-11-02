@@ -1028,6 +1028,8 @@ void write_new_seeds(char *enriched_file, char *contents)
 
 char *format_string(char *state_string)
 {
+    if (!state_string) return NULL;
+
     // remove the newline and whiltespace in the beginning of the string if any
     while (state_string[0] == '\n' || state_string[0] == ' ' || state_string[0] == '\t' || state_string[0] == '\r')
     {

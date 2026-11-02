@@ -3387,7 +3387,10 @@ void get_seeds_with_messsage_types(const char *in_dir, khash_t(strSet) * message
     // read the whole file into a buffer
     fseek(nl_file, 0, SEEK_END);
     long fsize_signed = ftell(nl_file);
-    if (fsize_signed <= 0) {
+    if (fsize_signed <= 0 || fsize_signed > MAX_FILE) {
+      if (fsize_signed > MAX_FILE) {
+        WARNF("Seed file '%s' exceeds MAX_FILE (%ld > %d), skipping enrichment", nl_file_path, fsize_signed, MAX_FILE);
+      }
       fclose(nl_file);
       free(nl_file_path);
       continue;
@@ -3508,8 +3511,12 @@ void get_seeds_with_messsage_types(const char *in_dir, khash_t(strSet) * message
         continue;
 
       // Check whether the client_request_answer is the same as the raw_content or if the client_request_answer is empty
-      char *formatted_raw_content = format_string(raw_content);
       char *unescaped_client_requests = unescape_string(client_request_answer);
+      if (unescaped_client_requests == NULL) {
+        free(client_request_answer);
+        continue;
+      }
+      char *formatted_raw_content = format_string(raw_content);
       char *formatted_unescaped_client_requests = format_string(unescaped_client_requests);
       if (formatted_unescaped_client_requests == NULL || strcmp(formatted_unescaped_client_requests, formatted_raw_content) == 0)
       {
@@ -5172,7 +5179,10 @@ static void link_or_copy(u8* old_path, u8* new_path) {
 }
 
 
-static u32 convert_from_replay_to_raw(u8* old_path, u8* new_path) {
+static u32 convert_from_replay_to_raw(u8* old_path, u8* new_path, region_t** out_regions, u32* out_region_count) {
+
+  if (out_regions) *out_regions = NULL;
+  if (out_region_count) *out_region_count = 0;
 
   FILE *sfd = fopen(old_path, "rb");
   if (!sfd) PFATAL("Unable to open '%s'", old_path);
@@ -5210,6 +5220,9 @@ static u32 convert_from_replay_to_raw(u8* old_path, u8* new_path) {
   u32 len = 0;
   if (is_replay) {
     offset = 0;
+    u32 raw_cur = 0;
+    u32 rcount = 0;
+    region_t *r_arr = NULL;
     while (offset + sizeof(unsigned int) <= fsize) {
       unsigned int mlen = 0;
       memcpy(&mlen, in_mem + offset, sizeof(unsigned int));
@@ -5219,7 +5232,21 @@ static u32 convert_from_replay_to_raw(u8* old_path, u8* new_path) {
           PFATAL("AFLNet - Unable to write input file in output dir");
         len += mlen;
         offset += mlen;
+
+        if (out_regions && out_region_count) {
+          rcount++;
+          r_arr = (region_t *)ck_realloc(r_arr, rcount * sizeof(region_t));
+          r_arr[rcount - 1].start_byte = raw_cur;
+          r_arr[rcount - 1].end_byte = raw_cur + mlen - 1;
+          r_arr[rcount - 1].state_sequence = NULL;
+          r_arr[rcount - 1].state_count = 0;
+          raw_cur += mlen;
+        }
       }
+    }
+    if (out_regions && out_region_count) {
+      *out_regions = r_arr;
+      *out_region_count = rcount;
     }
   } else {
     /* If already raw content, preserve it directly */
@@ -5314,7 +5341,9 @@ static void pivot_inputs(void) {
     /* Pivot to the new queue entry. */
 
     //link_or_copy(q->fname, nfn);
-    u32 len = convert_from_replay_to_raw(q->fname, nfn);
+    region_t *replay_regions = NULL;
+    u32 replay_region_count = 0;
+    u32 len = convert_from_replay_to_raw(q->fname, nfn, &replay_regions, &replay_region_count);
     ck_free(q->fname);
     q->fname = nfn;
     q->len = len;
@@ -5329,15 +5358,44 @@ static void pivot_inputs(void) {
       q->region_count = 0;
     }
 
-    FILE *rfp = fopen(q->fname, "rb");
-    if (rfp) {
-      unsigned char *raw_buf = (unsigned char *)ck_alloc(len + 1);
-      if (len == 0 || fread(raw_buf, 1, len, rfp) == len) {
-        raw_buf[len] = '\0';
-        q->regions = (*extract_requests)(raw_buf, len, &q->region_count);
+    /* If a protocol parser is selected, parse the raw buffer */
+    if (orig_extract_requests != NULL) {
+      FILE *rfp = fopen(q->fname, "rb");
+      if (rfp) {
+        unsigned char *raw_buf = (unsigned char *)ck_alloc(len + 1);
+        if (len == 0 || fread(raw_buf, 1, len, rfp) == len) {
+          raw_buf[len] = '\0';
+          q->regions = (*orig_extract_requests)(raw_buf, len, &q->region_count);
+        }
+        ck_free(raw_buf);
+        fclose(rfp);
       }
-      ck_free(raw_buf);
-      fclose(rfp);
+    }
+
+    /* If no protocol parser was specified or protocol parsing returned no regions,
+       preserve the exact message boundaries from the replay container */
+    if (!q->regions || q->region_count == 0) {
+      if (q->regions) {
+        ck_free(q->regions);
+        q->regions = NULL;
+      }
+      if (replay_regions && replay_region_count > 0) {
+        q->regions = replay_regions;
+        q->region_count = replay_region_count;
+        replay_regions = NULL;
+      } else {
+        q->regions = ck_alloc(sizeof(region_t));
+        q->regions[0].start_byte = 0;
+        q->regions[0].end_byte = (len > 0) ? (int)(len - 1) : -1;
+        q->regions[0].state_sequence = NULL;
+        q->regions[0].state_count = 0;
+        q->region_count = 1;
+      }
+    }
+
+    if (replay_regions) {
+      ck_free(replay_regions);
+      replay_regions = NULL;
     }
 
     if (q->region_count > max_seed_region_count) {
@@ -6901,7 +6959,9 @@ EXP_ST u8 common_fuzz_stuff(char** argv, u8* out_buf, u32 len) {
 
   // parse the out_buf into messages
   u32 region_count;
-  set_active_mutated_target(out_buf, len);
+  if (!post_handler) {
+    set_active_mutated_target(out_buf, len);
+  }
   region_t *regions = (*extract_requests)(out_buf, len, &region_count);
   clear_active_mutated_target();
   if (!region_count) PFATAL("AFLNet Region count cannot be Zero");
@@ -7791,10 +7851,30 @@ AFLNET_REGIONS_SELECTION:;
           }
 
           ck_free(stall_message);
+
+          /* Stalled probe did not trigger early exit; restore kl_messages from queue_cur so subsequent
+             mutation stages operate on the original test case matching queue_cur->regions */
+          delete_kl_messages(kl_messages);
+          kl_messages = construct_kl_messages(queue_cur->fname, queue_cur->regions, queue_cur->region_count);
+
+          M2_prev = NULL;
+          M2_next = kl_end(kl_messages);
+          u32 count_reset = 0;
+          for (it = kl_begin(kl_messages); it != kl_end(kl_messages); it = kl_next(it)) {
+            if (count_reset == M2_start_region_ID - 1) {
+              M2_prev = it;
+            }
+            if (count_reset == M2_start_region_ID + M2_region_count) {
+              M2_next = it;
+            }
+            count_reset++;
+          }
         }
 
         free(stall_response);
+        stall_response = NULL;
       free_stall:
+        if (stall_response) free(stall_response);
         free(stall_prompt);
         ck_free(history);
         if (examples) free(examples);
