@@ -1515,14 +1515,20 @@ klist_t(lms) *construct_kl_messages(u8* fname, region_t *regions, u32 region_cou
 
   for (i = 0; i < region_count; i++) {
     //Identify region size
-    u32 len = regions[i].end_byte - regions[i].start_byte + 1;
+    u32 len = (regions[i].end_byte >= regions[i].start_byte) ?
+              (u32)(regions[i].end_byte - regions[i].start_byte + 1) : 0;
 
     //Create a new message
     message_t *m = (message_t *) ck_alloc(sizeof(message_t));
-    m->mdata = (char *) ck_alloc(len);
-    m->msize = len;
-    if (m->mdata == NULL) PFATAL("Unable to allocate memory region to store new message");
-    fread(m->mdata, 1, len, fseed);
+    if (len > 0) {
+      m->mdata = (char *) ck_alloc(len);
+      m->msize = len;
+      if (m->mdata == NULL) PFATAL("Unable to allocate memory region to store new message");
+      fread(m->mdata, 1, len, fseed);
+    } else {
+      m->mdata = NULL;
+      m->msize = 0;
+    }
 
     //Insert the message to the linked list
     *kl_pushp(lms, kl_messages) = m;
@@ -1582,13 +1588,17 @@ u32 save_kl_messages_to_file(klist_t(lms) *kl_messages, u8 *fname, u8 replay_ena
       *psize = message_size;
 
       //Save packet content
-      memcpy(&mem[len + 4], kl_val(it)->mdata, message_size);
+      if (message_size > 0 && kl_val(it)->mdata) {
+        memcpy(&mem[len + 4], kl_val(it)->mdata, message_size);
+      }
       len = 4 + len + message_size;
     } else {
       mem = (u8 *)ck_realloc(mem, len + message_size);
 
       //Save packet content
-      memcpy(&mem[len], kl_val(it)->mdata, message_size);
+      if (message_size > 0 && kl_val(it)->mdata) {
+        memcpy(&mem[len], kl_val(it)->mdata, message_size);
+      }
       len = len + message_size;
     }
     message_count++;
@@ -1674,7 +1684,7 @@ region_t* convert_kl_messages_to_regions(klist_t(lms) *kl_messages, u32* region_
     regions = (region_t *)ck_realloc(regions, region_count * sizeof(region_t));
 
     cur_end = cur_start + kl_val(it)->msize - 1;
-    if (cur_end < 0) PFATAL("End_byte cannot be negative");
+    if (cur_end < cur_start - 1) PFATAL("End_byte cannot be less than start_byte - 1");
 
     regions[region_count - 1].start_byte = cur_start;
     regions[region_count - 1].end_byte = cur_end;

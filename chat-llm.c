@@ -428,14 +428,17 @@ char *construct_prompt_stall(char *protocol_name, char *examples, char *history)
                      "Desired format of real client requests:\\n%sCommunication History:\\n\\\"\\\"\\\"\\n%s\\\"\\\"\\\"";
 
     char *prompt = NULL;
-    asprintf(&prompt, template, protocol_name, protocol_name, protocol_name, examples, history);
+    if (asprintf(&prompt, template, protocol_name, protocol_name, protocol_name, examples, history) < 0 || !prompt) {
+        return NULL;
+    }
 
     char *final_prompt = NULL;
-
-    asprintf(&final_prompt, "[{\"role\": \"system\", \"content\": \"You are a helpful assistant.\"}, {\"role\": \"user\", \"content\": \"%s\"}]", prompt);
+    if (asprintf(&final_prompt, "[{\"role\": \"system\", \"content\": \"You are a helpful assistant.\"}, {\"role\": \"user\", \"content\": \"%s\"}]", prompt) < 0 || !final_prompt) {
+        free(prompt);
+        return NULL;
+    }
 
     free(prompt);
-
     return final_prompt;
 }
 

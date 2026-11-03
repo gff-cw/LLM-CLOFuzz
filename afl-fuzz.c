@@ -56,6 +56,7 @@
 #include <termios.h>
 #include <dlfcn.h>
 #include <sched.h>
+#include <libgen.h>
 
 #include <sys/wait.h>
 #include <sys/time.h>
@@ -3230,20 +3231,20 @@ static inline u8 is_active_mutated_target(const unsigned char* buf, unsigned int
 
 /* Strict geometric partition verification (must match REGION_CHECK_STRICT_PARTITION contract) */
 static u8 validate_mutated_regions(const region_t *regions, unsigned int count, unsigned int expected_size) {
-  if (!regions || count == 0 || expected_size == 0) return 0;
+  if (!regions || count == 0) return 0;
   if (regions[0].start_byte != 0) return 0;
 
   for (unsigned int i = 0; i < count; i++) {
     if (regions[i].start_byte < 0) return 0;
-    if (regions[i].end_byte < regions[i].start_byte) return 0;
-    if ((unsigned int)regions[i].end_byte >= expected_size) return 0;
+    if (regions[i].end_byte < regions[i].start_byte - 1) return 0;
+    if (regions[i].end_byte >= 0 && (unsigned int)regions[i].end_byte >= expected_size) return 0;
 
     if (i > 0) {
       if (regions[i].start_byte != regions[i - 1].end_byte + 1) return 0;
     }
   }
 
-  return ((unsigned int)regions[count - 1].end_byte == expected_size - 1);
+  return (regions[count - 1].end_byte == (int)expected_size - 1);
 }
 
 region_t* extract_requests_generic(unsigned char* buf, unsigned int buf_size, unsigned int* region_count_ref) {
@@ -5151,7 +5152,7 @@ static void perform_dry_run(char** argv) {
 
 /* Helper function: link() if possible, copy otherwise. */
 
-static void link_or_copy(u8* old_path, u8* new_path) {
+static void __attribute__((unused)) link_or_copy(u8* old_path, u8* new_path) {
 
   s32 i = link(old_path, new_path);
   s32 sfd, dfd;
@@ -5176,6 +5177,108 @@ static void link_or_copy(u8* old_path, u8* new_path) {
   close(sfd);
   close(dfd);
 
+}
+
+
+static void copy_file_simple(const char *src, const char *dst) {
+  FILE *s = fopen(src, "rb");
+  if (!s) return;
+  FILE *d = fopen(dst, "wb");
+  if (!d) { fclose(s); return; }
+  char buf[4096];
+  size_t n;
+  while ((n = fread(buf, 1, sizeof(buf), s)) > 0) {
+    if (fwrite(buf, 1, n, d) != n) break;
+  }
+  fclose(s);
+  fclose(d);
+}
+
+static void save_raw_as_replay(const char *raw_path, const region_t *regions, u32 region_count, const char *replay_path) {
+  if (!raw_path || !regions || region_count == 0 || !replay_path) return;
+  FILE *sfp = fopen(raw_path, "rb");
+  if (!sfp) return;
+  fseek(sfp, 0, SEEK_END);
+  long fsize_s = ftell(sfp);
+  if (fsize_s < 0) { fclose(sfp); return; }
+  size_t fsize = (size_t)fsize_s;
+  fseek(sfp, 0, SEEK_SET);
+
+  char *raw_mem = (char *)ck_alloc(fsize > 0 ? fsize : 1);
+  if (fsize > 0 && fread(raw_mem, 1, fsize, sfp) != fsize) {
+    ck_free(raw_mem);
+    fclose(sfp);
+    return;
+  }
+  fclose(sfp);
+
+  FILE *dfp = fopen(replay_path, "wb");
+  if (!dfp) {
+    ck_free(raw_mem);
+    return;
+  }
+
+  for (u32 i = 0; i < region_count; i++) {
+    u32 mlen = (regions[i].end_byte >= regions[i].start_byte) ?
+               (u32)(regions[i].end_byte - regions[i].start_byte + 1) : 0;
+    fwrite(&mlen, sizeof(u32), 1, dfp);
+    if (mlen > 0 && (size_t)regions[i].start_byte + mlen <= fsize) {
+      fwrite(raw_mem + regions[i].start_byte, 1, mlen, dfp);
+    }
+  }
+
+  fclose(dfp);
+  ck_free(raw_mem);
+}
+
+static region_t* load_regions_from_file(const char *rpath, u32 expected_len, u32 *count_ref) {
+  if (!rpath || !count_ref) return NULL;
+  *count_ref = 0;
+
+  FILE *fp = fopen(rpath, "r");
+  if (!fp) return NULL;
+
+  region_t *regions = NULL;
+  u32 count = 0;
+  char line[256];
+  int prev_end = -1;
+
+  while (fgets(line, sizeof(line), fp)) {
+    int s = -1, e = -1;
+    if (sscanf(line, "Region %*u - Start: %d, End: %d", &s, &e) == 2) {
+      if (s < 0 || e < s - 1) {
+        goto fail;
+      }
+      if (count == 0) {
+        if (s != 0) goto fail;
+      } else {
+        if (s != prev_end + 1) goto fail;
+      }
+      count++;
+      regions = (region_t *)ck_realloc(regions, count * sizeof(region_t));
+      regions[count - 1].start_byte = s;
+      regions[count - 1].end_byte = e;
+      regions[count - 1].state_sequence = NULL;
+      regions[count - 1].state_count = 0;
+      prev_end = e;
+    }
+  }
+  fclose(fp);
+
+  if (count > 0) {
+    if (expected_len == 0 && prev_end == -1) {
+      *count_ref = count;
+      return regions;
+    }
+    if (expected_len > 0 && prev_end == (int)expected_len - 1) {
+      *count_ref = count;
+      return regions;
+    }
+  }
+
+fail:
+  if (regions) ck_free(regions);
+  return NULL;
 }
 
 
@@ -5241,6 +5344,16 @@ static u32 convert_from_replay_to_raw(u8* old_path, u8* new_path, region_t** out
           r_arr[rcount - 1].state_sequence = NULL;
           r_arr[rcount - 1].state_count = 0;
           raw_cur += mlen;
+        }
+      } else {
+        /* Preserve zero-length record in region metadata: end_byte = start_byte - 1 */
+        if (out_regions && out_region_count) {
+          rcount++;
+          r_arr = (region_t *)ck_realloc(r_arr, rcount * sizeof(region_t));
+          r_arr[rcount - 1].start_byte = raw_cur;
+          r_arr[rcount - 1].end_byte = (int)raw_cur - 1;
+          r_arr[rcount - 1].state_sequence = NULL;
+          r_arr[rcount - 1].state_count = 0;
         }
       }
     }
@@ -5344,6 +5457,72 @@ static void pivot_inputs(void) {
     region_t *replay_regions = NULL;
     u32 replay_region_count = 0;
     u32 len = convert_from_replay_to_raw(q->fname, nfn, &replay_regions, &replay_region_count);
+
+    /* If q->fname was already a replay file, preserve it to replayable-queue */
+    if (replay_regions && replay_region_count > 0) {
+      u8 *fn_rep = alloc_printf("%s/replayable-queue/%s", out_dir, basename(nfn));
+      copy_file_simple((char *)q->fname, (char *)fn_rep);
+      ck_free(fn_rep);
+    } else {
+      /* Input was raw (e.g. resuming from raw queue). Check for associated replay file or regions */
+      char *old_fname_copy = strdup((char *)q->fname);
+      char *bname = basename(old_fname_copy);
+      char *dname_copy = strdup((char *)q->fname);
+      char *dname = dirname(dname_copy);
+
+      char *candidate_replay = NULL;
+      char *candidate_regions = NULL;
+
+      char *p1 = alloc_printf("%s/../replayable-queue/%s", dname, bname);
+      char *p2 = alloc_printf("%s/../_resume_replayable-queue/%s", dname, bname);
+      char *p3 = alloc_printf("%s/replayable-queue/%s", dname, bname);
+
+      char *r1 = alloc_printf("%s/../regions/%s", dname, bname);
+      char *r2 = alloc_printf("%s/../_resume_regions/%s", dname, bname);
+      char *r3 = alloc_printf("%s/regions/%s", dname, bname);
+
+      if (!access(p1, R_OK)) candidate_replay = p1;
+      else if (!access(p2, R_OK)) candidate_replay = p2;
+      else if (!access(p3, R_OK)) candidate_replay = p3;
+
+      if (!access(r1, R_OK)) candidate_regions = r1;
+      else if (!access(r2, R_OK)) candidate_regions = r2;
+      else if (!access(r3, R_OK)) candidate_regions = r3;
+
+      if (candidate_replay) {
+        region_t *cand_regions = NULL;
+        u32 cand_rcount = 0;
+        u8 *tmp_nfn = alloc_printf("%s.tmp_chk", nfn);
+        u32 rep_raw_len = convert_from_replay_to_raw((u8 *)candidate_replay, tmp_nfn, &cand_regions, &cand_rcount);
+        unlink((char *)tmp_nfn);
+        ck_free(tmp_nfn);
+
+        if (cand_regions && cand_rcount > 0 && rep_raw_len == len) {
+          replay_regions = cand_regions;
+          replay_region_count = cand_rcount;
+
+          u8 *fn_rep = alloc_printf("%s/replayable-queue/%s", out_dir, basename(nfn));
+          copy_file_simple(candidate_replay, (char *)fn_rep);
+          ck_free(fn_rep);
+        } else if (cand_regions) {
+          ck_free(cand_regions);
+        }
+      }
+
+      if (!replay_regions && candidate_regions) {
+        replay_regions = load_regions_from_file(candidate_regions, len, &replay_region_count);
+      }
+
+      ck_free(p1);
+      ck_free(p2);
+      ck_free(p3);
+      ck_free(r1);
+      ck_free(r2);
+      ck_free(r3);
+      free(old_fname_copy);
+      free(dname_copy);
+    }
+
     ck_free(q->fname);
     q->fname = nfn;
     q->len = len;
@@ -5406,6 +5585,13 @@ static void pivot_inputs(void) {
     u8 *rfn = alloc_printf("%s/regions/%s", out_dir, basename(q->fname));
     save_regions_to_file(q->regions, q->region_count, rfn);
     ck_free(rfn);
+
+    /* Ensure replayable-queue has a matching replay container */
+    u8 *fn_rep_check = alloc_printf("%s/replayable-queue/%s", out_dir, basename(q->fname));
+    if (access((char *)fn_rep_check, F_OK) != 0 && q->regions && q->region_count > 0) {
+      save_raw_as_replay((char *)q->fname, q->regions, q->region_count, (char *)fn_rep_check);
+    }
+    ck_free(fn_rep_check);
 
     /* Make sure that the passed_det value carries over, too. */
 
@@ -6043,6 +6229,16 @@ static void nuke_resume_dir(void) {
   if (delete_files(fn, CASE_PREFIX)) goto dir_cleanup_failed;
   ck_free(fn);
 
+  fn = alloc_printf("%s/_resume_regions", out_dir);
+  delete_files(fn, "");
+  rmdir((char *)fn);
+  ck_free(fn);
+
+  fn = alloc_printf("%s/_resume_replayable-queue", out_dir);
+  delete_files(fn, "");
+  rmdir((char *)fn);
+  ck_free(fn);
+
   return;
 
 dir_cleanup_failed:
@@ -6130,6 +6326,18 @@ static void maybe_delete_out_dir(void) {
     in_dir = alloc_printf("%s/_resume", out_dir);
 
     rename(orig_q, in_dir); /* Ignore errors */
+
+    u8* orig_rep = alloc_printf("%s/replayable-queue", out_dir);
+    u8* res_rep = alloc_printf("%s/_resume_replayable-queue", out_dir);
+    rename((char *)orig_rep, (char *)res_rep);
+    ck_free(orig_rep);
+    ck_free(res_rep);
+
+    u8* orig_reg = alloc_printf("%s/regions", out_dir);
+    u8* res_reg = alloc_printf("%s/_resume_regions", out_dir);
+    rename((char *)orig_reg, (char *)res_reg);
+    ck_free(orig_reg);
+    ck_free(res_reg);
 
     OKF("Output directory exists, will attempt session resume.");
 
@@ -6976,17 +7184,24 @@ EXP_ST u8 common_fuzz_stuff(char** argv, u8* out_buf, u32 len) {
     u32 len;
     //Identify region size
     if (i == max_seed_region_count) {
-      len = regions[region_count - 1].end_byte - regions[i].start_byte + 1;
+      len = (regions[region_count - 1].end_byte >= regions[i].start_byte) ?
+            (u32)(regions[region_count - 1].end_byte - regions[i].start_byte + 1) : 0;
     } else {
-      len = regions[i].end_byte - regions[i].start_byte + 1;
+      len = (regions[i].end_byte >= regions[i].start_byte) ?
+            (u32)(regions[i].end_byte - regions[i].start_byte + 1) : 0;
     }
 
     //Create a new message
     message_t *m = (message_t *) ck_alloc(sizeof(message_t));
-    m->mdata = (char *) ck_alloc(len);
-    m->msize = len;
-    if (m->mdata == NULL) PFATAL("Unable to allocate memory region to store new message");
-    memcpy(m->mdata, &out_buf[regions[i].start_byte], len);
+    if (len > 0) {
+      m->mdata = (char *) ck_alloc(len);
+      m->msize = len;
+      if (m->mdata == NULL) PFATAL("Unable to allocate memory region to store new message");
+      memcpy(m->mdata, &out_buf[regions[i].start_byte], len);
+    } else {
+      m->mdata = NULL;
+      m->msize = 0;
+    }
 
     //Insert the message to the linked list
     *kl_pushp(lms, kl_messages) = m;
@@ -7701,7 +7916,7 @@ AFLNET_REGIONS_SELECTION:;
       {
         empty = 0;
 
-        json_object *request_v = json_object_new_string_len(kl_val(it_pref)->mdata, kl_val(it_pref)->msize);
+        json_object *request_v = json_object_new_string_len(kl_val(it_pref)->mdata ? kl_val(it_pref)->mdata : "", kl_val(it_pref)->msize);
         char *request_orig = strdup(json_object_to_json_string(request_v));
         json_object_put(request_v);
         char *request = request_orig;
@@ -7785,7 +8000,11 @@ AFLNET_REGIONS_SELECTION:;
         }
 
         char *stall_prompt = construct_prompt_stall(protocol_name, examples, history);
-        char *stall_response = chat_with_llm(stall_prompt, "turbo", STALL_RETRIES, 1.5);
+        char *stall_response = NULL;
+        if (!stall_prompt)
+          goto free_stall;
+
+        stall_response = chat_with_llm(stall_prompt, "turbo", STALL_RETRIES, 1.5);
 
         {
           char *stall_prompt_path = alloc_printf("%s/stall-interactions/prompt-%d", out_dir, chat_times);
@@ -7899,9 +8118,11 @@ AFLNET_REGIONS_SELECTION:;
   u32 in_buf_size = 0;
   while (it != M2_next) {
     in_buf = (u8 *) ck_realloc (in_buf, in_buf_size + kl_val(it)->msize);
-    if (!in_buf) PFATAL("AFLNet cannot allocate memory for in_buf");
+    if (!in_buf && (in_buf_size + kl_val(it)->msize > 0)) PFATAL("AFLNet cannot allocate memory for in_buf");
     //Retrieve data from kl_messages to populate the in_buf
-    memcpy(&in_buf[in_buf_size], kl_val(it)->mdata, kl_val(it)->msize);
+    if (kl_val(it)->msize > 0 && kl_val(it)->mdata) {
+      memcpy(&in_buf[in_buf_size], kl_val(it)->mdata, kl_val(it)->msize);
+    }
 
     in_buf_size += kl_val(it)->msize;
     it = kl_next(it);
@@ -7909,8 +8130,10 @@ AFLNET_REGIONS_SELECTION:;
 
   orig_in = in_buf;
 
-  out_buf = ck_alloc_nozero(in_buf_size);
-  memcpy(out_buf, in_buf, in_buf_size);
+  out_buf = (in_buf_size > 0) ? ck_alloc_nozero(in_buf_size) : NULL;
+  if (in_buf_size > 0 && out_buf && in_buf) {
+    memcpy(out_buf, in_buf, in_buf_size);
+  }
 
   //Update len to keep the correct size of the buffer being mutated
   len = in_buf_size;
