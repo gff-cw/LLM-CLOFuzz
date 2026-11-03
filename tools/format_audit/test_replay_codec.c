@@ -3,12 +3,78 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <assert.h>
+#include <errno.h>
 #include <limits.h>
 #include <unistd.h>
 
 static int g_tests_run = 0;
 static int g_tests_passed = 0;
+static char g_test_dir[] = "./.test-replay-codec-XXXXXX";
+
+static void test_path(char *path, size_t size, const char *name) {
+  int n = snprintf(path, size, "%s/%s", g_test_dir, name);
+  if (n < 0 || (size_t)n >= size) exit(EXIT_FAILURE);
+}
+
+static void cleanup_test_files(void) {
+  const char *names[] = {"rewrite.bin", "io.bin", "limits.bin"};
+  char path[256];
+  for (size_t i = 0; i < sizeof(names) / sizeof(names[0]); i++) {
+    test_path(path, sizeof(path), names[i]);
+    unlink(path);
+  }
+  rmdir(g_test_dir);
+}
+
+/* Only this test binary wraps fopen. The codec still executes libc fread,
+   fwrite and fclose; faulting FILE streams make those operations report EIO. */
+enum io_fault { IO_NORMAL, IO_READ_ERROR, IO_WRITE_ERROR, IO_FLUSH_ERROR };
+static enum io_fault g_io_fault;
+static unsigned g_fault_reads, g_fault_writes, g_fault_closes;
+static off64_t g_fault_position;
+
+static ssize_t fault_read(void *cookie, char *buf, size_t size) {
+  (void)cookie; (void)buf; (void)size;
+  g_fault_reads++;
+  errno = EIO;
+  return -1;
+}
+
+static ssize_t fault_write(void *cookie, const char *buf, size_t size) {
+  (void)cookie; (void)buf; (void)size;
+  g_fault_writes++;
+  errno = EIO;
+  return -1;
+}
+
+static int fault_seek(void *cookie, off64_t *offset, int whence) {
+  (void)cookie;
+  if (whence == SEEK_SET) g_fault_position = *offset;
+  else if (whence == SEEK_CUR) g_fault_position += *offset;
+  else if (whence == SEEK_END) g_fault_position = 8 + *offset;
+  else { errno = EINVAL; return -1; }
+  *offset = g_fault_position;
+  return 0;
+}
+
+static int fault_close(void *cookie) {
+  (void)cookie;
+  g_fault_closes++;
+  return 0;
+}
+
+FILE *__real_fopen(const char *path, const char *mode);
+FILE *__wrap_fopen(const char *path, const char *mode) {
+  if (g_io_fault == IO_NORMAL) return __real_fopen(path, mode);
+  cookie_io_functions_t ops = {
+    .read = fault_read, .write = fault_write,
+    .seek = fault_seek, .close = fault_close
+  };
+  g_fault_position = 0;
+  FILE *fp = fopencookie(NULL, mode, ops);
+  if (fp && g_io_fault == IO_WRITE_ERROR) setvbuf(fp, NULL, _IONBF, 0);
+  return fp;
+}
 
 #define TEST_ASSERT(cond, msg) do { \
   if (!(cond)) { \
@@ -235,7 +301,7 @@ static bool test_t10(void) {
   return true;
 }
 
-/* T11: Limits exact and limit + 1 boundary */
+/* T11: Single-record limits, pre-allocation file limits and size arithmetic */
 static bool test_t11(void) {
   g_tests_run++;
   replay_codec_limits_t lim;
@@ -260,6 +326,71 @@ static bool test_t11(void) {
   TEST_ASSERT(st == REPLAY_OK, "Must accept exact limit length");
 
   free(wire);
+  wire = NULL;
+
+  char path[256];
+  test_path(path, sizeof(path), "limits.bin");
+  lim.max_records = 1;
+  lim.max_total_len = 10;
+  st = replay_encode_file(path, &in, &lim, &diag);
+  TEST_ASSERT(st == REPLAY_OK, "File at the wire-size limit must encode");
+  st = replay_decode_file(path, &lim, &out, &diag);
+  TEST_ASSERT(st == REPLAY_OK, "File at the wire-size limit must decode");
+  replay_container_free(&out);
+
+  FILE *fp = fopen(path, "r+b");
+  TEST_ASSERT(fp != NULL, "Open size-limit fixture");
+  int resized = ftruncate(fileno(fp), 15); /* 10 payload bytes + 4 header bytes + 1 */
+  int closed = fclose(fp);
+  TEST_ASSERT(resized == 0 && closed == 0, "Extend file past its wire-size limit");
+  st = replay_decode_file(path, &lim, &out, &diag);
+  TEST_ASSERT(st == REPLAY_ERR_TOTAL_LIMIT_EXCEEDED, "Oversized file must fail before allocation");
+  TEST_ASSERT(strstr(diag.detail, "before allocation") != NULL, "File limit diagnostic must identify the allocation guard");
+
+  if (sizeof(off_t) > sizeof(uint32_t)) {
+    fp = fopen(path, "r+b");
+    TEST_ASSERT(fp != NULL, "Open sparse large-file fixture");
+    resized = ftruncate(fileno(fp), (off_t)UINT32_MAX + 2);
+    closed = fclose(fp);
+    TEST_ASSERT(resized == 0 && closed == 0, "Create sparse file beyond u32 size");
+    st = replay_decode_file(path, NULL, &out, &diag);
+    TEST_ASSERT(st == REPLAY_ERR_TOTAL_LIMIT_EXCEEDED, "Default limits must reject large files before allocation");
+  }
+  unlink(path);
+
+  /* Encoding must use actual record lengths, not trust a stale total field. */
+  in.total_payload_bytes = 0;
+  lim.max_total_len = 9;
+  st = replay_encode_buffer(&in, &lim, &wire, &wire_size, &diag);
+  TEST_ASSERT(st == REPLAY_ERR_TOTAL_LIMIT_EXCEEDED, "Stale totals must not bypass payload limits");
+  in.total_payload_bytes = 10;
+  lim.max_records = SIZE_MAX;
+  lim.max_total_len = SIZE_MAX;
+  st = replay_encode_buffer(&in, &lim, &wire, &wire_size, &diag);
+  TEST_ASSERT(st == REPLAY_OK, "Large configured limits must not overflow limit arithmetic");
+  free(wire);
+  st = replay_encode_file(path, &in, &lim, &diag);
+  TEST_ASSERT(st == REPLAY_OK, "Write file with large configured limits");
+  st = replay_decode_file(path, &lim, &out, &diag);
+  TEST_ASSERT(st == REPLAY_OK, "Large file-limit sums must not overflow");
+  unlink(path);
+
+  if (SIZE_MAX > UINT32_MAX) {
+    replay_message_t oversized = {.data = (uint8_t *)"X", .len = (size_t)UINT32_MAX + 1};
+    replay_container_t synthetic = {.messages = &oversized, .count = 1};
+    lim.max_single_len = SIZE_MAX;
+    lim.enforce_int_limits = false;
+    wire = NULL;
+    st = replay_encode_buffer(&synthetic, &lim, &wire, &wire_size, &diag);
+    TEST_ASSERT(st == REPLAY_ERR_TARGET_INT_OVERFLOW && wire == NULL, "u32 wire lengths must not truncate when signed-int checks are disabled");
+  }
+  replay_container_t saturated = {.total_payload_bytes = SIZE_MAX};
+  TEST_ASSERT(replay_container_append(&saturated, (const uint8_t *)"X", 1) == REPLAY_ERR_TOTAL_LIMIT_EXCEEDED,
+              "Appending must reject payload-total overflow before allocation");
+  saturated.total_payload_bytes = 0;
+  saturated.count = saturated.capacity = SIZE_MAX / 2 + 1;
+  TEST_ASSERT(replay_container_append(&saturated, NULL, 0) == REPLAY_ERR_ALLOC,
+              "Growing the message array must reject capacity overflow");
   replay_container_free(&in);
   replay_container_free(&out);
   g_tests_passed++;
@@ -321,8 +452,8 @@ static bool test_t13(void) {
 /* T14: Write long then write short file without stale tail */
 static bool test_t14(void) {
   g_tests_run++;
-  const char *tmp_file = "/tmp/test_format_t14.bin";
-  unlink(tmp_file);
+  char tmp_file[256];
+  test_path(tmp_file, sizeof(tmp_file), "rewrite.bin");
 
   replay_container_t long_c, short_c, read_c;
   replay_container_init(&long_c);
@@ -353,12 +484,47 @@ static bool test_t14(void) {
   return true;
 }
 
-/* T15: Simulated short read/write and error reporting */
+/* T15: Missing file plus actual stdio read, write and flush errors */
 static bool test_t15(void) {
   g_tests_run++;
+  char path[256];
+  test_path(path, sizeof(path), "missing.bin");
+  replay_container_t out, in;
+  replay_container_init(&out);
+  replay_container_init(&in);
   replay_diagnostic_t diag;
-  replay_status_t st = replay_decode_file("/nonexistent/file/path/that/cannot/exist", NULL, NULL, &diag);
-  TEST_ASSERT(st == REPLAY_ERR_NULL_PARAM || st == REPLAY_ERR_IO, "Must fail with IO error");
+  replay_status_t st = replay_decode_file(path, NULL, &out, &diag);
+  TEST_ASSERT(st == REPLAY_ERR_IO && diag.code == REPLAY_ERR_IO, "Missing input must report an open error");
+  TEST_ASSERT(strstr(diag.detail, "open input") != NULL, "Missing file must reach fopen");
+
+  test_path(path, sizeof(path), "io.bin");
+  TEST_ASSERT(replay_container_append(&in, (const uint8_t *)"HELLO", 5) == REPLAY_OK, "Build I/O fixture");
+  TEST_ASSERT(replay_encode_file(path, &in, NULL, &diag) == REPLAY_OK, "Write real I/O fixture");
+
+  g_io_fault = IO_READ_ERROR;
+  st = replay_decode_file(path, NULL, &out, &diag);
+  g_io_fault = IO_NORMAL;
+  TEST_ASSERT(st == REPLAY_ERR_IO && g_fault_reads > 0 && g_fault_closes == 1, "Read EIO must reach fread and close the stream");
+  TEST_ASSERT(out.count == 0, "Failed read must not publish a container");
+
+  g_fault_writes = g_fault_closes = 0;
+  g_io_fault = IO_WRITE_ERROR;
+  st = replay_encode_file(path, &in, NULL, &diag);
+  g_io_fault = IO_NORMAL;
+  TEST_ASSERT(st == REPLAY_ERR_IO && g_fault_writes > 0 && g_fault_closes == 1, "Write EIO must reach fwrite and close the stream");
+  TEST_ASSERT(strstr(diag.detail, "Short write") != NULL, "Write test must exercise the fwrite failure branch");
+
+  g_fault_writes = g_fault_closes = 0;
+  g_io_fault = IO_FLUSH_ERROR;
+  st = replay_encode_file(path, &in, NULL, &diag);
+  g_io_fault = IO_NORMAL;
+  TEST_ASSERT(st == REPLAY_ERR_IO && g_fault_writes > 0 && g_fault_closes == 1, "Buffered write EIO must be reported at fclose");
+  TEST_ASSERT(strstr(diag.detail, "close and flush") != NULL, "Flush test must exercise the fclose failure branch");
+  printf("[+] T15 exercised missing-file, fread EIO, fwrite EIO and fclose/flush EIO paths\n");
+
+  replay_container_free(&in);
+  replay_container_free(&out);
+  unlink(path);
 
   g_tests_passed++;
   return true;
@@ -459,25 +625,28 @@ static bool test_t18(void) {
 }
 
 int main(void) {
-  printf("[*] Running Replay Codec Tests (T01 - T18)...\n");
-  assert(test_t01());
-  assert(test_t02());
-  assert(test_t03());
-  assert(test_t04());
-  assert(test_t05());
-  assert(test_t06());
-  assert(test_t07());
-  assert(test_t08());
-  assert(test_t09());
-  assert(test_t10());
-  assert(test_t11());
-  assert(test_t12());
-  assert(test_t13());
-  assert(test_t14());
-  assert(test_t15());
-  assert(test_t16());
-  assert(test_t17());
-  assert(test_t18());
+  if (!mkdtemp(g_test_dir)) { perror("mkdtemp"); return EXIT_FAILURE; }
+  if (atexit(cleanup_test_files) != 0) { cleanup_test_files(); return EXIT_FAILURE; }
+  printf("[*] Running independent Replay Codec Tests (T01 - T18, 18 cases)...\n");
+  if (!test_t01()) return EXIT_FAILURE;
+  if (!test_t02()) return EXIT_FAILURE;
+  if (!test_t03()) return EXIT_FAILURE;
+  if (!test_t04()) return EXIT_FAILURE;
+  if (!test_t05()) return EXIT_FAILURE;
+  if (!test_t06()) return EXIT_FAILURE;
+  if (!test_t07()) return EXIT_FAILURE;
+  if (!test_t08()) return EXIT_FAILURE;
+  if (!test_t09()) return EXIT_FAILURE;
+  if (!test_t10()) return EXIT_FAILURE;
+  if (!test_t11()) return EXIT_FAILURE;
+  if (!test_t12()) return EXIT_FAILURE;
+  if (!test_t13()) return EXIT_FAILURE;
+  if (!test_t14()) return EXIT_FAILURE;
+  if (!test_t15()) return EXIT_FAILURE;
+  if (!test_t16()) return EXIT_FAILURE;
+  if (!test_t17()) return EXIT_FAILURE;
+  if (!test_t18()) return EXIT_FAILURE;
+  if (g_tests_run != 18 || g_tests_passed != 18) return EXIT_FAILURE;
   printf("[+] ALL %d / %d REPLAY CODEC TESTS PASSED!\n", g_tests_passed, g_tests_run);
   return 0;
 }

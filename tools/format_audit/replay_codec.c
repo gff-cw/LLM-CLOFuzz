@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>
+#include <sys/types.h>
 
 void replay_limits_default(replay_codec_limits_t *limits) {
   if (!limits) return;
@@ -32,8 +33,11 @@ void replay_container_free(replay_container_t *container) {
 
 replay_status_t replay_container_append(replay_container_t *container, const uint8_t *data, size_t len) {
   if (!container) return REPLAY_ERR_NULL_PARAM;
+  if (len > SIZE_MAX - container->total_payload_bytes) return REPLAY_ERR_TOTAL_LIMIT_EXCEEDED;
   if (container->count >= container->capacity) {
+    if (container->capacity > SIZE_MAX / 2) return REPLAY_ERR_ALLOC;
     size_t new_cap = container->capacity ? container->capacity * 2 : 16;
+    if (new_cap > SIZE_MAX / sizeof(replay_message_t)) return REPLAY_ERR_ALLOC;
     replay_message_t *new_msgs = (replay_message_t *)realloc(container->messages, new_cap * sizeof(replay_message_t));
     if (!new_msgs) return REPLAY_ERR_ALLOC;
     container->messages = new_msgs;
@@ -156,13 +160,13 @@ replay_status_t replay_decode_buffer(const uint8_t *buf, size_t buf_size,
       return REPLAY_ERR_LENGTH_LIMIT_EXCEEDED;
     }
 
-    if (rec_idx + 1 > lim.max_records) {
+    if (rec_idx >= lim.max_records) {
       replay_container_free(&temp);
       set_diag(diag, REPLAY_ERR_RECORD_LIMIT_EXCEEDED, rec_idx, offset - 4, "Record count exceeds max limit");
       return REPLAY_ERR_RECORD_LIMIT_EXCEEDED;
     }
 
-    if (temp.total_payload_bytes + msg_len > lim.max_total_len) {
+    if (msg_len > lim.max_total_len - temp.total_payload_bytes) {
       replay_container_free(&temp);
       set_diag(diag, REPLAY_ERR_TOTAL_LIMIT_EXCEEDED, rec_idx, offset - 4, "Total payload bytes exceed max limit");
       return REPLAY_ERR_TOTAL_LIMIT_EXCEEDED;
@@ -213,24 +217,34 @@ replay_status_t replay_encode_buffer(const replay_container_t *container,
     set_diag(diag, REPLAY_ERR_RECORD_LIMIT_EXCEEDED, container->count, 0, "Record count exceeds limit");
     return REPLAY_ERR_RECORD_LIMIT_EXCEEDED;
   }
+  if (container->count && !container->messages) {
+    set_diag(diag, REPLAY_ERR_NULL_PARAM, 0, 0, "Missing message array");
+    return REPLAY_ERR_NULL_PARAM;
+  }
 
   size_t total_wire_bytes = 0;
+  size_t total_payload_bytes = 0;
   for (size_t i = 0; i < container->count; i++) {
     size_t mlen = container->messages[i].len;
     if (mlen > lim.max_single_len) {
       set_diag(diag, REPLAY_ERR_LENGTH_LIMIT_EXCEEDED, i, 0, "Message length exceeds single limit");
       return REPLAY_ERR_LENGTH_LIMIT_EXCEEDED;
     }
-    if (lim.enforce_int_limits && mlen > (size_t)INT_MAX) {
-      set_diag(diag, REPLAY_ERR_TARGET_INT_OVERFLOW, i, 0, "Message length exceeds target signed int");
+    if (mlen > UINT32_MAX || (lim.enforce_int_limits && mlen > (size_t)INT_MAX)) {
+      set_diag(diag, REPLAY_ERR_TARGET_INT_OVERFLOW, i, 0, "Message length exceeds the target or u32 wire representation");
       return REPLAY_ERR_TARGET_INT_OVERFLOW;
     }
+    if (mlen > lim.max_total_len - total_payload_bytes ||
+        mlen > SIZE_MAX - 4 || total_wire_bytes > SIZE_MAX - 4 - mlen) {
+      set_diag(diag, REPLAY_ERR_TOTAL_LIMIT_EXCEEDED, i, 0, "Payload or wire size exceeds limit");
+      return REPLAY_ERR_TOTAL_LIMIT_EXCEEDED;
+    }
+    if (mlen && !container->messages[i].data) {
+      set_diag(diag, REPLAY_ERR_NULL_PARAM, i, 0, "Missing message payload");
+      return REPLAY_ERR_NULL_PARAM;
+    }
+    total_payload_bytes += mlen;
     total_wire_bytes += 4 + mlen;
-  }
-
-  if (container->total_payload_bytes > lim.max_total_len || total_wire_bytes > lim.max_total_len + 4 * container->count) {
-    set_diag(diag, REPLAY_ERR_TOTAL_LIMIT_EXCEEDED, 0, 0, "Total payload bytes exceed limit");
-    return REPLAY_ERR_TOTAL_LIMIT_EXCEEDED;
   }
 
   uint8_t *wire = (uint8_t *)malloc(total_wire_bytes ? total_wire_bytes : 1);
@@ -271,20 +285,50 @@ replay_status_t replay_decode_file(const char *path,
     return REPLAY_ERR_IO;
   }
 
-  fseek(fp, 0, SEEK_END);
-  long fsize_signed = ftell(fp);
+  if (fseeko(fp, 0, SEEK_END) != 0) {
+    fclose(fp);
+    set_diag(diag, REPLAY_ERR_IO, 0, 0, "Failed to seek input file");
+    return REPLAY_ERR_IO;
+  }
+  off_t fsize_signed = ftello(fp);
   if (fsize_signed < 0) {
     fclose(fp);
     set_diag(diag, REPLAY_ERR_IO, 0, 0, "Failed to determine file size");
     return REPLAY_ERR_IO;
   }
+  if ((uintmax_t)fsize_signed > SIZE_MAX) {
+    fclose(fp);
+    set_diag(diag, REPLAY_ERR_TOTAL_LIMIT_EXCEEDED, 0, 0, "Input file size is not representable");
+    return REPLAY_ERR_TOTAL_LIMIT_EXCEEDED;
+  }
   size_t fsize = (size_t)fsize_signed;
-  fseek(fp, 0, SEEK_SET);
 
   if (fsize == 0) {
     fclose(fp);
     set_diag(diag, REPLAY_ERR_EMPTY_INPUT, 0, 0, "File is empty");
     return REPLAY_ERR_EMPTY_INPUT;
+  }
+
+  /* A valid file contains at most max_records headers and max_total_len payload
+     bytes. Reject oversized files before allocating their entire contents. */
+  replay_codec_limits_t lim;
+  if (limits) lim = *limits;
+  else replay_limits_default(&lim);
+  size_t max_wire_size = SIZE_MAX;
+  if (lim.max_records <= SIZE_MAX / 4) {
+    size_t header_bytes = lim.max_records * 4;
+    if (lim.max_total_len <= SIZE_MAX - header_bytes)
+      max_wire_size = lim.max_total_len + header_bytes;
+  }
+  if (fsize > max_wire_size) {
+    fclose(fp);
+    set_diag(diag, REPLAY_ERR_TOTAL_LIMIT_EXCEEDED, 0, 0, "Input file exceeds wire-size bound before allocation");
+    return REPLAY_ERR_TOTAL_LIMIT_EXCEEDED;
+  }
+  if (fseeko(fp, 0, SEEK_SET) != 0) {
+    fclose(fp);
+    set_diag(diag, REPLAY_ERR_IO, 0, 0, "Failed to rewind input file");
+    return REPLAY_ERR_IO;
   }
 
   uint8_t *buf = (uint8_t *)malloc(fsize);
@@ -295,10 +339,11 @@ replay_status_t replay_decode_file(const char *path,
   }
 
   size_t r = fread(buf, 1, fsize, fp);
-  fclose(fp);
-  if (r != fsize) {
+  int read_failed = ferror(fp);
+  int close_failed = fclose(fp);
+  if (r != fsize || read_failed || close_failed) {
     free(buf);
-    set_diag(diag, REPLAY_ERR_IO, 0, r, "Short read encountered reading file");
+    set_diag(diag, REPLAY_ERR_IO, 0, r, "Failed to read or close input file");
     return REPLAY_ERR_IO;
   }
 
@@ -331,7 +376,7 @@ replay_status_t replay_encode_file(const char *path,
 
   if (wire_size > 0) {
     size_t w = fwrite(wire, 1, wire_size, fp);
-    if (w != wire_size) {
+    if (w != wire_size || ferror(fp)) {
       fclose(fp);
       free(wire);
       set_diag(diag, REPLAY_ERR_IO, 0, w, "Short write occurred while saving file");

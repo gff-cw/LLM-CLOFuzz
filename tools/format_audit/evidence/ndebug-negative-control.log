@@ -1,0 +1,4 @@
+Negative control: -DNDEBUG build; the first successful encode assertion was intentionally inverted.
+[*] Running independent Replay Codec Tests (T01 - T18, 18 cases)...
+[-] FAILED: test_t01 (line 99): Negative-control intentional failure
+Exit status: 1

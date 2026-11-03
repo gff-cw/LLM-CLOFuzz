@@ -1,0 +1,4 @@
+.build-tmp/
+.test-replay-codec-*/
+test_replay_codec_ndebug
+test_region_checker_ndebug

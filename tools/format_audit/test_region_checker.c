@@ -3,7 +3,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <assert.h>
 
 static int g_tests_run = 0;
 static int g_tests_passed = 0;
@@ -336,17 +335,18 @@ static bool test_t26(void) {
 }
 
 int main(void) {
-  printf("[*] Running Region Checker Tests (T17 - T26)...\n");
-  assert(test_t17());
-  assert(test_t18());
-  assert(test_t19());
-  assert(test_t20());
-  assert(test_t21());
-  assert(test_t22());
-  assert(test_t23());
-  assert(test_t24());
-  assert(test_t25());
-  assert(test_t26());
+  printf("[*] Running independent Region Checker Tests (T17 - T26, 10 cases)...\n");
+  if (!test_t17()) return EXIT_FAILURE;
+  if (!test_t18()) return EXIT_FAILURE;
+  if (!test_t19()) return EXIT_FAILURE;
+  if (!test_t20()) return EXIT_FAILURE;
+  if (!test_t21()) return EXIT_FAILURE;
+  if (!test_t22()) return EXIT_FAILURE;
+  if (!test_t23()) return EXIT_FAILURE;
+  if (!test_t24()) return EXIT_FAILURE;
+  if (!test_t25()) return EXIT_FAILURE;
+  if (!test_t26()) return EXIT_FAILURE;
+  if (g_tests_run != 10 || g_tests_passed != 10) return EXIT_FAILURE;
   printf("[+] ALL %d / %d REGION CHECKER TESTS PASSED!\n", g_tests_passed, g_tests_run);
   return 0;
 }

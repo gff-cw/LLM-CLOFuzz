@@ -1,0 +1,33 @@
+============================================================
+    Independent codec/checker tests: 28 cases per build
+    18 codec cases (T01-T18), 10 region cases (T17-T26)
+    These tests do not establish native fuzzer coverage.
+============================================================
+rm -f replay_tool test_replay_codec test_region_checker test_replay_codec_ndebug test_region_checker_ndebug *.o
+cc  -Wall -Wextra -g -O2 replay_codec.c replay_tool.c  -o replay_tool
+cc  -Wall -Wextra -g -O2 replay_codec.c test_replay_codec.c  -Wl,--wrap=fopen -o test_replay_codec
+cc  -Wall -Wextra -g -O2 region_checker.c test_region_checker.c  -o test_region_checker
+
+[Step 1/2] Running 28 independent cases with the default build flags...
+./test_replay_codec
+[*] Running independent Replay Codec Tests (T01 - T18, 18 cases)...
+[+] T15 exercised missing-file, fread EIO, fwrite EIO and fclose/flush EIO paths
+[+] ALL 18 / 18 REPLAY CODEC TESTS PASSED!
+./test_region_checker
+[*] Running independent Region Checker Tests (T17 - T26, 10 cases)...
+[+] ALL 10 / 10 REGION CHECKER TESTS PASSED!
+
+[Step 2/2] Running the same 28 independent cases with NDEBUG...
+cc  -Wall -Wextra -g -O2 -DNDEBUG replay_codec.c test_replay_codec.c  -Wl,--wrap=fopen -o test_replay_codec_ndebug
+cc  -Wall -Wextra -g -O2 -DNDEBUG region_checker.c test_region_checker.c  -o test_region_checker_ndebug
+./test_replay_codec_ndebug
+[*] Running independent Replay Codec Tests (T01 - T18, 18 cases)...
+[+] T15 exercised missing-file, fread EIO, fwrite EIO and fclose/flush EIO paths
+[+] ALL 18 / 18 REPLAY CODEC TESTS PASSED!
+./test_region_checker_ndebug
+[*] Running independent Region Checker Tests (T17 - T26, 10 cases)...
+[+] ALL 10 / 10 REGION CHECKER TESTS PASSED!
+
+============================================================
+ [+] All 28 independent cases passed in both builds (56 executions).
+============================================================
