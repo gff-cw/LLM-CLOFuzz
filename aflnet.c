@@ -1,4 +1,6 @@
 #include <ctype.h>
+#include <errno.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -1702,6 +1704,68 @@ region_t* convert_kl_messages_to_regions(klist_t(lms) *kl_messages, u32* region_
 // Network communication functions
 
 int net_send(int sockfd, struct timeval timeout, char *mem, unsigned int len) {
+  int socket_type;
+  socklen_t type_len = sizeof(socket_type);
+  if (getsockopt(sockfd, SOL_SOCKET, SO_TYPE, &socket_type, &type_len) < 0)
+    return -1;
+
+  if (socket_type == SOCK_DGRAM) {
+    /* A datagram is one send, including a zero-byte datagram. Never retry a
+       short result as another datagram or report a readiness timeout as a
+       successful zero-byte send. */
+    if (timeout.tv_sec < 0 || timeout.tv_usec < 0 || timeout.tv_usec >= 1000000) {
+      errno = EINVAL;
+      return -1;
+    }
+    if (len > INT_MAX) {
+      errno = EMSGSIZE;
+      return -1;
+    }
+    if (setsockopt(sockfd, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout)) < 0)
+      return -1;
+
+    int wait_ms = -1; /* SO_SNDTIMEO == {0, 0} means no timeout. */
+    if (timeout.tv_sec || timeout.tv_usec) {
+      if (timeout.tv_sec > INT_MAX / 1000) {
+        wait_ms = INT_MAX;
+      } else {
+        long long millis = (long long)timeout.tv_sec * 1000 +
+                           (timeout.tv_usec + 999) / 1000;
+        wait_ms = millis > INT_MAX ? INT_MAX : (int)millis;
+      }
+    }
+    struct pollfd ready = {.fd = sockfd, .events = POLLOUT, .revents = 0};
+    int rv = poll(&ready, 1, wait_ms);
+    if (rv < 0) return -1;
+    if (rv == 0) {
+      errno = EAGAIN;
+      return -1;
+    }
+    if (ready.revents & POLLNVAL) {
+      errno = EBADF;
+      return -1;
+    }
+    if (!(ready.revents & POLLOUT)) {
+      int socket_error = 0;
+      socklen_t error_len = sizeof(socket_error);
+      if (getsockopt(sockfd, SOL_SOCKET, SO_ERROR, &socket_error, &error_len) < 0)
+        return -1;
+      errno = socket_error ? socket_error : EIO;
+      return -1;
+    }
+
+    ssize_t sent = send(sockfd, mem, len, MSG_NOSIGNAL);
+    if (sent < 0) return -1;
+    if ((unsigned int)sent != len) {
+      errno = EIO;
+      return -1;
+    }
+    return (int)sent;
+  }
+
+  /* Empty stream writes have no message to transmit. */
+  if (len == 0) return 0;
+
   unsigned int byte_count = 0;
   int n;
   struct pollfd pfd[1];

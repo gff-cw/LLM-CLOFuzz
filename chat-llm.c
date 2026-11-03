@@ -421,6 +421,21 @@ char *chat_with_llm(char *prompt, char *model, int tries, float temperature)
     return answer;
 }
 
+/* json-c takes ownership only when the add succeeds. A required string must
+   not silently become JSON null when its allocation fails. */
+static int stall_add_string(json_object *object, const char *key, const char *text)
+{
+    json_object *value = json_object_new_string(text);
+    if (!value)
+        return -1;
+    if (json_object_object_add(object, key, value) < 0)
+    {
+        json_object_put(value);
+        return -1;
+    }
+    return 0;
+}
+
 char *construct_prompt_stall(char *protocol_name, char *examples, char *history)
 {
     char *template = "In the %s protocol, the communication history between the %s client and the %s server is as follows."
@@ -436,25 +451,41 @@ char *construct_prompt_stall(char *protocol_name, char *examples, char *history)
         return NULL;
     }
 
-    json_object *messages_obj = json_object_new_array();
-    if (!messages_obj) {
-        free(prompt);
-        return NULL;
-    }
+    char *final_prompt = NULL;
+    json_object *messages_obj = NULL;
+    json_object *sys_msg = NULL;
+    json_object *user_msg = NULL;
 
-    json_object *sys_msg = json_object_new_object();
-    json_object_object_add(sys_msg, "role", json_object_new_string("system"));
-    json_object_object_add(sys_msg, "content", json_object_new_string("You are a helpful assistant."));
-    json_object_array_add(messages_obj, sys_msg);
+    messages_obj = json_object_new_array();
+    if (!messages_obj)
+        goto cleanup;
 
-    json_object *user_msg = json_object_new_object();
-    json_object_object_add(user_msg, "role", json_object_new_string("user"));
-    json_object_object_add(user_msg, "content", json_object_new_string(prompt));
-    json_object_array_add(messages_obj, user_msg);
+    sys_msg = json_object_new_object();
+    if (!sys_msg ||
+        stall_add_string(sys_msg, "role", "system") < 0 ||
+        stall_add_string(sys_msg, "content", "You are a helpful assistant.") < 0)
+        goto cleanup;
+    if (json_object_array_add(messages_obj, sys_msg) < 0)
+        goto cleanup;
+    sys_msg = NULL; /* Owned by messages_obj. */
+
+    user_msg = json_object_new_object();
+    if (!user_msg ||
+        stall_add_string(user_msg, "role", "user") < 0 ||
+        stall_add_string(user_msg, "content", prompt) < 0)
+        goto cleanup;
+    if (json_object_array_add(messages_obj, user_msg) < 0)
+        goto cleanup;
+    user_msg = NULL; /* Owned by messages_obj. */
 
     const char *json_payload = json_object_to_json_string(messages_obj);
-    char *final_prompt = json_payload ? strdup(json_payload) : NULL;
-    json_object_put(messages_obj);
+    if (json_payload)
+        final_prompt = strdup(json_payload);
+
+cleanup:
+    if (user_msg) json_object_put(user_msg);
+    if (sys_msg) json_object_put(sys_msg);
+    if (messages_obj) json_object_put(messages_obj);
     free(prompt);
 
     return final_prompt;
