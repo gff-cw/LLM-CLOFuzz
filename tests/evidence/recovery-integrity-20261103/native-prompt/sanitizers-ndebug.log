@@ -1,0 +1,5 @@
+chat-llm.c:1235:21: warning: assigning to 'char *' from 'kh_cstr_t' (aka 'const char *') discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+ 1235 |         data[index] = kh_key(sequence,i);
+      |                     ^ ~~~~~~~~~~~~~~~~~~
+1 warning generated.
+PASS 18 native prompt cases: real JSON, escaping and every allocation/add cleanup path.

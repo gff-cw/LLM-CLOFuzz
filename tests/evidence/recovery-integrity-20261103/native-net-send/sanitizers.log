@@ -1,0 +1,11 @@
+PASS zero UDP: exactly one real loopback datagram
+PASS ordinary UDP: payload preserved in one datagram
+PASS oversized UDP: kernel failure is propagated
+PASS injected partial datagram: failure without sending a second fragment
+PASS invalid datagram timeout: no false zero-byte success
+PASS unconnected zero UDP: destination failure is propagated
+PASS full local datagram queue: timeout fails, drained queue sends empty record
+PASS zero TCP: no send, no bytes, no connection close
+PASS ordinary TCP: stream payload unchanged after empty no-op
+PASS invalid descriptor: no false empty success
+All native net_send tests passed.

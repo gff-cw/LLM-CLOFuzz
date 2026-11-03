@@ -1,66 +1,53 @@
-# LLM-CLOFuzz / StateAFL / AFLNet 格式契约与数据表示规范
+# 当前输入格式与恢复契约
 
-## 1. 规范背景与范围
+本文件描述 `fix/replay-recovery-integrity-20261103` 的原生接入行为。旧版文档中的缺陷编号是历史分析，不代表当前缺陷状态；本文件替代原先按旧行号排列的结论。
 
-在 LLM-CLOFuzz 对协议消息进行 LLM 增强与变异的过程中，存在多种不同的数据表示层次：
-- **Replay 格式文件**：AFLNet / StateAFL 的测试用例保存格式，每条消息前面带有 4 字节的长度前缀（`uint32_t`，本机字节序，x86_64 上为小端）。
-- **Raw 字节流**：进入 Fuzz 队列或由解析器解包后的原始数据，移除了 4 字节的 replay 封装。
-- **Region 元数据**：用于切分各条消息的坐标结构（`region_t`），记录闭区间 `[start_byte, end_byte]`。
-- **网络 Payload**：发往目标服务的实际应用层报文，与 replay 封装完全隔离。
+## 文件与内存表示
 
-为避免在不同组件间混淆上述表示，本规范固定数据结构、编解码规则及生命周期管理契约。
+- Replay 文件使用 AFLNet/StateAFL 原有格式：每条消息由本机字节序的 4 字节 `u32` 长度和对应 payload 组成。没有新增魔数或更换格式。x86_64 上长度是小端。
+- 输出 `queue` 保存拼接后的 raw payload；输出 `replayable-queue` 保存 payload 和完整消息划分。
+- `region_t` 使用闭区间 `[start_byte, end_byte]`。空消息使用 `end_byte = start_byte - 1`，连续空消息各保留一个 region。
+- 多条消息拼接后的 raw 字节不能唯一确定边界。恢复必须同时有有效 replay，或由用户明确选择重新解析 raw。
+- `.regions` 是供调试查看的文本，不作为自动恢复的权威输入。仅校验几何和长度不能证明它属于当前 payload。
 
----
+## 输入方式
 
-## 2. 数据对象契约
+| 选项或路径 | 行为 |
+| --- | --- |
+| `-I replay` | 所有初始种子必须完整符合 replay 格式，非法或截断文件报错 |
+| `-I raw` | 所有初始文件按 raw 解释；使用协议解析器或单消息回退 |
+| `-I auto`，父目录 `queue` / `_resume` | 按 raw 恢复；要求至少一个解码后与 raw 逐字节相同的 replay companion |
+| `-I auto`，父目录 `replayable-queue` / `_resume_replayable-queue` | 严格按 replay 解码，不将输入自身误认为 raw 的伴随文件 |
+| `-I auto`，其他初始目录 | 保留旧版自动探测：完整符合 replay 则解包，否则按 raw |
 
-### 2.1 Replay 容器格式 (Replay Container)
-- **长度字段**：每条消息前置 4 字节无符号整数（`uint32_t` / `u32`），采用本机字节序（Little-Endian）。
-- **Payload 字节**：长度字段后紧跟实际二进制字节，长度完全由前置字段指定，支持任意二进制数据（含 `\0`、不可打印字符及非 UTF-8 序列）。
-- **合法性判定**：
-  - 合法容器的总字节数必须精确等于：`∑ (4 + len_i)`。
-  - 末尾不允许有多余未解释的尾部字节（trailing garbage）。
-  - 若文件剩余字节小于 4 字节，或声明长度超过文件剩余字节，判定为截断格式错误。
-- **零长消息策略**：支持零长记录（长度为 0，紧跟 0 字节 payload），其闭区间坐标表示为 `end_byte = start_byte - 1`。
+`auto` 在无类型的初始目录仍有固有歧义：某段 raw 恰好符合 replay 字节结构时会被解包。已知格式的实验应显式指定 `-I raw` 或 `-I replay`。启动时规范化输入目录路径，消除尾部斜杠、`.`、`..` 和目录软链接对目录角色判断的影响。
 
-### 2.2 Raw 缓冲 (Raw Buffer)
-- **有效边界**：必须具有显式的 `length` 和 `capacity`，不能依赖 NUL 终止符计算长度。
-- **不可逆性声明**：多个消息拼接后的 Raw 缓冲无法在无外部元数据的情况下唯一反推消息边界。必须由外部 `region_t` 元数据显式记录划分。
+导入以前的输出根目录时，程序先选择其 `queue`。若要直接导入 replay，应指定 `-i OLD/replayable-queue`。`-i -` 的常规恢复使用默认 `auto`，不要将已有 raw queue 声明为 `replay`。
 
-### 2.3 区域元数据 (Region Metadata)
-- **定义**：`region_t { int start_byte; int end_byte; ... }`
-- **坐标系**：闭区间 `[start_byte, end_byte]`。当长度为 `L` 时，`end_byte = start_byte + L - 1`；当 `L = 0` 时，`end_byte = start_byte - 1`。
-- **缓冲关联性**：区域坐标必须严格绑定到其所属的具体缓冲对象及其版本/哈希；任何对缓冲的扩容、重分配、数据修改均会导致旧区域元数据失效，禁止跨缓冲或跨轮次无条件复用。
+## 伴随文件与边界优先级
 
----
+对 raw queue 的每个文件，依次尝试同名的 `../_resume_replayable-queue`、`../replayable-queue` 和 `replayable-queue` 候选。排除与输入同 inode 的文件。每个候选都必须完整解码，并同时匹配 payload 长度和每个 payload 字节。损坏、过期或超限的高优先级候选不会遮住后续有效候选。
 
-## 3. 生产者与消费者审计表
+验证通过的 replay 边界优先于协议解析器，因此 `-P` 不会重新划分该种子并丢失空记录。输出 replay 总是由实际 raw 和最终 regions 重新生成，不直接复制未验证的旧文件。
 
-| 模块 / 函数 | 源码位置 | 输入表示 | 输出表示 | 坐标基准 | 长度/截断策略 | 所有权与资源管理 |
-|---|---|---|---|---|---|---|
-| `read_testcases` | `afl-fuzz.c:2329` | Replay 文件 (带 4B 头) | 内存 Replay 缓冲与 Raw 区域 | Raw (由解包逻辑决定) | 严格按 4B 头切分，非法头报 FATAL | 队列拥有缓冲，生命周期随 testcase |
-| `extract_requests_generic` | `afl-fuzz.c:3215` | 输入字节缓冲 (Replay/Raw) | `region_t*` 数组 | Raw 坐标序列 | 安全减法防溢出，支持零长 | 调用方负责 `ck_free(regions)` |
-| `enrich_testcases` | `afl-fuzz.c:3340` | Initial seed (Replay 格式) | 抽取各消息并重组 | 原实现错用 Raw 索引 Replay 缓冲 | 原实现转为 C 字符串导致截断 | 临时缓冲，函数退出释放 |
-| `write_new_seeds` | `chat-llm.c:998` | 抽取格式化后的字符串 | 生成文件 | 纯文本 | 原实现未加 4B 封装，破坏 Replay 格式 | 文件句柄在写入后关闭 |
-| `chat_with_llm` | `chat-llm.c:251` | JSON/文本 Prompt | 模型响应字符串 | N/A | 受 `max_tokens` 限制 | 堆分配，调用方释放返回指针 |
-| `save_responses_to_file` | `afl-fuzz.c:9630` | 内存响应数据 | 文件 | N/A | 二进制写入 | 临时文件记录 |
+字节相等建立的是 payload 与边界的兼容性，不是历史版本认证。两份 replay 若 payload 相同而消息划分不同，raw 本身不能判定原本是哪一份；需要指定保留的 replay 输入。此补丁不新增签名、版本清单或跨机器字节序转换。
 
----
+旧语料只有 raw 和 `.regions` 时，自动恢复会拒绝并保留原件。建议找回对应 replay；如果愿意重新划分消息，可将 raw 文件复制到独立初始目录并显式 `-I raw`。这会依赖协议解析器或单消息回退，无法承诺恢复原边界。
 
-## 4. 核心问题复核结论 (F2-A ~ F3-F)
+## 文件边界与失败行为
 
-### 问题 2：表示不一致复核 (F2-A ~ F2-F)
-- **F2-A (`afl-fuzz.c:3341`)**：确认存在。直接读取 initial seed 文件后按字符串处理，未解开 4 字节 replay 封装。
-- **F2-B (`afl-fuzz.c:3233`)**：确认存在。`extract_requests_generic` 计算的 `cur_start` 是 Raw 累加坐标，未对输入缓冲做就地解包。
-- **F2-C (`afl-fuzz.c:3353`)**：确认存在。用 Raw 坐标索引仍包含 4 字节长度头的 `nl_file_content`，造成数据错位。
-- **F2-D (`chat-llm.c:1230`)**：确认存在。将可能包含 NUL 字节的二进制数据视作 C 字符串，遇到 0x00 提前截断。
-- **F2-E (`chat-llm.c:998`)**：确认存在。`write_new_seeds` 以纯字符串写入，缺少 4 字节 replay 封装头，导致 AFLNet 后续读取失败。
-- **F2-F (`afl-fuzz.c:11235`)**：确认存在。AFLNet 主循环读取期望严格的 replay 封装，写入纯文本种子导致不兼容。
+payload 总长限制为 `MAX_FILE`（当前 1 MiB）；replay 最多 `MAX_FILE` 条记录，总文件上限为 `MAX_FILE + 4 * MAX_FILE`（当前 5 MiB）。读取前检查文件类型和宽整数文件尺寸，之后才转换为 `u32` 并分配；解码也单独限制总 payload 和记录数。
 
-### 问题 3：元数据关联缺口复核 (F3-A ~ F3-F)
-- **F3-A (`afl-fuzz.c:11081`)**：确认存在。运行期解包函数被重定向为 generic。
-- **F3-B (`afl-fuzz.c:3222`)**：确认存在。仅凭全局指针 `mutated_regions != NULL` 且数量大于 0 即直接复用，未校验与当前输入缓冲的哈希或地址关联。
-- **F3-C (`afl-fuzz.c:3235`)**：确认存在。缺少全局区域时，输入被假设为具有 4 字节长度前缀。
-- **F3-D (`afl-fuzz.c:7614`)**：确认存在。在 LLM 变异分支处理字符串时，未维护回放封装和变异区域。
-- **F3-E (`afl-fuzz.c:7705`)**：确认存在。变异区域分配在分支逻辑之后。
-- **F3-F (`afl-fuzz.c:9611`)**：确认存在。正常轮次结束释放区域指针并置空。
+恢复写入使用同目录临时文件，处理短写和 `EINTR`，检查 `fsync`、`close` 和 `rename`。写入失败不会替换已有目标文件；临时文件会清理。无法迁移原目录、验证输入或保存任一输出时，启动在清理 `_resume*` 前停止，原恢复数据保留。已有备份目录即使为空，也不会被新目录覆盖。
+
+如果清理被中断，可能出现 `_resume` 已不存在、却仍有旧 companion 备份的情况。下次恢复会在任何目录移动之前拒绝这个状态，避免将旧边界配给新 raw 并删除当前匹配的 companion；保留这些目录后再人工整理备份。
+
+这些是运行时 I/O 错误保证；没有对整个输出目录实现跨文件事务或断电原子性。重新运行时会重新验证 companion。
+
+## LLM 与网络层
+
+初始扩充共用相同的受限输入解码器。启用严格 replay 输入，或直接导入 replayable 目录时，生成的种子也保存为 replay；显式 raw 模式保存 raw。自动恢复已有 queue 时跳过重复的初始扩充，不向恢复快照加入无 companion 的新文件。LLM 文本构造仍以 C 字符串为接口，不能据此宣称模型可无损生成任意二进制协议数据。
+
+零长 UDP 消息实际发送一条零长数据报；超时和发送错误返回失败。普通 UDP 消息也保持单个数据报，不将短发送拆成另一条消息。零长 TCP 记录作为逻辑槽位保留，但 TCP 没有独立可观察的空消息，网络层不发送字节。
+
+本次未改变 StateAFL 的 LLVM 18 插桩接口、状态推断算法或 replay 的二进制布局。验证命令与覆盖范围见 [修复验证报告](REPAIR_VERIFICATION_20261103.md)。

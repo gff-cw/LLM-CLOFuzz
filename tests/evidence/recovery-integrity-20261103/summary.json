@@ -1,0 +1,37 @@
+{
+  "baseline_commit": "42bf625fa1d264b24601e21bedd065b8d20fe3f6",
+  "source_commit": "799351e7da7aa4515e819d5a1590ed4c82b78c26",
+  "source_commits": [
+    "799351e7da7aa4515e819d5a1590ed4c82b78c26",
+    "013d59c82d4242baf8b08f09d2aecc556bedf4e4",
+    "731beb1cd6b00e3434b71247e00d7b72e4da57c3"
+  ],
+  "branch": "fix/replay-recovery-integrity-20261103",
+  "scope": "Native build and fixed local regressions; no target fuzzing campaign or online LLM evaluation.",
+  "results": {
+    "native_build": 0,
+    "llvm18_full_build": 0,
+    "llvm18_final_smoke": 0,
+    "native_recovery": {
+      "ordinary": 80,
+      "asan_ubsan": 80
+    },
+    "native_network": {
+      "ordinary": 10,
+      "ndebug": 10,
+      "asan_ubsan": 10,
+      "asan_ubsan_ndebug": 10
+    },
+    "native_prompt": {
+      "ordinary": 18,
+      "ndebug": 18,
+      "asan_ubsan": 18,
+      "asan_ubsan_ndebug": 18
+    },
+    "independent_format": {
+      "ordinary": 28,
+      "ndebug": 28,
+      "negative_control_expected_exit": 1
+    }
+  }
+}

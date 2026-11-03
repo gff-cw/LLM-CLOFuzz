@@ -43,10 +43,14 @@ AFLNet scheduling. The default instrumentation is StateAFL's own New PM plugin.
 See [the source audit](LLVM18_MIGRATION_AUDIT.md) and
 [the measured test report](LLVM18_TEST_REPORT.md) for scope and evidence.
 
-The separate [ChatAFL source audit](docs/CHATAFL_SOURCE_AUDIT.md) and
-[evaluation review](docs/CHATAFL_EVALUATION_REVIEW.md) document the three LLM
-mechanisms and their compatibility constraints. This is a research review;
-the LLM mechanisms have not been integrated or evaluated in this checkout.
+This branch contains the ChatAFL port and recovery fixes. The separate
+[ChatAFL source audit](docs/CHATAFL_SOURCE_AUDIT.md) and
+[evaluation review](docs/CHATAFL_EVALUATION_REVIEW.md) are historical research
+reviews, not validation of the current implementation. See the current
+[format contract](docs/FORMAT_CONTRACT.md) and
+[repair and verification report](docs/REPAIR_VERIFICATION_20261103.md).
+Compilation and regression checks do not establish the effectiveness of the
+three LLM methods; that requires controlled fuzzing experiments.
 
 Use the existing system LLVM 18.1.3 toolchain. No separate LLVM download,
 versioned executable name, or manual installation into `/usr/lib/llvm-18` is
@@ -183,6 +187,13 @@ export AFL_PATH=$STATEAFL
 StateAFL can be run using the same command line options of AFL and AFLNet (except for protocol specification). Run ```afl-fuzz --help``` to see all options. Please also see [README-AFLnet.md](README-AFLnet.md) for more information.
 
 - ***-i folder***: folder with input files, in replayable format (see below)
+
+- ***-I auto|raw|replay***: input format (default `auto`). Use `replay` for a
+  strictly length-prefixed initial corpus, or `raw` for explicitly raw seeds.
+  In `auto`, importing `queue` or `_resume` requires a replay companion whose
+  decoded bytes match exactly; importing `replayable-queue` decodes it directly.
+  Recovery preserves verified message boundaries, including empty records.
+  Details and legacy-corpus migration are in [the format contract](docs/FORMAT_CONTRACT.md).
 
 - ***-N netinfo***: server information (e.g., tcp://127.0.0.1/8554)
 

@@ -1,0 +1,163 @@
+=== fresh_raw (exit 0) ===
+PASS fresh_raw
+=== fresh_replay (exit 0) ===
+PASS fresh_replay
+=== direct_replay_queue (exit 0) ===
+PASS direct_replay_queue
+=== direct_resume_replay_queue (exit 0) ===
+PASS direct_resume_replay_queue
+=== direct_replay_malformed (exit 0) ===
+PASS direct_replay_malformed
+=== explicit_replay_in_queue (exit 0) ===
+PASS explicit_replay_in_queue
+=== explicit_raw_ambiguous (exit 0) ===
+PASS explicit_raw_ambiguous
+=== explicit_raw_in_replay_queue (exit 0) ===
+PASS explicit_raw_in_replay_queue
+=== explicit_replay_malformed (exit 0) ===
+PASS explicit_replay_malformed
+=== explicit_replay_empty (exit 0) ===
+PASS explicit_replay_empty
+=== auto_partial_framing (exit 0) ===
+PASS auto_partial_framing
+=== auto_empty_raw (exit 0) ===
+PASS auto_empty_raw
+=== replay_zero_records (exit 0) ===
+PASS replay_zero_records
+=== resume_normal (exit 0) ===
+PASS resume_normal
+=== resume_in_place_layout (exit 0) ===
+PASS resume_in_place_layout
+=== resume_duplicate_slash (exit 0) ===
+PASS resume_duplicate_slash
+=== resume_dot_component (exit 0) ===
+PASS resume_dot_component
+=== replay_duplicate_slash_is_strict (exit 0) ===
+PASS replay_duplicate_slash_is_strict
+=== replay_dot_component_is_strict (exit 0) ===
+PASS replay_dot_component_is_strict
+=== resume_same_output_path (exit 0) ===
+PASS resume_same_output_path
+=== resume_zero_records (exit 0) ===
+PASS resume_zero_records
+=== resume_missing_companion (exit 0) ===
+PASS resume_missing_companion
+=== resume_empty_missing_companion (exit 0) ===
+PASS resume_empty_missing_companion
+=== resume_regions_only (exit 0) ===
+PASS resume_regions_only
+=== resume_stale_same_length (exit 0) ===
+PASS resume_stale_same_length
+=== resume_wrong_length (exit 0) ===
+PASS resume_wrong_length
+=== resume_malformed_companion (exit 0) ===
+PASS resume_malformed_companion
+=== resume_stale_priority_fallback (exit 0) ===
+PASS resume_stale_priority_fallback
+=== resume_malformed_priority_fallback (exit 0) ===
+PASS resume_malformed_priority_fallback
+=== resume_oversized_priority_fallback (exit 0) ===
+PASS resume_oversized_priority_fallback
+=== resume_oversized_companion (exit 0) ===
+PASS resume_oversized_companion
+=== resume_basename_mismatch (exit 0) ===
+PASS resume_basename_mismatch
+=== resume_corrupt_replay_and_regions (exit 0) ===
+PASS resume_corrupt_replay_and_regions
+=== save_round_trip (exit 0) ===
+PASS save_round_trip
+=== save_zero_records (exit 0) ===
+PASS save_zero_records
+=== save_invalid_partition (exit 0) ===
+PASS save_invalid_partition
+=== save_invalid_bounds (exit 0) ===
+PASS save_invalid_bounds
+=== atomic_replace (exit 0) ===
+PASS atomic_replace
+=== atomic_short_write (exit 0) ===
+PASS atomic_short_write
+=== atomic_interrupted_write (exit 0) ===
+PASS atomic_interrupted_write
+=== atomic_failed_write (exit 0) ===
+PASS atomic_failed_write
+=== atomic_partial_failed_write (exit 0) ===
+PASS atomic_partial_failed_write
+=== atomic_zero_write (exit 0) ===
+PASS atomic_zero_write
+=== atomic_failed_fsync (exit 0) ===
+PASS atomic_failed_fsync
+=== atomic_failed_rename (exit 0) ===
+PASS atomic_failed_rename
+=== atomic_failure_new_path (exit 0) ===
+PASS atomic_failure_new_path
+=== prepare_failed_write (exit 0) ===
+PASS prepare_failed_write
+=== prepare_failed_fsync (exit 0) ===
+PASS prepare_failed_fsync
+=== prepare_failed_rename (exit 0) ===
+PASS prepare_failed_rename
+=== prepare_short_write (exit 0) ===
+PASS prepare_short_write
+=== prepare_same_path_failed_write (exit 0) ===
+PASS prepare_same_path_failed_write
+=== prepare_same_path_failed_fsync (exit 0) ===
+PASS prepare_same_path_failed_fsync
+=== prepare_same_path_failed_rename (exit 0) ===
+PASS prepare_same_path_failed_rename
+=== save_failed_write (exit 0) ===
+PASS save_failed_write
+=== save_failed_fsync (exit 0) ===
+PASS save_failed_fsync
+=== save_failed_rename (exit 0) ===
+PASS save_failed_rename
+=== pivot_replay_preserves_empty_regions (exit 0) ===
+[1;94m[*] [0mImporting input files and preserving message boundaries...[0m
+PASS pivot_replay_preserves_empty_regions
+=== pivot_in_place_preserves_empty_regions (exit 0) ===
+[1;94m[*] [0mImporting input files and preserving message boundaries...[0m
+PASS pivot_in_place_preserves_empty_regions
+=== pivot_raw_uses_protocol_parser (exit 0) ===
+[1;94m[*] [0mImporting input files and preserving message boundaries...[0m
+PASS pivot_raw_uses_protocol_parser
+=== pivot_failed_metadata_write (exit 0) ===
+PASS pivot_failed_metadata_write
+=== pivot_failed_metadata_fsync (exit 0) ===
+PASS pivot_failed_metadata_fsync
+=== pivot_failed_metadata_rename (exit 0) ===
+PASS pivot_failed_metadata_rename
+=== preserve_required_directory (exit 0) ===
+PASS preserve_required_directory
+=== preserve_optional_missing (exit 0) ===
+PASS preserve_optional_missing
+=== preserve_required_missing (exit 0) ===
+PASS preserve_required_missing
+=== preserve_existing_empty_backup (exit 0) ===
+PASS preserve_existing_empty_backup
+=== preserve_existing_nonempty_backup (exit 0) ===
+PASS preserve_existing_nonempty_backup
+=== preserve_backup_is_file (exit 0) ===
+PASS preserve_backup_is_file
+=== preserve_failed_rename (exit 0) ===
+PASS preserve_failed_rename
+=== preserve_source_file_rejected (exit 0) ===
+PASS preserve_source_file_rejected
+=== stage_orphan_replay_backup (exit 0) ===
+PASS stage_orphan_replay_backup
+=== stage_orphan_regions_backup (exit 0) ===
+PASS stage_orphan_regions_backup
+=== stage_fresh_snapshot (exit 0) ===
+PASS stage_fresh_snapshot
+=== stage_interrupted_existing_raw_backup (exit 0) ===
+PASS stage_interrupted_existing_raw_backup
+=== enriched_explicit_replay (exit 0) ===
+PASS enriched_explicit_replay
+=== enriched_auto_replay_directory (exit 0) ===
+PASS enriched_auto_replay_directory
+=== enriched_explicit_raw_replay_directory (exit 0) ===
+PASS enriched_explicit_raw_replay_directory
+=== enriched_auto_raw (exit 0) ===
+PASS enriched_auto_raw
+=== enriched_protocol_boundaries (exit 0) ===
+PASS enriched_protocol_boundaries
+=== enriched_failed_write (exit 0) ===
+PASS enriched_failed_write

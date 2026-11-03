@@ -1,0 +1,43 @@
+{
+  "scope": "Local native tests only; no fuzz campaign or external/LLM requests.",
+  "checks": "Always-active CHECK; ordinary and NDEBUG variants.",
+  "source_sha256": {
+    "aflnet.c": "033cc0c82d0b58aabd84a90c51631216db8ca4a598ea05d3f06300f67409c638",
+    "tests/native_net_send.c": "a73a7c0b77cf6ec472a9a698ee17a97b52c89a727b943b4717ef2c02cb896127",
+    "tests/run_native_net_send.sh": "1709fcd1f930c668012569d971ef4cc4e8acde699d5ff4b0a335c7e076370ba4"
+  },
+  "runs": [
+    {
+      "mode": "ordinary",
+      "command": "bash tests/run_native_net_send.sh",
+      "exit_code": 0,
+      "cases_passed": 10,
+      "log": "tests/llvm18/out/native-net-send/ordinary.log",
+      "log_sha256": "c7e286b7d3fe479fe54647cb1fc8dafe3578bad32afcd2c21ba6ae250357259c"
+    },
+    {
+      "mode": "ndebug",
+      "command": "NATIVE_NDEBUG=1 bash tests/run_native_net_send.sh",
+      "exit_code": 0,
+      "cases_passed": 10,
+      "log": "tests/llvm18/out/native-net-send/ndebug.log",
+      "log_sha256": "c7e286b7d3fe479fe54647cb1fc8dafe3578bad32afcd2c21ba6ae250357259c"
+    },
+    {
+      "mode": "sanitizers",
+      "command": "NATIVE_SANITIZE=address,undefined bash tests/run_native_net_send.sh",
+      "exit_code": 0,
+      "cases_passed": 10,
+      "log": "tests/llvm18/out/native-net-send/sanitizers.log",
+      "log_sha256": "c7e286b7d3fe479fe54647cb1fc8dafe3578bad32afcd2c21ba6ae250357259c"
+    },
+    {
+      "mode": "sanitizers-ndebug",
+      "command": "NATIVE_SANITIZE=address,undefined NATIVE_NDEBUG=1 bash tests/run_native_net_send.sh",
+      "exit_code": 0,
+      "cases_passed": 10,
+      "log": "tests/llvm18/out/native-net-send/sanitizers-ndebug.log",
+      "log_sha256": "c7e286b7d3fe479fe54647cb1fc8dafe3578bad32afcd2c21ba6ae250357259c"
+    }
+  ]
+}
