@@ -28,6 +28,7 @@ afl-llvm-rt.o
 /afl-llvm-rt-state-tracer.o*
 /llvm_mode/.build/
 /tests/llvm18/out/
+/tests/out/
 /.tree.mvp
 /.tree.count.mvp
 /state-tracer-rt.log

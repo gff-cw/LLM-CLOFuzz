@@ -116,6 +116,28 @@ EXP_ST u8 *in_dir,                    /* Input directory with test cases  */
 EXP_ST u32 exec_tmout = EXEC_TIMEOUT; /* Configurable exec timeout (ms)   */
 static u32 hang_tmout = EXEC_TIMEOUT; /* Timeout used for hang det (ms)   */
 
+/* Keep the AFLNet native-u32 replay format; bound both payload and framing. */
+#define MAX_REPLAY_RECORDS MAX_FILE
+#define MAX_REPLAY_BYTES (MAX_FILE + sizeof(u32) * MAX_REPLAY_RECORDS)
+enum { INPUT_AUTO, INPUT_RAW, INPUT_REPLAY };
+static u8 input_format = INPUT_AUTO;
+static u8 load_pivot_input(const char *, u8 **, u32 *, region_t **, u32 *);
+static u8 write_enriched_seed(const char *, const char *);
+
+static u8 input_parent_is(const char *path, const char *name) {
+  const char *end = strrchr(path, '/'), *begin;
+  if (!end) return 0;
+  do {
+    while (end > path && end[-1] == '/') end--;
+    begin = end;
+    while (begin > path && begin[-1] != '/') begin--;
+    if (end - begin != 1 || *begin != '.') break;
+    end = begin;
+  } while (end > path);
+  return (size_t)(end - begin) == strlen(name) &&
+         !memcmp(begin, name, end - begin);
+}
+
 EXP_ST u64 mem_limit  = MEM_LIMIT;    /* Memory cap for child (MB)        */
 
 static u32 stats_update_freq = 1;     /* Stats update frequency (execs)   */
@@ -2328,7 +2350,9 @@ static void add_to_queue(u8* fname, u32 len, u8 passed_det) {
   }
 
   /* AFLNet: extract regions keeping client requests if needed */
-  if (corpus_read_or_sync) {
+  /* Initial inputs are decoded and partitioned by pivot_inputs. Parsing a
+     replay container here would treat its length headers as protocol data. */
+  if (corpus_read_or_sync == 2) {
     FILE *fp;
     unsigned char *buf;
 
@@ -2343,11 +2367,7 @@ static void add_to_queue(u8* fname, u32 len, u8 passed_det) {
     q->regions = (*extract_requests)(buf, len, &q->region_count);
     ck_free(buf);
 
-    //Keep track the maximal number of seed regions
-    //We use this for some optimization to reduce the overhead while following the server's sequence diagram
-    if ((corpus_read_or_sync == 1) && (q->region_count > max_seed_region_count)) max_seed_region_count = q->region_count;
-
-  } else {
+  } else if (corpus_read_or_sync != 1) {
     //Convert the linked list kl_messages to regions
     q->regions = convert_kl_messages_to_regions(kl_messages, &q->region_count, messages_sent);
   }
@@ -3246,7 +3266,7 @@ static inline u8 is_active_mutated_target(const unsigned char* buf, unsigned int
 
 /* Strict geometric partition verification (must match REGION_CHECK_STRICT_PARTITION contract) */
 static u8 validate_mutated_regions(const region_t *regions, unsigned int count, unsigned int expected_size) {
-  if (!regions || count == 0) return 0;
+  if (!regions || count == 0 || count > MAX_REPLAY_RECORDS || expected_size > MAX_FILE) return 0;
   if (regions[0].start_byte != 0) return 0;
 
   for (unsigned int i = 0; i < count; i++) {
@@ -3392,80 +3412,31 @@ void get_seeds_with_messsage_types(const char *in_dir, khash_t(strSet) * message
     strcat(nl_file_path, "/");
     strcat(nl_file_path, nl_file_name);
 
-    FILE *nl_file = fopen(nl_file_path, "r");
-    if (nl_file == NULL)
-    {
-      WARNF("Error in opening the file %s", nl_file_path);
+    u8 *raw_content = NULL;
+    u32 raw_len = 0, region_count = 0;
+    region_t *regions = NULL;
+    if (!load_pivot_input(nl_file_path, &raw_content, &raw_len, &regions, &region_count)) {
+      WARNF("Cannot read seed '%s' for enrichment: %s", nl_file_path, strerror(errno));
       free(nl_file_path);
       continue;
     }
-
-    // read the whole file into a buffer
-    fseek(nl_file, 0, SEEK_END);
-    long fsize_signed = ftell(nl_file);
-    if (fsize_signed <= 0 || fsize_signed > MAX_FILE) {
-      if (fsize_signed > MAX_FILE) {
-        WARNF("Seed file '%s' exceeds MAX_FILE (%ld > %d), skipping enrichment", nl_file_path, fsize_signed, MAX_FILE);
-      }
-      fclose(nl_file);
-      free(nl_file_path);
-      continue;
-    }
-    size_t fsize = (size_t)fsize_signed;
-    fseek(nl_file, 0, SEEK_SET);
-    char *nl_file_content = ck_alloc(fsize + 1);
-    if (!nl_file_content) {
-      fclose(nl_file);
-      free(nl_file_path);
-      continue;
-    }
-    size_t rbytes = fread(nl_file_content, 1, fsize, nl_file);
-    nl_file_content[rbytes] = '\0';
-    fclose(nl_file);
     free(nl_file_path);
-
-    /* Unpack replay file to raw buffer and calculate clean raw regions */
-    char *raw_content = NULL;
-    size_t raw_len = 0;
-    size_t raw_cap = (rbytes > 0) ? rbytes : 16;
-    raw_content = ck_alloc(raw_cap + 1);
-
-    size_t offset = 0;
-    u8 is_replay = 1;
-    while (offset + sizeof(unsigned int) <= rbytes) {
-      unsigned int mlen = 0;
-      memcpy(&mlen, nl_file_content + offset, sizeof(unsigned int));
-      offset += sizeof(unsigned int);
-      if (mlen > rbytes - offset) {
-        is_replay = 0;
-        break;
-      }
-      if (raw_len + mlen > raw_cap) {
-        raw_cap = (raw_len + mlen) * 2;
-        raw_content = ck_realloc(raw_content, raw_cap + 1);
-      }
-      if (mlen > 0) {
-        memcpy(raw_content + raw_len, nl_file_content + offset, mlen);
-        raw_len += mlen;
-      }
-      offset += mlen;
-    }
-
-    if (!is_replay || offset != rbytes) {
-      /* Not a replay container; use raw content directly */
+    if (!raw_len) {
       ck_free(raw_content);
-      raw_content = nl_file_content;
-      raw_len = rbytes;
-      nl_file_content = NULL;
-    } else {
-      if (!raw_content) raw_content = ck_alloc(1);
-      raw_content[raw_len] = '\0';
-      ck_free(nl_file_content);
-      nl_file_content = NULL;
+      ck_free(regions);
+      continue;
     }
-
-    u32 region_count = 0;
-    region_t *regions = (*extract_requests)((unsigned char *)raw_content, raw_len, &region_count);
+    if (!regions) {
+      regions = orig_extract_requests ?
+        (*orig_extract_requests)(raw_content, raw_len, &region_count) :
+        (*extract_requests)(raw_content, raw_len, &region_count);
+      if (regions && !validate_mutated_regions(regions, region_count, raw_len)) {
+        for (u32 j = 0; j < region_count; j++) ck_free(regions[j].state_sequence);
+        ck_free(regions);
+        regions = NULL;
+        region_count = 0;
+      }
+    }
 
     khash_t(strSet) *messages = duplicate_hash(message_types_set); // duplicate the message set
 
@@ -3559,7 +3530,8 @@ void get_seeds_with_messsage_types(const char *in_dir, khash_t(strSet) * message
           strcat(enriched_file_path, "/");
           strcat(enriched_file_path, enriched_file_name);
 
-          write_new_seeds(enriched_file_path, formatted_client_requests);
+          if (!write_enriched_seed(enriched_file_path, formatted_client_requests))
+            WARNF("Cannot save enriched seed '%s': %s", enriched_file_path, strerror(errno));
           free(enriched_file_path);
         }
         free(enriched_file_name);
@@ -3663,7 +3635,7 @@ static void read_testcases(void) {
 
     }
 
-    if (st.st_size == 0) {
+    if (st.st_size == 0 && input_format != INPUT_RAW) {
       /* Allow 0-byte raw file if companion replay container or regions file exists */
       char *bn = strrchr(fn, '/') ? (char *)(strrchr(fn, '/') + 1) : (char *)fn;
       char *companion1 = alloc_printf("%s/../replayable-queue/%s", in_dir, bn);
@@ -3684,9 +3656,13 @@ static void read_testcases(void) {
       }
     }
 
-    if (st.st_size > MAX_FILE)
+    u32 input_limit = input_format == INPUT_RAW ||
+        (input_format == INPUT_AUTO &&
+         (input_parent_is(fn, "queue") || input_parent_is(fn, "_resume"))) ?
+        MAX_FILE : MAX_REPLAY_BYTES;
+    if (st.st_size < 0 || (u64)st.st_size > input_limit)
       FATAL("Test case '%s' is too big (%s, limit is %s)", fn,
-            DMS(st.st_size), DMS(MAX_FILE));
+            DMS(st.st_size), DMS(input_limit));
 
     /* Check for metadata that indicates that deterministic fuzzing
        is complete for this entry. We don't want to repeat deterministic
@@ -5217,201 +5193,344 @@ static void __attribute__((unused)) link_or_copy(u8* old_path, u8* new_path) {
 }
 
 
-static void copy_file_simple(const char *src, const char *dst) {
-  FILE *s = fopen(src, "rb");
-  if (!s) return;
-  FILE *d = fopen(dst, "wb");
-  if (!d) { fclose(s); return; }
-  char buf[4096];
-  size_t n;
-  while ((n = fread(buf, 1, sizeof(buf), s)) > 0) {
-    if (fwrite(buf, 1, n, d) != n) break;
+/* Read a bounded snapshot before narrowing any file size to the allocator's u32.
+   A changed/truncated file is an error, rather than a partially valid seed. */
+static u8 read_pivot_file(const char *path, u32 limit, u8 **bytes, u32 *length) {
+  int fd = -1, error;
+  struct stat st;
+  u8 *data = NULL, extra;
+  u32 offset = 0;
+  *bytes = NULL;
+  *length = 0;
+  fd = open(path, O_RDONLY | O_NONBLOCK);
+  if (fd < 0) return 0;
+  if (fstat(fd, &st)) goto fail;
+  if (!S_ISREG(st.st_mode)) { errno = EINVAL; goto fail; }
+  if (st.st_size < 0 || (u64)st.st_size > limit ||
+      (u64)st.st_size + 1 > MAX_ALLOC) { errno = EFBIG; goto fail; }
+  u32 size = (u32)st.st_size;
+  data = ck_alloc(size + 1);
+  while (offset < size) {
+    ssize_t n = read(fd, data + offset, size - offset);
+    if (n < 0 && errno == EINTR) continue;
+    if (n <= 0) { if (!n) errno = EIO; goto fail; }
+    offset += (u32)n;
   }
-  fclose(s);
-  fclose(d);
-}
-
-static void save_raw_as_replay(const char *raw_path, const region_t *regions, u32 region_count, const char *replay_path) {
-  if (!raw_path || !regions || region_count == 0 || !replay_path) return;
-  FILE *sfp = fopen(raw_path, "rb");
-  if (!sfp) return;
-  fseek(sfp, 0, SEEK_END);
-  long fsize_s = ftell(sfp);
-  if (fsize_s < 0) { fclose(sfp); return; }
-  size_t fsize = (size_t)fsize_s;
-  fseek(sfp, 0, SEEK_SET);
-
-  char *raw_mem = (char *)ck_alloc(fsize > 0 ? fsize : 1);
-  if (fsize > 0 && fread(raw_mem, 1, fsize, sfp) != fsize) {
-    ck_free(raw_mem);
-    fclose(sfp);
-    return;
-  }
-  fclose(sfp);
-
-  FILE *dfp = fopen(replay_path, "wb");
-  if (!dfp) {
-    ck_free(raw_mem);
-    return;
-  }
-
-  for (u32 i = 0; i < region_count; i++) {
-    u32 mlen = (regions[i].end_byte >= regions[i].start_byte) ?
-               (u32)(regions[i].end_byte - regions[i].start_byte + 1) : 0;
-    fwrite(&mlen, sizeof(u32), 1, dfp);
-    if (mlen > 0 && regions[i].start_byte >= 0 && (size_t)regions[i].start_byte + mlen <= fsize) {
-      fwrite(raw_mem + regions[i].start_byte, 1, mlen, dfp);
-    }
-  }
-
-  fclose(dfp);
-  ck_free(raw_mem);
-}
-
-static region_t* load_regions_from_file(const char *rpath, u32 expected_len, u32 *count_ref) {
-  if (!rpath || !count_ref) return NULL;
-  *count_ref = 0;
-
-  FILE *fp = fopen(rpath, "r");
-  if (!fp) return NULL;
-
-  region_t *regions = NULL;
-  u32 count = 0;
-  char line[256];
-  int prev_end = -1;
-
-  while (fgets(line, sizeof(line), fp)) {
-    int s = -1, e = -1;
-    if (sscanf(line, "Region %*u - Start: %d, End: %d", &s, &e) == 2) {
-      if (s < 0 || e < s - 1) {
-        goto fail;
-      }
-      if (count == 0) {
-        if (s != 0) goto fail;
-      } else {
-        if (s != prev_end + 1) goto fail;
-      }
-      count++;
-      regions = (region_t *)ck_realloc(regions, count * sizeof(region_t));
-      regions[count - 1].start_byte = s;
-      regions[count - 1].end_byte = e;
-      regions[count - 1].state_sequence = NULL;
-      regions[count - 1].state_count = 0;
-      prev_end = e;
-    }
-  }
-  fclose(fp);
-  fp = NULL;
-
-  if (count > 0) {
-    if (expected_len == 0 && prev_end == -1) {
-      *count_ref = count;
-      return regions;
-    }
-    if (expected_len > 0 && prev_end == (int)expected_len - 1) {
-      *count_ref = count;
-      return regions;
-    }
-  }
-
+  ssize_t n;
+  do { n = read(fd, &extra, 1); } while (n < 0 && errno == EINTR);
+  if (n) { if (n > 0) errno = EIO; goto fail; }
+  if (close(fd)) { fd = -1; goto fail; }
+  *bytes = data;
+  *length = size;
+  return 1;
 fail:
-  if (fp) fclose(fp);
-  if (regions) ck_free(regions);
-  return NULL;
+  error = errno;
+  if (fd >= 0) close(fd);
+  ck_free(data);
+  errno = error;
+  return 0;
 }
 
-
-static u32 convert_from_replay_to_raw(u8* old_path, u8* new_path, region_t** out_regions, u32* out_region_count) {
-
-  if (out_regions) *out_regions = NULL;
-  if (out_region_count) *out_region_count = 0;
-
-  FILE *sfd = fopen(old_path, "rb");
-  if (!sfd) PFATAL("Unable to open '%s'", old_path);
-
-  fseek(sfd, 0, SEEK_END);
-  long fsize_s = ftell(sfd);
-  if (fsize_s < 0) PFATAL("Unable to ftell '%s'", old_path);
-  size_t fsize = (size_t)fsize_s;
-  fseek(sfd, 0, SEEK_SET);
-
-  char *in_mem = ck_alloc(fsize + 1);
-  if (fsize > 0 && fread(in_mem, 1, fsize, sfd) != fsize) {
-    PFATAL("AFLNet - Unable to read input file '%s'", old_path);
+/* Publish a complete file with rename only after all writes and fsync succeed.
+   Source recovery files are never opened for writing. */
+static u8 atomic_write_file(const char *path, const u8 *bytes, u32 len) {
+  int fd, error;
+  u32 offset = 0;
+  if (!path || (!bytes && len)) { errno = EINVAL; return 0; }
+  char *tmp = (char *)alloc_printf("%s.tmp.XXXXXX", path);
+  fd = mkstemp(tmp);
+  if (fd < 0) { ck_free(tmp); return 0; }
+  while (offset < len) {
+    ssize_t n = write(fd, bytes + offset, len - offset);
+    if (n < 0 && errno == EINTR) continue;
+    if (n <= 0) { if (!n) errno = EIO; goto fail; }
+    offset += (u32)n;
   }
-  fclose(sfd);
+  int result;
+  do { result = fsync(fd); } while (result && errno == EINTR);
+  if (result) goto fail;
+  if (close(fd)) { fd = -1; goto fail; }
+  fd = -1;
+  if (rename(tmp, path)) goto fail;
+  ck_free(tmp);
+  return 1;
+fail:
+  error = errno;
+  if (fd >= 0) close(fd);
+  unlink(tmp);
+  ck_free(tmp);
+  errno = error;
+  return 0;
+}
 
-  /* Verify whether in_mem strictly matches Replay framing */
-  size_t offset = 0;
-  u8 is_replay = (fsize >= sizeof(unsigned int));
-  while (offset + sizeof(unsigned int) <= fsize) {
-    unsigned int mlen = 0;
-    memcpy(&mlen, in_mem + offset, sizeof(unsigned int));
-    offset += sizeof(unsigned int);
-    if (mlen > fsize - offset) {
-      is_replay = 0;
-      break;
+/* Strict two-pass decode: preserve empty records without quadratic reallocs. */
+static u8 decode_pivot_replay(const u8 *bytes, u32 length, u8 **raw,
+                              u32 *raw_len, region_t **regions, u32 *count) {
+  u32 offset = 0, total = 0, records = 0;
+  *raw = NULL; *regions = NULL; *raw_len = *count = 0;
+  if (!length) { errno = EINVAL; return 0; }
+  while (offset < length) {
+    u32 n;
+    if (length - offset < sizeof(n)) { errno = EINVAL; return 0; }
+    memcpy(&n, bytes + offset, sizeof(n));
+    offset += sizeof(n);
+    if (n > length - offset) { errno = EINVAL; return 0; }
+    if (n > MAX_FILE - total || records == MAX_REPLAY_RECORDS) {
+      errno = EFBIG; return 0;
     }
-    offset += mlen;
+    total += n;
+    records++;
+    offset += n;
   }
-  if (offset != fsize || fsize == 0) is_replay = 0;
-
-  FILE *dfd = fopen(new_path, "wb");
-  if (!dfd) PFATAL("Unable to create '%s'", new_path);
-
-  u32 len = 0;
-  if (is_replay) {
-    offset = 0;
-    u32 raw_cur = 0;
-    u32 rcount = 0;
-    region_t *r_arr = NULL;
-    while (offset + sizeof(unsigned int) <= fsize) {
-      unsigned int mlen = 0;
-      memcpy(&mlen, in_mem + offset, sizeof(unsigned int));
-      offset += sizeof(unsigned int);
-      if (mlen > 0) {
-        if (fwrite(in_mem + offset, 1, mlen, dfd) != mlen)
-          PFATAL("AFLNet - Unable to write input file in output dir");
-        len += mlen;
-        offset += mlen;
-
-        if (out_regions && out_region_count) {
-          rcount++;
-          r_arr = (region_t *)ck_realloc(r_arr, rcount * sizeof(region_t));
-          r_arr[rcount - 1].start_byte = raw_cur;
-          r_arr[rcount - 1].end_byte = raw_cur + mlen - 1;
-          r_arr[rcount - 1].state_sequence = NULL;
-          r_arr[rcount - 1].state_count = 0;
-          raw_cur += mlen;
-        }
-      } else {
-        /* Preserve zero-length record in region metadata: end_byte = start_byte - 1 */
-        if (out_regions && out_region_count) {
-          rcount++;
-          r_arr = (region_t *)ck_realloc(r_arr, rcount * sizeof(region_t));
-          r_arr[rcount - 1].start_byte = raw_cur;
-          r_arr[rcount - 1].end_byte = (int)raw_cur - 1;
-          r_arr[rcount - 1].state_sequence = NULL;
-          r_arr[rcount - 1].state_count = 0;
-        }
-      }
-    }
-    if (out_regions && out_region_count) {
-      *out_regions = r_arr;
-      *out_region_count = rcount;
-    }
-  } else {
-    /* If already raw content, preserve it directly */
-    if (fsize > 0 && fwrite(in_mem, 1, fsize, dfd) != fsize)
-      PFATAL("AFLNet - Unable to write input file in output dir");
-    len = fsize;
+  if ((u64)records * sizeof(region_t) > MAX_ALLOC) {
+    errno = EFBIG; return 0;
   }
+  u8 *data = ck_alloc(total + 1);
+  region_t *parts = ck_alloc(records * sizeof(region_t));
+  u32 cursor = 0;
+  offset = 0;
+  for (u32 i = 0; i < records; i++) {
+    u32 n;
+    memcpy(&n, bytes + offset, sizeof(n));
+    offset += sizeof(n);
+    parts[i].start_byte = cursor;
+    parts[i].end_byte = (int)(cursor + n) - 1;
+    if (n) memcpy(data + cursor, bytes + offset, n);
+    cursor += n;
+    offset += n;
+  }
+  *raw = data; *raw_len = total; *regions = parts; *count = records;
+  return 1;
+}
 
-  fclose(dfd);
-  ck_free(in_mem);
+/* A replay companion binds boundaries to the current bytes, not just a name
+   and length. Try every candidate; a stale higher-priority file cannot hide
+   a valid lower-priority file. Legacy text regions have no such identity. */
+static u8 find_pivot_companion(const char *path, const u8 *raw, u32 raw_len,
+                               region_t **regions, u32 *count) {
+  const char *base = strrchr(path, '/');
+  char *dir_copy = (char *)ck_strdup((u8 *)path);
+  char *dir = dirname(dir_copy);
+  base = base ? base + 1 : path;
+  const char *locations[] = { "../_resume_replayable-queue",
+                              "../replayable-queue", "replayable-queue" };
+  struct stat input_st;
+  if (stat(path, &input_st)) { ck_free(dir_copy); return 0; }
+  int last_error = ENOENT;
+  for (u32 i = 0; i < sizeof(locations) / sizeof(locations[0]); i++) {
+    char *candidate = (char *)alloc_printf("%s/%s/%s", dir, locations[i], base);
+    struct stat st;
+    u8 *framed = NULL, *decoded = NULL;
+    u32 framed_len = 0, decoded_len = 0, n = 0;
+    region_t *parts = NULL;
+    if (stat(candidate, &st)) { if (errno != ENOENT) last_error = errno; }
+    else if (st.st_dev == input_st.st_dev && st.st_ino == input_st.st_ino)
+      last_error = EINVAL;
+    else if (!read_pivot_file(candidate, MAX_REPLAY_BYTES, &framed, &framed_len))
+      last_error = errno;
+    else if (!decode_pivot_replay(framed, framed_len, &decoded, &decoded_len, &parts, &n))
+      last_error = errno;
+    else if (decoded_len == raw_len && (!raw_len || !memcmp(decoded, raw, raw_len))) {
+      ck_free(framed); ck_free(decoded); ck_free(candidate); ck_free(dir_copy);
+      *regions = parts; *count = n;
+      return 1;
+    } else last_error = EINVAL;
+    ck_free(framed); ck_free(decoded); ck_free(parts); ck_free(candidate);
+  }
+  ck_free(dir_copy);
+  errno = last_error;
+  return 0;
+}
 
-  return len;
+/* Explicit -I overrides auto detection. In auto mode known queue paths are
+   raw recovery inputs, and replayable-queue paths are strictly framed inputs.
+   Unlabelled initial corpora retain legacy auto detection for compatibility. */
+static u8 load_pivot_input(const char *input_path, u8 **out_bytes,
+                           u32 *out_len, region_t **out_regions, u32 *out_count) {
+  u8 *input = NULL, *raw = NULL;
+  region_t *parts = NULL;
+  u32 input_len = 0, raw_len = 0, count = 0;
+  int error;
+  if (!out_bytes || !out_len || !out_regions || !out_count) { errno = EINVAL; return 0; }
+  *out_bytes = NULL; *out_len = 0; *out_regions = NULL; *out_count = 0;
+  if (!input_path) { errno = EINVAL; return 0; }
+  u8 recovery = input_format == INPUT_AUTO &&
+      (input_parent_is(input_path, "queue") || input_parent_is(input_path, "_resume"));
+  u8 replay = input_format == INPUT_REPLAY || (input_format == INPUT_AUTO &&
+      (input_parent_is(input_path, "replayable-queue") ||
+       input_parent_is(input_path, "_resume_replayable-queue")));
+  if (!read_pivot_file(input_path, recovery || input_format == INPUT_RAW ?
+                       MAX_FILE : MAX_REPLAY_BYTES, &input, &input_len)) return 0;
+  if (recovery || input_format == INPUT_RAW) {
+    raw = input; input = NULL; raw_len = input_len;
+    if (recovery && !find_pivot_companion(input_path, raw, raw_len, &parts, &count))
+      goto fail;
+  } else if (!decode_pivot_replay(input, input_len, &raw, &raw_len, &parts, &count)) {
+    if (replay) goto fail;
+    if (input_len > MAX_FILE) { errno = EFBIG; goto fail; }
+    raw = input; input = NULL; raw_len = input_len;
+  }
+  ck_free(input);
+  *out_bytes = raw; *out_len = raw_len; *out_regions = parts; *out_count = count;
+  return 1;
+fail:
+  error = errno;
+  ck_free(input); ck_free(raw); ck_free(parts);
+  errno = error;
+  return 0;
+}
 
+static u8 prepare_pivot_input(const char *input_path, const char *output_path,
+                              u32 *out_len, region_t **out_regions, u32 *out_count) {
+  u8 *raw = NULL;
+  if (!out_len || !out_regions || !out_count) { errno = EINVAL; return 0; }
+  *out_len = 0; *out_regions = NULL; *out_count = 0;
+  if (!output_path) { errno = EINVAL; return 0; }
+  if (!load_pivot_input(input_path, &raw, out_len, out_regions, out_count)) return 0;
+  u8 ok = atomic_write_file(output_path, raw, *out_len);
+  int error = errno;
+  ck_free(raw);
+  if (!ok) {
+    ck_free(*out_regions);
+    *out_regions = NULL; *out_count = 0; *out_len = 0;
+  }
+  errno = error;
+  return ok;
+}
+
+static u8 write_pivot_replay(const u8 *raw, u32 length, const region_t *regions,
+                              u32 count, const char *path) {
+  if (!raw || !path || count > MAX_REPLAY_RECORDS ||
+      !validate_mutated_regions(regions, count, length)) { errno = EINVAL; return 0; }
+  u64 size = (u64)length + (u64)count * sizeof(u32);
+  if (size > MAX_REPLAY_BYTES || size > MAX_ALLOC) { errno = EFBIG; return 0; }
+  u8 *framed = ck_alloc((u32)size);
+  u32 offset = 0;
+  for (u32 i = 0; i < count; i++) {
+    u32 n = regions[i].end_byte - regions[i].start_byte + 1;
+    memcpy(framed + offset, &n, sizeof(n));
+    offset += sizeof(n);
+    if (n) memcpy(framed + offset, raw + regions[i].start_byte, n);
+    offset += n;
+  }
+  u8 ok = atomic_write_file(path, framed, (u32)size);
+  int error = errno;
+  ck_free(framed);
+  errno = error;
+  return ok;
+}
+
+static u8 save_raw_as_replay(const char *raw_path, const region_t *regions,
+                             u32 region_count, const char *replay_path) {
+  u8 *raw = NULL;
+  u32 length = 0;
+  if (!raw_path || !replay_path) { errno = EINVAL; return 0; }
+  if (!read_pivot_file(raw_path, MAX_FILE, &raw, &length)) return 0;
+  u8 ok = write_pivot_replay(raw, length, regions, region_count, replay_path);
+  int error = errno;
+  ck_free(raw);
+  errno = error;
+  return ok;
+}
+
+/* Generated text must obey the same explicit input format as its corpus. */
+static u8 write_enriched_seed(const char *path, const char *contents) {
+  if (!path || !contents) { errno = EINVAL; return 0; }
+  size_t length = strlen(contents);
+  if (!length || length > MAX_FILE) { errno = EFBIG; return 0; }
+  u8 framed = input_format == INPUT_REPLAY || (input_format == INPUT_AUTO &&
+      (input_parent_is(path, "replayable-queue") ||
+       input_parent_is(path, "_resume_replayable-queue")));
+  if (!framed) return atomic_write_file(path, (const u8 *)contents, (u32)length);
+  u32 count = 0;
+  region_t *parts = orig_extract_requests ?
+    (*orig_extract_requests)((u8 *)contents, (u32)length, &count) : NULL;
+  if (parts && !validate_mutated_regions(parts, count, (u32)length)) {
+    for (u32 i = 0; i < count; i++) ck_free(parts[i].state_sequence);
+    ck_free(parts);
+    parts = NULL;
+  }
+  if (!parts) {
+    parts = ck_alloc(sizeof(region_t));
+    parts[0].end_byte = (int)length - 1;
+    count = 1;
+  }
+  u8 ok = write_pivot_replay((const u8 *)contents, (u32)length, parts, count, path);
+  int error = errno;
+  for (u32 i = 0; i < count; i++) ck_free(parts[i].state_sequence);
+  ck_free(parts);
+  errno = error;
+  return ok;
+}
+
+static u8 save_pivot_regions(const char *path, const region_t *regions, u32 count) {
+  /* Two signed decimal offsets and a u32 index take at most 72 bytes/line. */
+  if (!regions || !count || count > MAX_REPLAY_RECORDS ||
+      (u64)count * 80 + 1 > MAX_ALLOC) { errno = EINVAL; return 0; }
+  u32 capacity = count * 80 + 1, length = 0;
+  u8 *text = ck_alloc(capacity);
+  for (u32 i = 0; i < count; i++) {
+    int n = snprintf((char *)text + length, capacity - length,
+                     "Region %u - Start: %d, End: %d\n", i,
+                     regions[i].start_byte, regions[i].end_byte);
+    if (n < 0 || (u32)n >= capacity - length) {
+      ck_free(text); errno = EOVERFLOW; return 0;
+    }
+    length += (u32)n;
+  }
+  u8 ok = atomic_write_file(path, text, length);
+  int error = errno;
+  ck_free(text);
+  errno = error;
+  return ok;
+}
+
+/* Do not overwrite an earlier recovery snapshot, even if it is empty. A failed
+   move must stop startup before the old output directories are cleaned. */
+static u8 preserve_resume_dir(const char *name, const char *backup, u8 required) {
+  char *source = (char *)alloc_printf("%s/%s", out_dir, name);
+  char *destination = (char *)alloc_printf("%s/%s", out_dir, backup);
+  struct stat st;
+  u8 ok = 0;
+  if (!lstat(destination, &st)) {
+    if (S_ISDIR(st.st_mode)) ok = 1;
+    else errno = ENOTDIR;
+  } else if (errno == ENOENT) {
+    if (lstat(source, &st)) {
+      if (!required && errno == ENOENT) ok = 1;
+    } else if (!S_ISDIR(st.st_mode)) errno = ENOTDIR;
+    else if (!rename(source, destination)) ok = 1;
+  }
+  int error = errno;
+  ck_free(source); ck_free(destination);
+  errno = error;
+  return ok;
+}
+
+static u8 stage_resume_inputs(void) {
+  char *raw_backup = (char *)alloc_printf("%s/_resume", out_dir);
+  struct stat st;
+  int result = lstat(raw_backup, &st), error = errno;
+  ck_free(raw_backup);
+  if (result && error != ENOENT) { errno = error; return 0; }
+  if (!result && !S_ISDIR(st.st_mode)) { errno = ENOTDIR; return 0; }
+  if (result) {
+    /* Cleanup can be interrupted after _resume was removed but before its
+       sidecars were removed. Never pair those orphan sidecars with a new raw
+       snapshot and then delete the new matching replayable-queue. */
+    const char *backups[] = { "_resume_replayable-queue", "_resume_regions" };
+    for (u32 i = 0; i < sizeof(backups) / sizeof(backups[0]); i++) {
+      char *path = (char *)alloc_printf("%s/%s", out_dir, backups[i]);
+      result = lstat(path, &st);
+      error = errno;
+      ck_free(path);
+      if (!result) { errno = EEXIST; return 0; }
+      if (error != ENOENT) { errno = error; return 0; }
+    }
+  }
+  return preserve_resume_dir("queue", "_resume", 1) &&
+         preserve_resume_dir("replayable-queue", "_resume_replayable-queue", 0) &&
+         preserve_resume_dir("regions", "_resume_regions", 0);
 }
 
 
@@ -5425,7 +5544,7 @@ static void pivot_inputs(void) {
   struct queue_entry* q = queue;
   u32 id = 0;
 
-  ACTF("Creating hard links for all input files...");
+  ACTF("Importing input files and preserving message boundaries...");
 
   max_seed_region_count = 0;
 
@@ -5492,151 +5611,63 @@ static void pivot_inputs(void) {
 
     /* Pivot to the new queue entry. */
 
-    //link_or_copy(q->fname, nfn);
     region_t *replay_regions = NULL;
-    u32 replay_region_count = 0;
-    u32 len = 0;
-
-    char *old_fname_copy = strdup((char *)q->fname);
-    char *bname = basename(old_fname_copy);
-    char *dname_copy = strdup((char *)q->fname);
-    char *dname = dirname(dname_copy);
-
-    char *candidate_replay = NULL;
-    char *candidate_regions = NULL;
-
-    char *p2 = alloc_printf("%s/../_resume_replayable-queue/%s", dname, bname);
-    char *p1 = alloc_printf("%s/../replayable-queue/%s", dname, bname);
-    char *p3 = alloc_printf("%s/replayable-queue/%s", dname, bname);
-
-    char *r2 = alloc_printf("%s/../_resume_regions/%s", dname, bname);
-    char *r1 = alloc_printf("%s/../regions/%s", dname, bname);
-    char *r3 = alloc_printf("%s/regions/%s", dname, bname);
-
-    if (!access(p2, R_OK)) candidate_replay = p2;
-    else if (!access(p1, R_OK)) candidate_replay = p1;
-    else if (!access(p3, R_OK)) candidate_replay = p3;
-
-    if (!access(r2, R_OK)) candidate_regions = r2;
-    else if (!access(r1, R_OK)) candidate_regions = r1;
-    else if (!access(r3, R_OK)) candidate_regions = r3;
-
-    if (candidate_replay || candidate_regions) {
-      /* q->fname is a raw queue file with known companion metadata */
-      copy_file_simple((char *)q->fname, (char *)nfn);
-      len = q->len;
-
-      if (candidate_replay) {
-        region_t *cand_regions = NULL;
-        u32 cand_rcount = 0;
-        u8 *tmp_nfn = alloc_printf("%s.tmp_chk", nfn);
-        u32 rep_raw_len = convert_from_replay_to_raw((u8 *)candidate_replay, tmp_nfn, &cand_regions, &cand_rcount);
-        unlink((char *)tmp_nfn);
-        ck_free(tmp_nfn);
-
-        if (cand_regions && cand_rcount > 0 && rep_raw_len == len) {
-          replay_regions = cand_regions;
-          replay_region_count = cand_rcount;
-
-          u8 *fn_rep = alloc_printf("%s/replayable-queue/%s", out_dir, basename(nfn));
-          copy_file_simple(candidate_replay, (char *)fn_rep);
-          ck_free(fn_rep);
-        } else if (cand_regions) {
-          ck_free(cand_regions);
-        }
-      }
-
-      if (!replay_regions && candidate_regions) {
-        replay_regions = load_regions_from_file(candidate_regions, len, &replay_region_count);
-      }
-    } else {
-      /* Initial seed import: detect whether q->fname is replay container or raw */
-      len = convert_from_replay_to_raw(q->fname, nfn, &replay_regions, &replay_region_count);
-      if (replay_regions && replay_region_count > 0) {
-        u8 *fn_rep = alloc_printf("%s/replayable-queue/%s", out_dir, basename(nfn));
-        copy_file_simple((char *)q->fname, (char *)fn_rep);
-        ck_free(fn_rep);
-      }
-    }
-
-    ck_free(p1);
-    ck_free(p2);
-    ck_free(p3);
-    ck_free(r1);
-    ck_free(r2);
-    ck_free(r3);
-    free(old_fname_copy);
-    free(dname_copy);
+    u32 replay_region_count = 0, len = 0;
+    if (!prepare_pivot_input((char *)q->fname, (char *)nfn,
+                             &len, &replay_regions, &replay_region_count))
+      PFATAL("Cannot import '%s'; recovery originals retained. Check replay companions or select -I raw/replay explicitly",
+             q->fname);
 
     ck_free(q->fname);
     q->fname = nfn;
     q->len = len;
 
-    /* Synchronize region metadata with the newly created raw file */
     if (q->regions) {
-      for (u32 i = 0; i < q->region_count; i++) {
-        if (q->regions[i].state_sequence) ck_free(q->regions[i].state_sequence);
-      }
+      for (u32 i = 0; i < q->region_count; i++)
+        ck_free(q->regions[i].state_sequence);
       ck_free(q->regions);
-      q->regions = NULL;
-      q->region_count = 0;
     }
+    q->regions = replay_regions;
+    q->region_count = replay_region_count;
 
-    /* If a protocol parser is selected, parse the raw buffer */
-    if (orig_extract_requests != NULL) {
-      FILE *rfp = fopen(q->fname, "rb");
-      if (rfp) {
-        unsigned char *raw_buf = (unsigned char *)ck_alloc(len + 1);
-        if (len == 0 || fread(raw_buf, 1, len, rfp) == len) {
-          raw_buf[len] = '\0';
-          q->regions = (*orig_extract_requests)(raw_buf, len, &q->region_count);
-        }
-        ck_free(raw_buf);
-        fclose(rfp);
-      }
-    }
-
-    /* If no protocol parser was specified or protocol parsing returned no regions,
-       preserve the exact message boundaries from the replay container */
-    if (!q->regions || q->region_count == 0) {
-      if (q->regions) {
+    /* A validated container is authoritative, including empty message slots.
+       Protocol parsing is only appropriate for an explicitly raw seed. */
+    if (!q->regions && orig_extract_requests) {
+      u8 *raw = NULL;
+      u32 raw_len = 0;
+      if (!read_pivot_file((char *)q->fname, MAX_FILE, &raw, &raw_len))
+        PFATAL("Cannot read pivoted seed '%s'; recovery originals retained", q->fname);
+      q->regions = (*orig_extract_requests)(raw, raw_len, &q->region_count);
+      ck_free(raw);
+      if (q->regions && !validate_mutated_regions(q->regions, q->region_count, len)) {
+        for (u32 i = 0; i < q->region_count; i++)
+          ck_free(q->regions[i].state_sequence);
         ck_free(q->regions);
         q->regions = NULL;
-      }
-      if (replay_regions && replay_region_count > 0) {
-        q->regions = replay_regions;
-        q->region_count = replay_region_count;
-        replay_regions = NULL;
-      } else {
-        q->regions = ck_alloc(sizeof(region_t));
-        q->regions[0].start_byte = 0;
-        q->regions[0].end_byte = (len > 0) ? (int)(len - 1) : -1;
-        q->regions[0].state_sequence = NULL;
-        q->regions[0].state_count = 0;
-        q->region_count = 1;
+        q->region_count = 0;
       }
     }
-
-    if (replay_regions) {
-      ck_free(replay_regions);
-      replay_regions = NULL;
+    if (!q->regions) {
+      q->regions = ck_alloc(sizeof(region_t));
+      q->regions[0].start_byte = 0;
+      q->regions[0].end_byte = (int)len - 1;
+      q->region_count = 1;
     }
-
-    if (q->region_count > max_seed_region_count) {
+    if (q->region_count > max_seed_region_count)
       max_seed_region_count = q->region_count;
-    }
 
-    /* Save the updated regions information for debugging */
-    u8 *rfn = alloc_printf("%s/regions/%s", out_dir, basename(q->fname));
-    save_regions_to_file(q->regions, q->region_count, rfn);
+    const char *new_base = strrchr((char *)q->fname, '/');
+    new_base = new_base ? new_base + 1 : (char *)q->fname;
+    u8 *rfn = alloc_printf("%s/regions/%s", out_dir, new_base);
+    if (!save_pivot_regions((char *)rfn, q->regions, q->region_count))
+      PFATAL("Cannot save '%s'; recovery originals retained", rfn);
     ck_free(rfn);
 
-    /* Ensure replayable-queue has a matching replay container */
-    u8 *fn_rep_check = alloc_printf("%s/replayable-queue/%s", out_dir, basename(q->fname));
-    if (access((char *)fn_rep_check, F_OK) != 0 && q->regions && q->region_count > 0) {
-      save_raw_as_replay((char *)q->fname, q->regions, q->region_count, (char *)fn_rep_check);
-    }
-    ck_free(fn_rep_check);
+    u8 *replay_path = alloc_printf("%s/replayable-queue/%s", out_dir, new_base);
+    if (!save_raw_as_replay((char *)q->fname, q->regions, q->region_count,
+                            (char *)replay_path))
+      PFATAL("Cannot save '%s'; recovery originals retained", replay_path);
+    ck_free(replay_path);
 
     /* Make sure that the passed_det value carries over, too. */
 
@@ -6275,13 +6306,11 @@ static void nuke_resume_dir(void) {
   ck_free(fn);
 
   fn = alloc_printf("%s/_resume_regions", out_dir);
-  delete_files(fn, "");
-  rmdir((char *)fn);
+  if (delete_files(fn, "")) goto dir_cleanup_failed;
   ck_free(fn);
 
   fn = alloc_printf("%s/_resume_replayable-queue", out_dir);
-  delete_files(fn, "");
-  rmdir((char *)fn);
+  if (delete_files(fn, "")) goto dir_cleanup_failed;
   ck_free(fn);
 
   return;
@@ -6362,31 +6391,14 @@ static void maybe_delete_out_dir(void) {
      queue/ to a new location that gets deleted once import to the new queue/
      is finished. If _resume/ already exists, the current queue/ may be
      incomplete due to an earlier abort, so we want to use the old _resume/
-     dir instead, and we let rename() fail silently. */
+     dir instead. Preserve each directory before cleaning the current output. */
 
   if (in_place_resume) {
-
-    u8* orig_q = alloc_printf("%s/queue", out_dir);
-
     in_dir = alloc_printf("%s/_resume", out_dir);
-
-    rename(orig_q, in_dir); /* Ignore errors */
-
-    u8* orig_rep = alloc_printf("%s/replayable-queue", out_dir);
-    u8* res_rep = alloc_printf("%s/_resume_replayable-queue", out_dir);
-    rename((char *)orig_rep, (char *)res_rep);
-    ck_free(orig_rep);
-    ck_free(res_rep);
-
-    u8* orig_reg = alloc_printf("%s/regions", out_dir);
-    u8* res_reg = alloc_printf("%s/_resume_regions", out_dir);
-    rename((char *)orig_reg, (char *)res_reg);
-    ck_free(orig_reg);
-    ck_free(res_reg);
+    if (!stage_resume_inputs())
+      PFATAL("Cannot preserve recovery directories (check orphan _resume* backups); originals retained");
 
     OKF("Output directory exists, will attempt session resume.");
-
-    ck_free(orig_q);
 
   } else {
 
@@ -7993,8 +8005,11 @@ AFLNET_REGIONS_SELECTION:;
         empty = 0;
 
         json_object *request_v = json_object_new_string_len(kl_val(it_pref)->mdata ? kl_val(it_pref)->mdata : "", kl_val(it_pref)->msize);
-        char *request_orig = strdup(json_object_to_json_string(request_v));
+        if (!request_v) goto free_stall;
+        const char *request_json = json_object_to_json_string(request_v);
+        char *request_orig = request_json ? strdup(request_json) : NULL;
         json_object_put(request_v);
+        if (!request_orig) goto free_stall;
         char *request = request_orig;
         int request_len = strlen(request);
         if (request_len >= 2) {
@@ -8010,8 +8025,11 @@ AFLNET_REGIONS_SELECTION:;
         int resp_chunk_len = response_bytes_temp[i] - prev_len;
         if (resp_chunk_len < 0) resp_chunk_len = 0;
         json_object *response_v = json_object_new_string_len(responses_temp[i], resp_chunk_len);
-        char *response_orig = strdup(json_object_to_json_string(response_v));
+        if (!response_v) { free(request_orig); goto free_stall; }
+        const char *response_json = json_object_to_json_string(response_v);
+        char *response_orig = response_json ? strdup(response_json) : NULL;
         json_object_put(response_v);
+        if (!response_orig) { free(request_orig); goto free_stall; }
         prev_len = response_bytes_temp[i];
         char *response = response_orig;
         int response_len = strlen(response);
@@ -8076,6 +8094,7 @@ AFLNET_REGIONS_SELECTION:;
             offset++;
           }
           char *examples_temp = strdup(examples + offset);
+          if (!examples_temp) goto free_stall;
           free(examples);
           examples = examples_temp;
           examples_len = examples_len - offset;
@@ -10605,6 +10624,7 @@ static void usage(u8* argv0) {
        "Required parameters:\n\n"
 
        "  -i dir        - input directory with test cases\n"
+       "  -I format     - input format: auto (default), raw, or replay\n"
        "  -o dir        - output directory for fuzzer findings\n\n"
 
        "Execution control settings:\n\n"
@@ -11371,7 +11391,7 @@ int main(int argc, char** argv) {
   gettimeofday(&tv, &tz);
   srandom(tv.tv_sec ^ tv.tv_usec ^ getpid());
 
-  while ((opt = getopt(argc, argv, "+i:o:f:m:t:T:dnCB:S:M:x:QN:D:W:r:w:e:P:KEq:s:RFc:l:u:U:")) > 0)
+  while ((opt = getopt(argc, argv, "+i:I:o:f:m:t:T:dnCB:S:M:x:QN:D:W:r:w:e:P:KEq:s:RFc:l:u:U:")) > 0)
 
     switch (opt) {
 
@@ -11382,6 +11402,14 @@ int main(int argc, char** argv) {
 
         if (!strcmp(in_dir, "-")) in_place_resume = 1;
 
+        break;
+
+      case 'I': /* explicit seed format */
+
+        if (!strcmp(optarg, "auto")) input_format = INPUT_AUTO;
+        else if (!strcmp(optarg, "raw")) input_format = INPUT_RAW;
+        else if (!strcmp(optarg, "replay")) input_format = INPUT_REPLAY;
+        else FATAL("Invalid -I format: choose auto, raw, or replay");
         break;
 
       case 'o': /* output dir */
@@ -11770,6 +11798,13 @@ int main(int argc, char** argv) {
 
   setup_dirs_fds();
 
+  /* Resolve trailing separators, dot components and directory symlinks before
+     choosing raw recovery versus framed seed semantics. */
+  char *canonical_input = realpath((char *)in_dir, NULL);
+  if (!canonical_input) PFATAL("Unable to resolve input directory '%s'", in_dir);
+  in_dir = ck_strdup((u8 *)canonical_input);
+  free(canonical_input);
+
   /* Auto-detect non-in-place resumption attempts before enrichment. */
   u8* resume_q_check = alloc_printf("%s/queue", in_dir);
   if (!access(resume_q_check, F_OK)) in_dir = resume_q_check; else ck_free(resume_q_check);
@@ -11782,7 +11817,12 @@ int main(int argc, char** argv) {
     load_llm_config(NULL);
     ACTF("Target LLM model: %s", get_target_llm_model());
     setup_llm_grammars();
-    enrich_testcases();
+    const char *input_base = strrchr((char *)in_dir, '/');
+    input_base = input_base ? input_base + 1 : (char *)in_dir;
+    if (in_place_resume || (input_format == INPUT_AUTO &&
+        (!strcmp(input_base, "queue") || !strcmp(input_base, "_resume"))))
+      ACTF("Restoring the existing corpus without repeating initial enrichment");
+    else enrich_testcases();
   }
 
   read_testcases();
