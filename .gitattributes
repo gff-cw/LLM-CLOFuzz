@@ -1,0 +1,2 @@
+# Diagnostic output is archived verbatim, including spaces emitted by make/nm.
+tests/evidence/recovery-integrity-20261103/**/*.log -whitespace
