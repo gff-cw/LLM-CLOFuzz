@@ -262,8 +262,81 @@ static bool test_t24(void) {
   return true;
 }
 
+/* T25: Zero-length regions in empty buffer (size == 0, [0, -1]) */
+static bool test_t25(void) {
+  g_tests_run++;
+  raw_buffer_handle_t buf;
+  raw_buffer_init(&buf, 1009, NULL, 0);
+
+  region_set_t set;
+  region_set_init(&set);
+  region_set_append(&set, 0, -1);
+  region_set_bind(&set, &buf);
+
+  region_diagnostic_t diag;
+  region_status_t st = region_validate(&set, &buf, REGION_CHECK_PERMISSIVE | REGION_CHECK_ORDERED, &diag);
+  TEST_ASSERT(st == REGION_OK, "Zero-length region in empty buffer must pass permissive/ordered");
+
+  st = region_validate(&set, &buf, REGION_CHECK_FULL_COVER, &diag);
+  TEST_ASSERT(st == REGION_OK, "Zero-length region in empty buffer must satisfy full coverage");
+
+  const uint8_t *slice = (const uint8_t *)0x1;
+  size_t slen = 999;
+  st = region_extract_slice(&buf, &set.regions[0], &slice, &slen);
+  TEST_ASSERT(st == REGION_OK, "Extract zero-length slice must succeed");
+  TEST_ASSERT(slice == NULL && slen == 0, "Slice must be NULL with length 0");
+
+  region_set_free(&set);
+  g_tests_passed++;
+  return true;
+}
+
+/* T26: Mixed zero-length and non-empty regions in 10-byte buffer */
+static bool test_t26(void) {
+  g_tests_run++;
+  uint8_t data[10] = "ABCDEFGHIJ";
+  raw_buffer_handle_t buf;
+  raw_buffer_init(&buf, 1010, data, 10);
+
+  region_set_t set;
+  region_set_init(&set);
+  /* [0, -1] (zero-len), [0, 4] (len 5), [5, 4] (zero-len), [5, 9] (len 5), [10, 9] (zero-len) */
+  region_set_append(&set, 0, -1);
+  region_set_append(&set, 0, 4);
+  region_set_append(&set, 5, 4);
+  region_set_append(&set, 5, 9);
+  region_set_append(&set, 10, 9);
+  region_set_bind(&set, &buf);
+
+  region_diagnostic_t diag;
+  region_status_t st = region_validate(&set, &buf, REGION_CHECK_ORDERED | REGION_CHECK_NO_GAPS | REGION_CHECK_FULL_COVER, &diag);
+  TEST_ASSERT(st == REGION_OK, "Interleaved zero-length regions must pass strict validation");
+
+  const uint8_t *slice = NULL;
+  size_t slen = 0;
+
+  region_extract_slice(&buf, &set.regions[0], &slice, &slen);
+  TEST_ASSERT(slen == 0 && slice == NULL, "Region 0 slice mismatch");
+
+  region_extract_slice(&buf, &set.regions[1], &slice, &slen);
+  TEST_ASSERT(slen == 5 && memcmp(slice, "ABCDE", 5) == 0, "Region 1 slice mismatch");
+
+  region_extract_slice(&buf, &set.regions[2], &slice, &slen);
+  TEST_ASSERT(slen == 0 && slice == NULL, "Region 2 slice mismatch");
+
+  region_extract_slice(&buf, &set.regions[3], &slice, &slen);
+  TEST_ASSERT(slen == 5 && memcmp(slice, "FGHIJ", 5) == 0, "Region 3 slice mismatch");
+
+  region_extract_slice(&buf, &set.regions[4], &slice, &slen);
+  TEST_ASSERT(slen == 0 && slice == NULL, "Region 4 slice mismatch");
+
+  region_set_free(&set);
+  g_tests_passed++;
+  return true;
+}
+
 int main(void) {
-  printf("[*] Running Region Checker Tests (T17 - T24)...\n");
+  printf("[*] Running Region Checker Tests (T17 - T26)...\n");
   assert(test_t17());
   assert(test_t18());
   assert(test_t19());
@@ -272,6 +345,8 @@ int main(void) {
   assert(test_t22());
   assert(test_t23());
   assert(test_t24());
+  assert(test_t25());
+  assert(test_t26());
   printf("[+] ALL %d / %d REGION CHECKER TESTS PASSED!\n", g_tests_passed, g_tests_run);
   return 0;
 }

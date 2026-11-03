@@ -389,8 +389,77 @@ static bool test_t16(void) {
   return true;
 }
 
+/* T17: All-zero-length replay container (wire size > 0, total payload == 0) */
+static bool test_t17(void) {
+  g_tests_run++;
+  replay_container_t in, out;
+  replay_container_init(&in);
+  replay_container_init(&out);
+
+  replay_container_append(&in, NULL, 0);
+  replay_container_append(&in, NULL, 0);
+  replay_container_append(&in, NULL, 0);
+
+  uint8_t *wire = NULL;
+  size_t wire_size = 0;
+  replay_diagnostic_t diag;
+  replay_status_t st = replay_encode_buffer(&in, NULL, &wire, &wire_size, &diag);
+  TEST_ASSERT(st == REPLAY_OK, "Encode all-zero container failed");
+  TEST_ASSERT(wire_size == 3 * sizeof(uint32_t), "Wire size must be 12 bytes");
+  TEST_ASSERT(in.total_payload_bytes == 0, "Total payload bytes must be 0");
+
+  st = replay_decode_buffer(wire, wire_size, NULL, &out, &diag);
+  TEST_ASSERT(st == REPLAY_OK, "Decode all-zero container failed");
+  TEST_ASSERT(out.count == 3, "Decoded count must be 3");
+  TEST_ASSERT(out.total_payload_bytes == 0, "Decoded total payload must be 0");
+  TEST_ASSERT(out.messages[0].len == 0 && out.messages[1].len == 0 && out.messages[2].len == 0, "All lengths must be 0");
+
+  free(wire);
+  replay_container_free(&in);
+  replay_container_free(&out);
+  g_tests_passed++;
+  return true;
+}
+
+/* T18: Leading, middle, and trailing zero-length records mixed with payloads */
+static bool test_t18(void) {
+  g_tests_run++;
+  replay_container_t in, out;
+  replay_container_init(&in);
+  replay_container_init(&out);
+
+  replay_container_append(&in, NULL, 0);
+  replay_container_append(&in, (const uint8_t *)"HELLO", 5);
+  replay_container_append(&in, NULL, 0);
+  replay_container_append(&in, (const uint8_t *)"WORLD", 5);
+  replay_container_append(&in, NULL, 0);
+
+  uint8_t *wire = NULL;
+  size_t wire_size = 0;
+  replay_diagnostic_t diag;
+  replay_status_t st = replay_encode_buffer(&in, NULL, &wire, &wire_size, &diag);
+  TEST_ASSERT(st == REPLAY_OK, "Encode mixed container failed");
+  TEST_ASSERT(wire_size == 5 * sizeof(uint32_t) + 10, "Wire size must be 30 bytes");
+  TEST_ASSERT(in.total_payload_bytes == 10, "Total payload bytes must be 10");
+
+  st = replay_decode_buffer(wire, wire_size, NULL, &out, &diag);
+  TEST_ASSERT(st == REPLAY_OK, "Decode mixed container failed");
+  TEST_ASSERT(out.count == 5, "Decoded count must be 5");
+  TEST_ASSERT(out.messages[0].len == 0, "Record 0 must be len 0");
+  TEST_ASSERT(out.messages[1].len == 5 && memcmp(out.messages[1].data, "HELLO", 5) == 0, "Record 1 mismatch");
+  TEST_ASSERT(out.messages[2].len == 0, "Record 2 must be len 0");
+  TEST_ASSERT(out.messages[3].len == 5 && memcmp(out.messages[3].data, "WORLD", 5) == 0, "Record 3 mismatch");
+  TEST_ASSERT(out.messages[4].len == 0, "Record 4 must be len 0");
+
+  free(wire);
+  replay_container_free(&in);
+  replay_container_free(&out);
+  g_tests_passed++;
+  return true;
+}
+
 int main(void) {
-  printf("[*] Running Replay Codec Tests (T01 - T16)...\n");
+  printf("[*] Running Replay Codec Tests (T01 - T18)...\n");
   assert(test_t01());
   assert(test_t02());
   assert(test_t03());
@@ -407,6 +476,8 @@ int main(void) {
   assert(test_t14());
   assert(test_t15());
   assert(test_t16());
+  assert(test_t17());
+  assert(test_t18());
   printf("[+] ALL %d / %d REPLAY CODEC TESTS PASSED!\n", g_tests_passed, g_tests_run);
   return 0;
 }

@@ -1767,7 +1767,7 @@ void save_regions_to_file(region_t *regions, unsigned int region_count, unsigned
   int fd;
   FILE* fp;
 
-  fd = open(fname, O_WRONLY | O_CREAT | O_EXCL, 0600);
+  fd = open(fname, O_WRONLY | O_CREAT | O_TRUNC, 0600);
 
   if (fd < 0) return;
 

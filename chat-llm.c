@@ -424,21 +424,39 @@ char *chat_with_llm(char *prompt, char *model, int tries, float temperature)
 char *construct_prompt_stall(char *protocol_name, char *examples, char *history)
 {
     char *template = "In the %s protocol, the communication history between the %s client and the %s server is as follows."
-                     "The next proper client request that can affect the server's state are:\\n\\n"
-                     "Desired format of real client requests:\\n%sCommunication History:\\n\\\"\\\"\\\"\\n%s\\\"\\\"\\\"";
+                     "The next proper client request that can affect the server's state are:\n\n"
+                     "Desired format of real client requests:\n%sCommunication History:\n\"\"\"\n%s\"\"\"";
 
     char *prompt = NULL;
-    if (asprintf(&prompt, template, protocol_name, protocol_name, protocol_name, examples, history) < 0 || !prompt) {
+    if (asprintf(&prompt, template, protocol_name ? protocol_name : "",
+                 protocol_name ? protocol_name : "",
+                 protocol_name ? protocol_name : "",
+                 examples ? examples : "",
+                 history ? history : "") < 0 || !prompt) {
         return NULL;
     }
 
-    char *final_prompt = NULL;
-    if (asprintf(&final_prompt, "[{\"role\": \"system\", \"content\": \"You are a helpful assistant.\"}, {\"role\": \"user\", \"content\": \"%s\"}]", prompt) < 0 || !final_prompt) {
+    json_object *messages_obj = json_object_new_array();
+    if (!messages_obj) {
         free(prompt);
         return NULL;
     }
 
+    json_object *sys_msg = json_object_new_object();
+    json_object_object_add(sys_msg, "role", json_object_new_string("system"));
+    json_object_object_add(sys_msg, "content", json_object_new_string("You are a helpful assistant."));
+    json_object_array_add(messages_obj, sys_msg);
+
+    json_object *user_msg = json_object_new_object();
+    json_object_object_add(user_msg, "role", json_object_new_string("user"));
+    json_object_object_add(user_msg, "content", json_object_new_string(prompt));
+    json_object_array_add(messages_obj, user_msg);
+
+    const char *json_payload = json_object_to_json_string(messages_obj);
+    char *final_prompt = json_payload ? strdup(json_payload) : NULL;
+    json_object_put(messages_obj);
     free(prompt);
+
     return final_prompt;
 }
 
@@ -526,9 +544,9 @@ char *format_request_message(char *message)
     if (!message) return NULL;
 
     int message_len = strlen(message);
-    int max_len = message_len;
+    int max_len = (message_len > 0 ? message_len : 1);
     int res_len = 0;
-    char *res = ck_alloc(message_len * sizeof(char));
+    char *res = ck_alloc(max_len * sizeof(char));
     for (int i = 0; i < message_len; i++)
     {
         // If an \n is not padded with an \r before, we add it

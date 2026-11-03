@@ -806,16 +806,29 @@ u8* choose_source_region(u32 *out_len) {
   //randomly select a region in the selected seed
   if (q->region_count) {
     u32 reg_index = UR(q->region_count);
-    u32 len = q->regions[reg_index].end_byte - q->regions[reg_index].start_byte + 1;
-    if (len <= MAX_FILE) {
-      out = (u8 *)ck_alloc(len);
-      if (out == NULL) PFATAL("Unable allocate a memory region to store a region");
-      *out_len = len;
-      //Read region data into memory. */
-      FILE *fp = fopen(q->fname, "rb");
-      fseek(fp, q->regions[reg_index].start_byte, SEEK_CUR);
-      fread(out, 1, len, fp);
-      fclose(fp);
+    if (q->regions[reg_index].end_byte >= q->regions[reg_index].start_byte) {
+      u32 len = q->regions[reg_index].end_byte - q->regions[reg_index].start_byte + 1;
+      if (len > 0 && len <= MAX_FILE) {
+        out = (u8 *)ck_alloc(len);
+        if (out == NULL) PFATAL("Unable allocate a memory region to store a region");
+        //Read region data into memory. */
+        FILE *fp = fopen(q->fname, "rb");
+        if (fp) {
+          fseek(fp, q->regions[reg_index].start_byte, SEEK_SET);
+          if (fread(out, 1, len, fp) == len) {
+            *out_len = len;
+          } else {
+            ck_free(out);
+            out = NULL;
+            *out_len = 0;
+          }
+          fclose(fp);
+        } else {
+          ck_free(out);
+          out = NULL;
+          *out_len = 0;
+        }
+      }
     }
   }
 
@@ -2322,9 +2335,9 @@ static void add_to_queue(u8* fname, u32 len, u8 passed_det) {
     /* opening file for reading */
     fp = fopen(fname , "rb");
 
-    buf = (unsigned char *)ck_alloc(len);
-    u32 byte_count = fread(buf, 1, len, fp);
-    fclose(fp);
+    buf = (unsigned char *)ck_alloc(len > 0 ? len : 1);
+    u32 byte_count = (len > 0 && fp) ? fread(buf, 1, len, fp) : 0;
+    if (fp) fclose(fp);
 
     if (byte_count != len) PFATAL("AFLNet - Inconsistent file length '%s'", fname);
     q->regions = (*extract_requests)(buf, len, &q->region_count);
@@ -2339,10 +2352,12 @@ static void add_to_queue(u8* fname, u32 len, u8 passed_det) {
     q->regions = convert_kl_messages_to_regions(kl_messages, &q->region_count, messages_sent);
   }
 
-  /* save the regions' information to file for debugging purpose */
-  u8 *fn = alloc_printf("%s/regions/%s", out_dir, basename(fname));
-  save_regions_to_file(q->regions, q->region_count, fn);
-  ck_free(fn);
+  /* save the regions' information to file for debugging purpose (initial seeds are saved in pivot_inputs) */
+  if (corpus_read_or_sync != 1) {
+    u8 *fn = alloc_printf("%s/regions/%s", out_dir, basename(fname));
+    save_regions_to_file(q->regions, q->region_count, fn);
+    ck_free(fn);
+  }
 
   last_path_time = get_cur_time();
 
@@ -3017,9 +3032,9 @@ void init_ipsm(char** argv) {
     int fd = open(q->fname, O_RDONLY);
     if (fd < 0) PFATAL("Unable to open '%s'", q->fname);
 
-    u8* use_mem = ck_alloc_nozero(q->len);
+    u8* use_mem = ck_alloc_nozero(q->len > 0 ? q->len : 1);
 
-    if (read(fd, use_mem, q->len) != q->len)
+    if (q->len > 0 && read(fd, use_mem, q->len) != q->len)
       FATAL("Short read from '%s'", q->fname);
 
     close(fd);
@@ -3436,13 +3451,14 @@ void get_seeds_with_messsage_types(const char *in_dir, khash_t(strSet) * message
       offset += mlen;
     }
 
-    if (!is_replay || offset != rbytes || raw_len == 0) {
+    if (!is_replay || offset != rbytes) {
       /* Not a replay container; use raw content directly */
       ck_free(raw_content);
       raw_content = nl_file_content;
       raw_len = rbytes;
       nl_file_content = NULL;
     } else {
+      if (!raw_content) raw_content = ck_alloc(1);
       raw_content[raw_len] = '\0';
       ck_free(nl_file_content);
       nl_file_content = NULL;
@@ -3639,12 +3655,33 @@ static void read_testcases(void) {
 
     /* This also takes care of . and .. */
 
-    if (!S_ISREG(st.st_mode) || !st.st_size || strstr(fn, "/README.txt")) {
+    if (!S_ISREG(st.st_mode) || strstr(fn, "/README.txt")) {
 
       ck_free(fn);
       ck_free(dfn);
       continue;
 
+    }
+
+    if (st.st_size == 0) {
+      /* Allow 0-byte raw file if companion replay container or regions file exists */
+      char *bn = strrchr(fn, '/') ? (char *)(strrchr(fn, '/') + 1) : (char *)fn;
+      char *companion1 = alloc_printf("%s/../replayable-queue/%s", in_dir, bn);
+      char *companion2 = alloc_printf("%s/../_resume_replayable-queue/%s", in_dir, bn);
+      char *companion3 = alloc_printf("%s/../regions/%s", in_dir, bn);
+      char *companion4 = alloc_printf("%s/../_resume_regions/%s", in_dir, bn);
+      u8 has_comp = (!access(companion1, R_OK) || !access(companion2, R_OK) ||
+                     !access(companion3, R_OK) || !access(companion4, R_OK));
+      ck_free(companion1);
+      ck_free(companion2);
+      ck_free(companion3);
+      ck_free(companion4);
+
+      if (!has_comp) {
+        ck_free(fn);
+        ck_free(dfn);
+        continue;
+      }
     }
 
     if (st.st_size > MAX_FILE)
@@ -4889,9 +4926,9 @@ static void perform_dry_run(char** argv) {
     fd = open(q->fname, O_RDONLY);
     if (fd < 0) PFATAL("Unable to open '%s'", q->fname);
 
-    use_mem = ck_alloc_nozero(q->len);
+    use_mem = ck_alloc_nozero(q->len > 0 ? q->len : 1);
 
-    if (read(fd, use_mem, q->len) != q->len)
+    if (q->len > 0 && read(fd, use_mem, q->len) != q->len)
       FATAL("Short read from '%s'", q->fname);
 
     close(fd);
@@ -5222,7 +5259,7 @@ static void save_raw_as_replay(const char *raw_path, const region_t *regions, u3
     u32 mlen = (regions[i].end_byte >= regions[i].start_byte) ?
                (u32)(regions[i].end_byte - regions[i].start_byte + 1) : 0;
     fwrite(&mlen, sizeof(u32), 1, dfp);
-    if (mlen > 0 && (size_t)regions[i].start_byte + mlen <= fsize) {
+    if (mlen > 0 && regions[i].start_byte >= 0 && (size_t)regions[i].start_byte + mlen <= fsize) {
       fwrite(raw_mem + regions[i].start_byte, 1, mlen, dfp);
     }
   }
@@ -5264,6 +5301,7 @@ static region_t* load_regions_from_file(const char *rpath, u32 expected_len, u32
     }
   }
   fclose(fp);
+  fp = NULL;
 
   if (count > 0) {
     if (expected_len == 0 && prev_end == -1) {
@@ -5277,6 +5315,7 @@ static region_t* load_regions_from_file(const char *rpath, u32 expected_len, u32
   }
 
 fail:
+  if (fp) fclose(fp);
   if (regions) ck_free(regions);
   return NULL;
 }
@@ -5456,38 +5495,36 @@ static void pivot_inputs(void) {
     //link_or_copy(q->fname, nfn);
     region_t *replay_regions = NULL;
     u32 replay_region_count = 0;
-    u32 len = convert_from_replay_to_raw(q->fname, nfn, &replay_regions, &replay_region_count);
+    u32 len = 0;
 
-    /* If q->fname was already a replay file, preserve it to replayable-queue */
-    if (replay_regions && replay_region_count > 0) {
-      u8 *fn_rep = alloc_printf("%s/replayable-queue/%s", out_dir, basename(nfn));
-      copy_file_simple((char *)q->fname, (char *)fn_rep);
-      ck_free(fn_rep);
-    } else {
-      /* Input was raw (e.g. resuming from raw queue). Check for associated replay file or regions */
-      char *old_fname_copy = strdup((char *)q->fname);
-      char *bname = basename(old_fname_copy);
-      char *dname_copy = strdup((char *)q->fname);
-      char *dname = dirname(dname_copy);
+    char *old_fname_copy = strdup((char *)q->fname);
+    char *bname = basename(old_fname_copy);
+    char *dname_copy = strdup((char *)q->fname);
+    char *dname = dirname(dname_copy);
 
-      char *candidate_replay = NULL;
-      char *candidate_regions = NULL;
+    char *candidate_replay = NULL;
+    char *candidate_regions = NULL;
 
-      char *p1 = alloc_printf("%s/../replayable-queue/%s", dname, bname);
-      char *p2 = alloc_printf("%s/../_resume_replayable-queue/%s", dname, bname);
-      char *p3 = alloc_printf("%s/replayable-queue/%s", dname, bname);
+    char *p2 = alloc_printf("%s/../_resume_replayable-queue/%s", dname, bname);
+    char *p1 = alloc_printf("%s/../replayable-queue/%s", dname, bname);
+    char *p3 = alloc_printf("%s/replayable-queue/%s", dname, bname);
 
-      char *r1 = alloc_printf("%s/../regions/%s", dname, bname);
-      char *r2 = alloc_printf("%s/../_resume_regions/%s", dname, bname);
-      char *r3 = alloc_printf("%s/regions/%s", dname, bname);
+    char *r2 = alloc_printf("%s/../_resume_regions/%s", dname, bname);
+    char *r1 = alloc_printf("%s/../regions/%s", dname, bname);
+    char *r3 = alloc_printf("%s/regions/%s", dname, bname);
 
-      if (!access(p1, R_OK)) candidate_replay = p1;
-      else if (!access(p2, R_OK)) candidate_replay = p2;
-      else if (!access(p3, R_OK)) candidate_replay = p3;
+    if (!access(p2, R_OK)) candidate_replay = p2;
+    else if (!access(p1, R_OK)) candidate_replay = p1;
+    else if (!access(p3, R_OK)) candidate_replay = p3;
 
-      if (!access(r1, R_OK)) candidate_regions = r1;
-      else if (!access(r2, R_OK)) candidate_regions = r2;
-      else if (!access(r3, R_OK)) candidate_regions = r3;
+    if (!access(r2, R_OK)) candidate_regions = r2;
+    else if (!access(r1, R_OK)) candidate_regions = r1;
+    else if (!access(r3, R_OK)) candidate_regions = r3;
+
+    if (candidate_replay || candidate_regions) {
+      /* q->fname is a raw queue file with known companion metadata */
+      copy_file_simple((char *)q->fname, (char *)nfn);
+      len = q->len;
 
       if (candidate_replay) {
         region_t *cand_regions = NULL;
@@ -5512,16 +5549,24 @@ static void pivot_inputs(void) {
       if (!replay_regions && candidate_regions) {
         replay_regions = load_regions_from_file(candidate_regions, len, &replay_region_count);
       }
-
-      ck_free(p1);
-      ck_free(p2);
-      ck_free(p3);
-      ck_free(r1);
-      ck_free(r2);
-      ck_free(r3);
-      free(old_fname_copy);
-      free(dname_copy);
+    } else {
+      /* Initial seed import: detect whether q->fname is replay container or raw */
+      len = convert_from_replay_to_raw(q->fname, nfn, &replay_regions, &replay_region_count);
+      if (replay_regions && replay_region_count > 0) {
+        u8 *fn_rep = alloc_printf("%s/replayable-queue/%s", out_dir, basename(nfn));
+        copy_file_simple((char *)q->fname, (char *)fn_rep);
+        ck_free(fn_rep);
+      }
     }
+
+    ck_free(p1);
+    ck_free(p2);
+    ck_free(p3);
+    ck_free(r1);
+    ck_free(r2);
+    ck_free(r3);
+    free(old_fname_copy);
+    free(dname_copy);
 
     ck_free(q->fname);
     q->fname = nfn;
@@ -7614,22 +7659,27 @@ void regions_add_bytes(region_t* regions, unsigned int region_count, unsigned in
 #endif
 
     int cur_region = 0;
-    while(cur_region < region_count && regions[cur_region].end_byte < position) {
+    while(cur_region < region_count) {
+      if (regions[cur_region].end_byte >= (int)position) break;
+      if (regions[cur_region].start_byte == (int)position &&
+          regions[cur_region].end_byte < regions[cur_region].start_byte) break;
       cur_region++;
     }
 
     // Append bytes at end of last region
-    if(cur_region == region_count && regions[cur_region-1].end_byte + 1 == position) {
+    if(cur_region == region_count && region_count > 0 && regions[cur_region-1].end_byte + 1 == (int)position) {
       cur_region--;
     }
 
-    regions[cur_region].end_byte += added_bytes;
-    cur_region++;
-
-    while(cur_region < region_count) {
-      regions[cur_region].start_byte += added_bytes;
+    if (cur_region < region_count) {
       regions[cur_region].end_byte += added_bytes;
       cur_region++;
+
+      while(cur_region < region_count) {
+        regions[cur_region].start_byte += added_bytes;
+        regions[cur_region].end_byte += added_bytes;
+        cur_region++;
+      }
     }
 }
 
@@ -7648,7 +7698,10 @@ int regions_remove_bytes(region_t* regions, unsigned int region_count, unsigned 
 #endif
 
     int cur_region = 0;
-    while(cur_region < region_count && regions[cur_region].end_byte < position) {
+    while(cur_region < region_count) {
+      if (regions[cur_region].end_byte >= (int)position) break;
+      if (regions[cur_region].start_byte == (int)position &&
+          regions[cur_region].end_byte < regions[cur_region].start_byte) break;
       cur_region++;
     }
 
@@ -7657,12 +7710,18 @@ int regions_remove_bytes(region_t* regions, unsigned int region_count, unsigned 
     int removed_regions = 0;
     int modified_regions = 0;
 
-    while(to_remove > 0) {
+    while(to_remove > 0 && cur_region < region_count) {
 
       regions[cur_region].start_byte -= removed;
       regions[cur_region].end_byte -= removed;
 
-      if(regions[cur_region].end_byte > position + to_remove - 1) {
+      if (regions[cur_region].end_byte < regions[cur_region].start_byte) {
+        cur_region++;
+        modified_regions++;
+        continue;
+      }
+
+      if(regions[cur_region].end_byte > (int)position + to_remove - 1) {
 
         regions[cur_region].end_byte -= to_remove;
 
@@ -7671,12 +7730,12 @@ int regions_remove_bytes(region_t* regions, unsigned int region_count, unsigned 
 
       } else {
 
-	if(regions[cur_region].start_byte != position) {
+	if(regions[cur_region].start_byte != (int)position) {
 
-          to_remove -= regions[cur_region].end_byte - position + 1;
+          to_remove -= regions[cur_region].end_byte - (int)position + 1;
           removed = removed_bytes - to_remove;
 
-	  regions[cur_region].end_byte = position - 1;
+	  regions[cur_region].end_byte = (int)position - 1;
 
 	}
         else {
@@ -7684,7 +7743,7 @@ int regions_remove_bytes(region_t* regions, unsigned int region_count, unsigned 
 	  // This region is marked to be removed
 	  // (bytes from "start" to "end" have all been deleted)
 
-          to_remove -= regions[cur_region].end_byte - position + 1;
+          to_remove -= regions[cur_region].end_byte - (int)position + 1;
           removed = removed_bytes - to_remove;
 
 	  regions[cur_region].start_byte = -1;
@@ -7705,29 +7764,43 @@ int regions_remove_bytes(region_t* regions, unsigned int region_count, unsigned 
       cur_region++;
     }
 
-    if(region_count > 1 && removed_regions > 0) {
+    if(removed_regions > 0) {
 
       unsigned int new_region_count = region_count - removed_regions;
-      region_t* new_regions = ck_alloc(new_region_count * sizeof(region_t));
+      if (new_region_count == 0) {
+        new_region_count = 1;
+        region_t* new_regions = ck_alloc(sizeof(region_t));
+        new_regions[0].start_byte = 0;
+        new_regions[0].end_byte = -1;
+        new_regions[0].state_sequence = NULL;
+        new_regions[0].state_count = 0;
 
-      int j=new_region_count-1;
-      for(int i=region_count-1; i>=0; i--) {
+        ck_free(mutated_regions);
+        mutated_regions = new_regions;
+        mutated_region_count = 1;
+      } else if (region_count > 1) {
+        region_t* new_regions = ck_alloc(new_region_count * sizeof(region_t));
 
-        if(regions[i].start_byte == -1 && regions[i].end_byte == -1) {
-          continue;
+        int j=new_region_count-1;
+        for(int i=region_count-1; i>=0; i--) {
+
+          if(regions[i].start_byte == -1 && regions[i].end_byte == -1) {
+            continue;
+          }
+
+          if (j >= 0) {
+            new_regions[j].start_byte = regions[i].start_byte;
+            new_regions[j].end_byte = regions[i].end_byte;
+            new_regions[j].state_sequence = regions[i].state_sequence;
+            new_regions[j].state_count = regions[i].state_count;
+            j--;
+          }
         }
 
-        new_regions[j].start_byte = regions[i].start_byte;
-        new_regions[j].end_byte = regions[i].end_byte;
-        new_regions[j].state_sequence = regions[i].state_sequence;
-        new_regions[j].state_count = regions[i].state_count;
-
-        j--;
+        ck_free(mutated_regions);
+        mutated_regions = new_regions;
+        mutated_region_count = new_region_count;
       }
-
-      ck_free(mutated_regions);
-      mutated_regions = new_regions;
-      mutated_region_count = new_region_count;
     }
 
 
@@ -7908,11 +7981,14 @@ AFLNET_REGIONS_SELECTION:;
       u32 history_len = 0;
       char *examples = NULL;
       int examples_len = 0;
+      char *stall_prompt = NULL;
+      char *stall_response = NULL;
       kliter_t(lms) *it_pref = kl_begin(kl_messages);
+      kliter_t(lms) *prefix_end = M2_prev ? kl_next(M2_prev) : kl_begin(kl_messages);
       int i = 0;
       int empty = 1;
       int prev_len = 0;
-      for (; i < response_count && it_pref != M2_prev; i++, it_pref = kl_next(it_pref))
+      for (; i < response_count && it_pref != prefix_end && it_pref != kl_end(kl_messages); i++, it_pref = kl_next(it_pref))
       {
         empty = 0;
 
@@ -7953,6 +8029,12 @@ AFLNET_REGIONS_SELECTION:;
         if (i == 0)
         {
           examples_len = asprintf(&examples, "Request-1:\\n%.*s\\nRequest-2:\\n%.*s\\n", request_len, request, request_len, request);
+          if (examples_len < 0 || !examples) {
+            examples = NULL;
+            free(request_orig);
+            free(response_orig);
+            goto free_stall;
+          }
         }
 
         history = ck_realloc(history, history_len + request_len);
@@ -7999,8 +8081,7 @@ AFLNET_REGIONS_SELECTION:;
           examples_len = examples_len - offset;
         }
 
-        char *stall_prompt = construct_prompt_stall(protocol_name, examples, history);
-        char *stall_response = NULL;
+        stall_prompt = construct_prompt_stall(protocol_name, examples, history);
         if (!stall_prompt)
           goto free_stall;
 
@@ -8008,7 +8089,7 @@ AFLNET_REGIONS_SELECTION:;
 
         {
           char *stall_prompt_path = alloc_printf("%s/stall-interactions/prompt-%d", out_dir, chat_times);
-          int stall_prompt_fd = open(stall_prompt_path, O_WRONLY | O_CREAT, 0600);
+          int stall_prompt_fd = open(stall_prompt_path, O_WRONLY | O_CREAT | O_TRUNC, 0600);
           if (stall_prompt_fd >= 0) {
             ck_write(stall_prompt_fd, stall_prompt, strlen(stall_prompt), stall_prompt_path);
             close(stall_prompt_fd);
@@ -8021,7 +8102,7 @@ AFLNET_REGIONS_SELECTION:;
 
         {
           char *stall_response_path = alloc_printf("%s/stall-interactions/response-%d", out_dir, chat_times);
-          int stall_response_fd = open(stall_response_path, O_WRONLY | O_CREAT, 0600);
+          int stall_response_fd = open(stall_response_path, O_WRONLY | O_CREAT | O_TRUNC, 0600);
           if (stall_response_fd >= 0) {
             ck_write(stall_response_fd, stall_response, strlen(stall_response), stall_response_path);
             close(stall_response_fd);
@@ -8094,8 +8175,8 @@ AFLNET_REGIONS_SELECTION:;
         stall_response = NULL;
       free_stall:
         if (stall_response) free(stall_response);
-        free(stall_prompt);
-        ck_free(history);
+        if (stall_prompt) free(stall_prompt);
+        if (history) ck_free(history);
         if (examples) free(examples);
       }
 
@@ -8128,9 +8209,10 @@ AFLNET_REGIONS_SELECTION:;
     it = kl_next(it);
   }
 
+  if (!in_buf) in_buf = ck_alloc(1);
   orig_in = in_buf;
 
-  out_buf = (in_buf_size > 0) ? ck_alloc_nozero(in_buf_size) : NULL;
+  out_buf = ck_alloc_nozero(in_buf_size > 0 ? in_buf_size : 1);
   if (in_buf_size > 0 && out_buf && in_buf) {
     memcpy(out_buf, in_buf, in_buf_size);
   }
@@ -8162,11 +8244,11 @@ AFLNET_REGIONS_SELECTION:;
 
   orig_perf = perf_score = calculate_score(queue_cur);
 
-  /* Skip right away if -d is given, if we have done deterministic fuzzing on
+  /* Skip right away if len is 0, if -d is given, if we have done deterministic fuzzing on
      this entry ourselves (was_fuzzed), or if it has gone through deterministic
      testing in earlier, resumed runs (passed_det). */
 
-  if (skip_deterministic || queue_cur->was_fuzzed || queue_cur->passed_det)
+  if (len == 0 || skip_deterministic || queue_cur->was_fuzzed || queue_cur->passed_det)
     goto havoc_stage;
 
   /* Skip deterministic fuzzing if exec path checksum puts this out of scope
@@ -9186,7 +9268,7 @@ havoc_stage:
   double epsilon = UR(100) / 100.0;
 
   int is_exploration = epsilon < EPSILON_CHOICE;
-  if (is_exploration)
+  if (is_exploration || temp_len == 0)
   {
     if (!splice_cycle) {
       stage_name = "havoc explore";
@@ -9208,6 +9290,11 @@ havoc_stage:
   }
 
   int rc = kv_size(original_ranges);
+  if (rc == 0) {
+    range v = {.len = temp_len, .start = 0, .mutable = 1};
+    kv_push(range, original_ranges, v);
+    rc = 1;
+  }
   ranges = ck_alloc(rc * sizeof(range));
   memcpy(ranges, original_ranges.a, rc * sizeof(range));
 
@@ -9441,8 +9528,8 @@ havoc_stage:
 
             /* Clone bytes (75%) or insert a block of constant bytes (25%). */
 
-            u8  actually_clone = UR(4);
-            u32 clone_from, clone_to, clone_len;
+            u8  actually_clone = (temp_len > 0) ? UR(4) : 0;
+            u32 clone_from = 0, clone_to, clone_len;
             u8* new_buf;
 
             if (actually_clone) {
@@ -9463,7 +9550,7 @@ havoc_stage:
 
             /* Head */
 
-            memcpy(new_buf, out_buf, clone_to);
+            if (clone_to > 0) memcpy(new_buf, out_buf, clone_to);
 
             /* Inserted part */
 
@@ -9471,11 +9558,12 @@ havoc_stage:
               memcpy(new_buf + clone_to, out_buf + clone_from, clone_len);
             else
               memset(new_buf + clone_to,
-                     UR(2) ? UR(256) : out_buf[UR(temp_len)], clone_len);
+                     (temp_len == 0 || UR(2)) ? UR(256) : out_buf[UR(temp_len)], clone_len);
 
             /* Tail */
-            memcpy(new_buf + clone_to + clone_len, out_buf + clone_to,
-                   temp_len - clone_to);
+            if (temp_len > clone_to)
+              memcpy(new_buf + clone_to + clone_len, out_buf + clone_to,
+                     temp_len - clone_to);
 
             ck_free(out_buf);
             out_buf = new_buf;
@@ -9742,7 +9830,7 @@ havoc_stage:
 
         /* Duplicate the current region */
         case 20: {
-            if (temp_len + ranges[range_choice].len >= MAX_FILE) break;
+            if (ranges[range_choice].len == 0 || temp_len + ranges[range_choice].len >= MAX_FILE) break;
 
             u8* new_buf = ck_alloc_nozero(temp_len + ranges[range_choice].len);
             u8* start_dest = new_buf;
@@ -9801,14 +9889,14 @@ havoc_stage:
     /* out_buf might have been mangled a bit, so let's restore it to its
        original size and shape. */
 
-    if (temp_len < len) out_buf = ck_realloc(out_buf, len);
+    if (temp_len < len) out_buf = ck_realloc(out_buf, len > 0 ? len : 1);
     temp_len = len;
 
     if (rc != kv_size(original_ranges))
       ranges = ck_realloc(ranges, kv_size(original_ranges) * sizeof(range));
     rc = kv_size(original_ranges);
 
-    memcpy(out_buf, in_buf, len);
+    if (len > 0) memcpy(out_buf, in_buf, len);
     memcpy(ranges, original_ranges.a, rc * sizeof(range));
 
     /* Restore mutated regions */
@@ -9872,7 +9960,7 @@ havoc_stage:
 retry_splicing:
 
   if (use_splicing && splice_cycle++ < SPLICE_CYCLES &&
-      queued_paths > 1 && M2_len > 1) {
+      queued_paths > 1 && M2_len > 1 && len > 1) {
 
     struct queue_entry* target;
     u32 tid, split_at;
@@ -9961,12 +10049,14 @@ retry_splicing:
 
     /* Update mutated regions */
     unsigned int first_region_count = 0;
-    while(mutated_regions[first_region_count].end_byte < split_at) {
+    while(first_region_count < mutated_region_count - 1 &&
+          mutated_regions[first_region_count].end_byte < (int)split_at) {
         first_region_count++;
     }
 
     unsigned int second_region_count = 0;
-    while(target->regions[target->region_count - 1 - second_region_count].start_byte > split_at) {
+    while(second_region_count < target->region_count - 1 &&
+          target->regions[target->region_count - 1 - second_region_count].start_byte > (int)split_at) {
         second_region_count++;
     }
 
@@ -11679,6 +11769,10 @@ int main(int argc, char** argv) {
   setup_ipsm();
 
   setup_dirs_fds();
+
+  /* Auto-detect non-in-place resumption attempts before enrichment. */
+  u8* resume_q_check = alloc_printf("%s/queue", in_dir);
+  if (!access(resume_q_check, F_OK)) in_dir = resume_q_check; else ck_free(resume_q_check);
 
   if (protocol_selected)
   {
