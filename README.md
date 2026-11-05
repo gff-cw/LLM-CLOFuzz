@@ -48,7 +48,8 @@ This branch contains the ChatAFL port and recovery fixes. The separate
 [evaluation review](docs/CHATAFL_EVALUATION_REVIEW.md) are historical research
 reviews, not validation of the current implementation. See the current
 [format contract](docs/FORMAT_CONTRACT.md) and
-[repair and verification report](docs/REPAIR_VERIFICATION_20261103.md).
+[runtime repair report](docs/RUNTIME_DEFECT_FIXES_20261105.md) and the earlier
+[recovery verification report](docs/REPAIR_VERIFICATION_20261103.md).
 Compilation and regression checks do not establish the effectiveness of the
 three LLM methods; that requires controlled fuzzing experiments.
 
@@ -106,11 +107,12 @@ afl-clang-fast --version
 afl-clang-fast -### -O0 -c test-instr.c
 
 # Compile a real local server (C++ projects use afl-clang-fast++).
-afl-clang-fast -O2 -g tests/llvm18/network_server.c -o /tmp/stateafl-server
+mkdir -p tests/out/local-server
+afl-clang-fast -O2 -g tests/llvm18/network_server.c -o tests/out/local-server/stateafl-server
 
 # Obtain LLVM IR and verify it independently with the matching LLVM version.
-afl-clang-fast -O1 -g0 -S -emit-llvm tests/llvm18/state_fixture.c -o /tmp/stateafl.ll
-opt -passes=verify -disable-output /tmp/stateafl.ll
+afl-clang-fast -O1 -g0 -S -emit-llvm tests/llvm18/state_fixture.c -o tests/out/local-server/stateafl.ll
+opt -passes=verify -disable-output tests/out/local-server/stateafl.ll
 ```
 
 For configure/CMake projects use `CC=$STATEAFL/afl-clang-fast` and
@@ -197,7 +199,10 @@ StateAFL can be run using the same command line options of AFL and AFLNet (excep
 
 - ***-N netinfo***: server information (e.g., tcp://127.0.0.1/8554)
 
-- ***-P protocol***: (optional, for cross-checking protocol state machine against AFLNet) application protocol to be tested (e.g., RTSP, FTP, DTLS12, DNS, DICOM, SMTP, SSH, TLS, DAAP-HTTP, SIP)
+- ***-P protocol***: select a supported protocol parser and enable LLM grammar
+  setup, initial corpus expansion, and stall intervention (e.g., RTSP, FTP,
+  HTTP, SMTP). Configure `llm_config.json` in the launch working directory or
+  its parent. Omitting `-P` runs the base StateAFL path without these LLM calls.
 
 - ***-D usec***: (optional) waiting time (in microseconds) for the server to complete its initialization 
 

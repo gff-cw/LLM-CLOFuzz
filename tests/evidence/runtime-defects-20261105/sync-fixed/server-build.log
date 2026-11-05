@@ -1,0 +1,40 @@
+[1;92m[+] [0mFUNCTION LLVM: llvm.lifetime.start.p0[0m
+[1;92m[+] [0mFUNCTION LLVM: llvm.lifetime.start.p0[0m
+[1;92m[+] [0mFUNCTION LLVM: llvm.lifetime.start.p0[0m
+[1;92m[+] [0mFUNCTION LLVM: llvm.lifetime.start.p0[0m
+[1;92m[+] [0mFUNCTION LLVM: llvm.lifetime.start.p0[0m
+[1;92m[+] [0mFUNCTION LLVM: llvm.lifetime.start.p0[0m
+[1;92m[+] [0mFound function call: malloc
+[0m
+[1;92m[+] [0mFUNCTION LLVM: llvm.lifetime.start.p0[0m
+[1;92m[+] [0mFound function call: malloc
+[0m
+[1;92m[+] [0mFUNCTION LLVM: llvm.lifetime.start.p0[0m
+[1;92m[+] [0mFUNCTION LLVM: llvm.lifetime.start.p0[0m
+[1;92m[+] [0mFound function call: recv
+[0m
+[1;92m[+] [0mFUNCTION LLVM: llvm.lifetime.start.p0[0m
+[1;92m[+] [0mFound function call: send
+[0m
+[1;92m[+] [0mFUNCTION LLVM: llvm.lifetime.end.p0[0m
+[1;92m[+] [0mFUNCTION LLVM: llvm.lifetime.end.p0[0m
+[1;92m[+] [0mFUNCTION LLVM: llvm.lifetime.end.p0[0m
+[1;92m[+] [0mFound function call: close
+[0m
+[1;92m[+] [0mFound function call: close
+[0m
+[1;92m[+] [0mFound function call: free
+[0m
+[1;92m[+] [0mFound function call: free
+[0m
+[1;92m[+] [0mFUNCTION LLVM: llvm.lifetime.end.p0[0m
+[1;92m[+] [0mFUNCTION LLVM: llvm.lifetime.end.p0[0m
+[1;92m[+] [0mFUNCTION LLVM: llvm.lifetime.end.p0[0m
+[1;92m[+] [0mFUNCTION LLVM: llvm.lifetime.end.p0[0m
+[1;92m[+] [0mFUNCTION LLVM: llvm.lifetime.end.p0[0m
+[1;92m[+] [0mFUNCTION LLVM: llvm.lifetime.end.p0[0m
+[1;92m[+] [0mFUNCTION LLVM: llvm.lifetime.end.p0[0m
+[1;92m[+] [0mFUNCTION LLVM: llvm.lifetime.start.p0[0m
+[1;92m[+] [0mFUNCTION LLVM: llvm.lifetime.start.p0[0m
+[1;92m[+] [0mFUNCTION LLVM: llvm.lifetime.end.p0[0m
+[1;92m[+] [0mFUNCTION LLVM: llvm.lifetime.end.p0[0m

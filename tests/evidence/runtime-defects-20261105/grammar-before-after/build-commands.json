@@ -1,0 +1,53 @@
+{
+  "baseline_source_command": [
+    "git",
+    "show",
+    "43b9b41:chat-llm.c"
+  ],
+  "build_commands": [
+    [
+      "clang",
+      "-std=gnu11",
+      "-O1",
+      "-g",
+      "-ffunction-sections",
+      "-fdata-sections",
+      "-fsanitize=address,undefined",
+      "-fno-omit-frame-pointer",
+      "-Wno-pointer-sign",
+      "-Wno-unused-result",
+      "-I",
+      "/home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz",
+      "tests/out/runtime-fixes-20261105/grammar-baseline/probe.c",
+      "tests/out/runtime-fixes-20261105/grammar-baseline/baseline-chat-llm.c",
+      "-Wl,--gc-sections",
+      "-ljson-c",
+      "-lpcre2-8",
+      "-lcurl",
+      "-o",
+      "tests/out/runtime-fixes-20261105/grammar-baseline/baseline-probe"
+    ],
+    [
+      "clang",
+      "-std=gnu11",
+      "-O1",
+      "-g",
+      "-ffunction-sections",
+      "-fdata-sections",
+      "-fsanitize=address,undefined",
+      "-fno-omit-frame-pointer",
+      "-Wno-pointer-sign",
+      "-Wno-unused-result",
+      "-I",
+      "/home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz",
+      "tests/out/runtime-fixes-20261105/grammar-baseline/probe.c",
+      "/home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz/chat-llm.c",
+      "-Wl,--gc-sections",
+      "-ljson-c",
+      "-lpcre2-8",
+      "-lcurl",
+      "-o",
+      "tests/out/runtime-fixes-20261105/grammar-baseline/fixed-probe"
+    ]
+  ]
+}

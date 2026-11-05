@@ -1,0 +1,87 @@
+{
+  "baseline_commit": "43b9b41ece4a5db00b4149e6301f3491f6a6b10b",
+  "source_commit": "939c173c0826785f17395664cf4a13ee6154e21d",
+  "source_commits": [
+    "939c173c0826785f17395664cf4a13ee6154e21d",
+    "6ef95bdb0660e93609ee0fafcc05680209f80286"
+  ],
+  "branch": "fix/chatafl-runtime-defects-20261105",
+  "scope": "Four concrete runtime defects; native tests and one bounded local synchronization campaign, no online LLM calls.",
+  "source_sha256": {
+    "afl-fuzz.c": "5d10b1fc120345af2cfd434ce2f052958e76b97f48cca667ec86bea7dadf1b96",
+    "aflnet.c": "772fb640c5c730f1f6e6f675183e50f71579d1ab66ce8bb27b889f146d6dd030",
+    "chat-llm.c": "40f48501f185f7febaee275c11cc61161a9574a730247548d4566c4fff0af1df",
+    "aflnet.h": "c3dceb13b6e80dc5e8969bc2d57b861bc6655138332b5d5df21e5a01bca4f715",
+    "chat-llm.h": "fc98af0675dfa833eaa77ecac321a77ff1c4d3d8b252a7c685bd1c3459a1683b",
+    "config.h": "c8bfa8d3e1f78bd11b9460f9ccfa609b4d09132013d272e738c5c1ccbace4e6a",
+    "types.h": "6cb9d023a25122bc457e9863ded211ae120db9337ae010720718673d2f576006",
+    "alloc-inl.h": "4ab62526760459a2f13de1a5d81d12df2a518ac5614e2c95936d3e4f9a93b97a",
+    "hash.h": "57d4051611d5a9a1f849b2334bda30f27e12330e7d2c0dc1c8fd8cd08a0f0a77",
+    "klist.h": "8785a9e851393077cb7d1180df2c0077540076da9f6e9ffbb7de0406d3d48640",
+    "khash.h": "4582c7fd4b98f61339ce677bb1daa7a45a53075b112a494a335525c4bda72074",
+    "kvec.h": "7265946f559b398216c258ea1c665ec1e34d428187116ea9658249cb1c27fb8f",
+    "Makefile": "38e8be34a77691a3152309a327a875ee93a35e89c38a399ae361ac4a9a216c79",
+    "llvm_mode/Makefile": "a2ed53ea3d6a0c892353e3a50323f936bea0a4ffd14690db0611c5a7234d53a4",
+    "tests/native_sync_stall.c": "b38589ecdb563a8b5dc9df10d94d4751635f2e286f25c5c37f25e223a5242002",
+    "tests/run_native_sync_stall.py": "16782732113bfd2edef1eb9bcf63d2027e7730441e3b3984ade5970edadf6d25",
+    "tests/run_sync_smoke.py": "a80a2119e99a740a04e6e946f3ad88b4c18d08e6367b4bf69b274daf4b1d3ca6",
+    "tests/native_grammar.c": "db6100f05a4947e37c7704974e3dcd3ff5a34c9726632425b7b0b1ec3be1c8a6",
+    "tests/run_native_grammar.sh": "592cd674f13dcf404926d9712f3e805b759949cd5d1f06a79333cddef55c75e8",
+    "tests/native_recovery.c": "3d4507e152397d5455e319b69570b63651bdeb2af34f7cb4780e0e58784ae6bb",
+    "tests/run_native_recovery.py": "c1dfe0474efb297f64b9da01546e76f5d684142562c8aaf626021b223f57bef3",
+    "tests/llvm18/network_server.c": "f7700c7f5ed114dcb0304ed77b687a1ca5e96099d651eed620e67ccfe544ef17"
+  },
+  "validation": {
+    "native_build_exit": 0,
+    "llvm18_build_exit": 0,
+    "native_sync_stall": {
+      "ordinary": 32,
+      "asan_ubsan": 32
+    },
+    "native_recovery": {
+      "ordinary": 80,
+      "asan_ubsan": 80
+    },
+    "native_grammar": {
+      "ordinary": 31,
+      "ndebug": 31,
+      "asan_ubsan": 31,
+      "asan_ubsan_ndebug": 31
+    },
+    "sync_baseline": {
+      "expected_failure": true,
+      "fuzzer_signal": "SIGSEGV",
+      "fuzzer_returncode": -11,
+      "elapsed_seconds": 2.11
+    },
+    "sync_fixed": {
+      "fuzzer_returncode": 0,
+      "elapsed_seconds": 45.03,
+      "execs_done": 455,
+      "queue_count": 11,
+      "paths_imported": 1,
+      "checkpoint": 1,
+      "checks": {
+        "clean_bounded_exit": true,
+        "imported_statistic_positive": true,
+        "exactly_one_peer_import": true,
+        "imported_raw_matches_peer": true,
+        "three_replay_records_match_peer": true,
+        "sync_checkpoint_one": true,
+        "peer_unchanged": true,
+        "effective_aslr_disabled": true,
+        "source_hashes_stable": true,
+        "artifact_hashes_stable": true
+      }
+    },
+    "grammar_baseline": {
+      "json_exit": 2,
+      "header_exit": 1,
+      "header_asan_stack_buffer_overflow": true
+    },
+    "grammar_fixed": {
+      "json_exit": 0,
+      "header_exit": 0
+    }
+  }
+}

@@ -1,0 +1,45 @@
+[
+  {
+    "variant": "ordinary",
+    "command": [
+      "bash",
+      "tests/run_native_grammar.sh"
+    ],
+    "environment": {},
+    "returncode": 0
+  },
+  {
+    "variant": "ndebug",
+    "command": [
+      "bash",
+      "tests/run_native_grammar.sh"
+    ],
+    "environment": {
+      "NATIVE_NDEBUG": "1"
+    },
+    "returncode": 0
+  },
+  {
+    "variant": "sanitized",
+    "command": [
+      "bash",
+      "tests/run_native_grammar.sh"
+    ],
+    "environment": {
+      "NATIVE_SANITIZE": "address,undefined"
+    },
+    "returncode": 0
+  },
+  {
+    "variant": "sanitized-ndebug",
+    "command": [
+      "bash",
+      "tests/run_native_grammar.sh"
+    ],
+    "environment": {
+      "NATIVE_SANITIZE": "address,undefined",
+      "NATIVE_NDEBUG": "1"
+    },
+    "returncode": 0
+  }
+]

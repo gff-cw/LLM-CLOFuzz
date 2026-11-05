@@ -1,0 +1,23 @@
+[
+  {
+    "label": "native",
+    "command": [
+      "make",
+      "-B",
+      "-j2"
+    ],
+    "returncode": 0,
+    "duration_seconds": 50.49
+  },
+  {
+    "label": "llvm18",
+    "command": [
+      "make",
+      "-C",
+      "llvm_mode",
+      "-j2"
+    ],
+    "returncode": 0,
+    "duration_seconds": 7.79
+  }
+]

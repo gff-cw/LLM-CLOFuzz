@@ -1,0 +1,6 @@
+{
+  "chat-llm.c": "40f48501f185f7febaee275c11cc61161a9574a730247548d4566c4fff0af1df",
+  "chat-llm.h": "fc98af0675dfa833eaa77ecac321a77ff1c4d3d8b252a7c685bd1c3459a1683b",
+  "tests/native_grammar.c": "db6100f05a4947e37c7704974e3dcd3ff5a34c9726632425b7b0b1ec3be1c8a6",
+  "tests/run_native_grammar.sh": "592cd674f13dcf404926d9712f3e805b759949cd5d1f06a79333cddef55c75e8"
+}

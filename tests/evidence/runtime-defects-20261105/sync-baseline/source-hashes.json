@@ -1,0 +1,24 @@
+{
+  "checkout_head": "43b9b41ece4a5db00b4149e6301f3491f6a6b10b",
+  "sources": {
+    "afl-fuzz.c": "5d10b1fc120345af2cfd434ce2f052958e76b97f48cca667ec86bea7dadf1b96",
+    "aflnet.c": "772fb640c5c730f1f6e6f675183e50f71579d1ab66ce8bb27b889f146d6dd030",
+    "aflnet.h": "c3dceb13b6e80dc5e8969bc2d57b861bc6655138332b5d5df21e5a01bca4f715",
+    "chat-llm.c": "40f48501f185f7febaee275c11cc61161a9574a730247548d4566c4fff0af1df",
+    "chat-llm.h": "fc98af0675dfa833eaa77ecac321a77ff1c4d3d8b252a7c685bd1c3459a1683b",
+    "alloc-inl.h": "4ab62526760459a2f13de1a5d81d12df2a518ac5614e2c95936d3e4f9a93b97a",
+    "config.h": "c8bfa8d3e1f78bd11b9460f9ccfa609b4d09132013d272e738c5c1ccbace4e6a",
+    "types.h": "6cb9d023a25122bc457e9863ded211ae120db9337ae010720718673d2f576006",
+    "tests/llvm18/network_server.c": "f7700c7f5ed114dcb0304ed77b687a1ca5e96099d651eed620e67ccfe544ef17",
+    "tests/run_sync_smoke.py": "95934c044495e8f3fff1883be304dbd5faed43595007059f84e656a16e9bfc3b"
+  },
+  "artifacts": {
+    "afl-fuzz": "87b6b46f00392616d1f10f21117278e81176e354b7ee7ec7277a5c686059ead0",
+    "afl-clang-fast": "58389fc0762d643dbd47290ee45401293a9a90f820b3e93cf41f2a48084e37bd",
+    "afl-llvm-pass.so": "6c36264a612926dda5a292fa81c6525a766f15b032760533ee6d26de679fa732",
+    "afl-llvm-rt.o": "f2bfca83c081afd35f4fa831f8950128f4aba7d62b813bc447f2e0db97d3a613",
+    "afl-llvm-rt-state-tracer.o": "6a17a23c4f786eaefc9eb6a8628bf47d39643170ff9df91c2b2f8fd00ac569f3",
+    "afl-llvm-rt-state-tracer.o.cpp.o": "a83d03818807b1740db09b85c1fccf82fffabd8cc1c1d221dd5bcc404469704b"
+  },
+  "local_server": "3633ad1a035ff542fa9073a2cd0b1d5e7979e338c91b221777c0274608414500"
+}

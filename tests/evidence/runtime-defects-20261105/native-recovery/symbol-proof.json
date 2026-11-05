@@ -1,0 +1,18 @@
+{
+  "native": {
+    "symbols_sha256": "abf1fefacceba40f9fc2d7f8f44bb06227af913ee41e0ad2fecf771b88102f67",
+    "excluded_symbols_absent": [
+      "discarded_fuzzer_main",
+      "chat_with_llm",
+      "curl_easy_perform"
+    ]
+  },
+  "sanitized": {
+    "symbols_sha256": "d3d205f8dae113b46fdc2075b50471eeddf7b5462ff8556688bcf353a77e0159",
+    "excluded_symbols_absent": [
+      "discarded_fuzzer_main",
+      "chat_with_llm",
+      "curl_easy_perform"
+    ]
+  }
+}

@@ -1,0 +1,64 @@
+=== sync_mixed (exit 0) ===
+PASS sync_mixed
+=== sync_zeros (exit 0) ===
+PASS sync_zeros
+=== sync_initial_replay (exit 0) ===
+PASS sync_initial_replay
+=== sync_initial_raw (exit 0) ===
+PASS sync_initial_raw
+=== sync_callback_failure (exit 0) ===
+PASS sync_callback_failure
+=== sync_missing_then_retry (exit 0) ===
+PASS sync_missing_then_retry
+=== sync_stale (exit 0) ===
+PASS sync_stale
+=== sync_malformed (exit 0) ===
+PASS sync_malformed
+=== sync_wrong_basename (exit 0) ===
+PASS sync_wrong_basename
+=== sync_priority_fallback (exit 0) ===
+PASS sync_priority_fallback
+=== sync_oversized_companion (exit 0) ===
+PASS sync_oversized_companion
+=== sync_companion_race_retry (exit 0) ===
+PASS sync_companion_race_retry
+=== sync_snapshot_not_reread (exit 0) ===
+PASS sync_snapshot_not_reread
+=== sync_frozen_save_count (exit 0) ===
+PASS sync_frozen_save_count
+=== sync_frozen_zero_records (exit 0) ===
+PASS sync_frozen_zero_records
+=== clear_idle (exit 0) ===
+PASS clear_idle
+=== clear_live (exit 0) ===
+PASS clear_live
+=== sync_busy_list (exit 0) ===
+PASS sync_busy_list
+=== sync_busy_boundary (exit 0) ===
+PASS sync_busy_boundary
+=== sync_busy_frozen_count (exit 0) ===
+PASS sync_busy_frozen_count
+=== cursor_failed_before_higher_success (exit 0) ===
+PASS cursor_failed_before_higher_success
+=== cursor_lowest_retry (exit 0) ===
+PASS cursor_lowest_retry
+=== cursor_completed (exit 0) ===
+PASS cursor_completed
+=== cursor_real_retry (exit 0) ===
+PASS cursor_real_retry
+=== stall_empty_history (exit 0) ===
+PASS stall_empty_history
+=== stall_missing_history (exit 0) ===
+PASS stall_missing_history
+=== stall_failed_prompt (exit 0) ===
+PASS stall_failed_prompt
+=== stall_empty_prompt (exit 0) ===
+PASS stall_empty_prompt
+=== stall_actual_attempt (exit 0) ===
+PASS stall_actual_attempt
+=== stall_response_failure_charged (exit 0) ===
+PASS stall_response_failure_charged
+=== stall_cap_64 (exit 0) ===
+PASS stall_cap_64
+=== stall_skips_preserve_quota (exit 0) ===
+PASS stall_skips_preserve_quota

@@ -1,0 +1,4 @@
+/home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz/tests/out/runtime-fixes-20261105/grammar-baseline/baseline-chat-llm.c:1235:21: warning: assigning to 'char *' from 'kh_cstr_t' (aka 'const char *') discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+ 1235 |         data[index] = kh_key(sequence,i);
+      |                     ^ ~~~~~~~~~~~~~~~~~~
+1 warning generated.

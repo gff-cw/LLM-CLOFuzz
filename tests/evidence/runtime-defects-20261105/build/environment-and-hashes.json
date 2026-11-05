@@ -1,0 +1,25 @@
+{
+  "source_sha256": {
+    "afl-fuzz.c": "5d10b1fc120345af2cfd434ce2f052958e76b97f48cca667ec86bea7dadf1b96",
+    "aflnet.c": "772fb640c5c730f1f6e6f675183e50f71579d1ab66ce8bb27b889f146d6dd030",
+    "chat-llm.c": "40f48501f185f7febaee275c11cc61161a9574a730247548d4566c4fff0af1df",
+    "chat-llm.h": "fc98af0675dfa833eaa77ecac321a77ff1c4d3d8b252a7c685bd1c3459a1683b",
+    "aflnet.h": "c3dceb13b6e80dc5e8969bc2d57b861bc6655138332b5d5df21e5a01bca4f715",
+    "config.h": "c8bfa8d3e1f78bd11b9460f9ccfa609b4d09132013d272e738c5c1ccbace4e6a",
+    "types.h": "6cb9d023a25122bc457e9863ded211ae120db9337ae010720718673d2f576006",
+    "alloc-inl.h": "4ab62526760459a2f13de1a5d81d12df2a518ac5614e2c95936d3e4f9a93b97a",
+    "Makefile": "38e8be34a77691a3152309a327a875ee93a35e89c38a399ae361ac4a9a216c79",
+    "llvm_mode/Makefile": "a2ed53ea3d6a0c892353e3a50323f936bea0a4ffd14690db0611c5a7234d53a4"
+  },
+  "binary_sha256": {
+    "afl-fuzz": "93b515ad6e0b055b3a2177cff4baae6316dd8ef39b9fbd58ec700d8dfa670bee",
+    "aflnet-replay": "514e183df9de13d8c921cccf921b4ccec8df04eefcfffb5bf90a634188e4db1d",
+    "aflnet-client": "65b292d6009eef4c806804635b60785bfec5aef197f5855118a6536e85829c19",
+    "afl-clang-fast": "58389fc0762d643dbd47290ee45401293a9a90f820b3e93cf41f2a48084e37bd",
+    "afl-llvm-pass.so": "6c36264a612926dda5a292fa81c6525a766f15b032760533ee6d26de679fa732",
+    "afl-llvm-rt.o": "f2bfca83c081afd35f4fa831f8950128f4aba7d62b813bc447f2e0db97d3a613",
+    "afl-llvm-rt-state-tracer.o": "6a17a23c4f786eaefc9eb6a8628bf47d39643170ff9df91c2b2f8fd00ac569f3"
+  },
+  "clang": "Ubuntu clang version 18.1.3 (1ubuntu1)\nTarget: x86_64-pc-linux-gnu\nThread model: posix\nInstalledDir: /usr/bin\n",
+  "llvm_config": "18.1.3\n"
+}

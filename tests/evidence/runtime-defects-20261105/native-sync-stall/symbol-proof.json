@@ -1,0 +1,22 @@
+{
+  "native": {
+    "symbols_sha256": "299f9b822be3a98edf23d7ec5b8e0f7007357a2b03919b14718773d1afc00556",
+    "excluded_symbols_absent": [
+      "discarded_fuzzer_main",
+      "chat_with_llm",
+      "curl_easy_perform",
+      "run_target",
+      "send_over_network"
+    ]
+  },
+  "sanitized": {
+    "symbols_sha256": "a159385a2c14a92771478e365845293434406ed0ce7283dcb643d69fd86b600d",
+    "excluded_symbols_absent": [
+      "discarded_fuzzer_main",
+      "chat_with_llm",
+      "curl_easy_perform",
+      "run_target",
+      "send_over_network"
+    ]
+  }
+}
