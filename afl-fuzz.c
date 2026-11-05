@@ -57,6 +57,7 @@
 #include <dlfcn.h>
 #include <sched.h>
 #include <libgen.h>
+#include <limits.h>
 
 #include <sys/wait.h>
 #include <sys/time.h>
@@ -488,6 +489,20 @@ khash_t(hms) *khms_states;
 //If M3 is empty, M2_next point to the end of the kl_messages linked list
 kliter_t(lms) *M2_prev, *M2_next;
 
+/* A synchronized case is one immutable peer snapshot. Execution can send a
+   different prefix on each rerun; persistence still uses the full snapshot. */
+static u32 sync_case_message_count;
+
+static u32 queued_message_limit(void) {
+  return sync_case_message_count ? sync_case_message_count : messages_sent;
+}
+
+static void clear_message_context(void) {
+  if (kl_messages) delete_kl_messages(kl_messages);
+  kl_messages = NULL;
+  M2_prev = M2_next = NULL;
+}
+
 //Function pointers pointing to Protocol-specific functions
 unsigned int* (*extract_response_codes)(unsigned char* buf, unsigned int buf_size, unsigned int* state_count_ref) = extract_response_state_tracer;
 region_t* (*extract_requests)(unsigned char* buf, unsigned int buf_size, unsigned int* region_count_ref) = extract_requests_generic;
@@ -496,6 +511,17 @@ region_t* (*extract_requests)(unsigned char* buf, unsigned int buf_size, unsigne
 u32 uninteresting_times = 0;
 /* Track how much times we ask for breaking coverage plateau */
 u32 chat_times = 0;
+
+/* Count logical stall requests only when a usable prompt is dispatched. A
+   failed API attempt consumes its slot; missing history or a failed prompt
+   construction does not. Transport retries remain inside chat_with_llm. */
+static char *request_stall_chat(const char *history, char *prompt) {
+  if (!history || !*history || !prompt || !*prompt ||
+      chat_times >= CHATTING_THRESHOLD) return NULL;
+  chat_times++;
+  uninteresting_times = 0;
+  return chat_with_llm(prompt, "turbo", STALL_RETRIES, 1.5);
+}
 
 // Patterns generated from the Language Model
 klist_t(rang) * protocol_patterns;
@@ -2369,7 +2395,8 @@ static void add_to_queue(u8* fname, u32 len, u8 passed_det) {
 
   } else if (corpus_read_or_sync != 1) {
     //Convert the linked list kl_messages to regions
-    q->regions = convert_kl_messages_to_regions(kl_messages, &q->region_count, messages_sent);
+    q->regions = convert_kl_messages_to_regions(kl_messages, &q->region_count,
+                                                queued_message_limit());
   }
 
   /* save the regions' information to file for debugging purpose (initial seeds are saved in pivot_inputs) */
@@ -3068,7 +3095,7 @@ void init_ipsm(char** argv) {
     if (state_aware_mode) update_state_aware_variables(q, 1, argv);
 
     /* AFLNet delete the kl_messages */
-    delete_kl_messages(kl_messages);
+    clear_message_context();
 
     if (stop_soon) break;
 
@@ -4949,11 +4976,11 @@ static void perform_dry_run(char** argv) {
 
     /* save the seed to file for replaying */
     u8 *fn_replay = alloc_printf("%s/replayable-queue/%s", out_dir, basename(q->fname));
-    save_kl_messages_to_file(kl_messages, fn_replay, 1, messages_sent);
+    save_kl_messages_to_file(kl_messages, fn_replay, 1, queued_message_limit());
     ck_free(fn_replay);
 
     /* AFLNet delete the kl_messages */
-    delete_kl_messages(kl_messages);
+    clear_message_context();
 
     if (stop_soon) return;
 
@@ -5806,7 +5833,7 @@ static u8 save_if_interesting(char** argv, void* mem, u32 len, u8 fault) {
 
 #endif /* ^!SIMPLE_FILES */
 
-    u32 full_len = save_kl_messages_to_file(kl_messages, fn, 0, messages_sent);
+    u32 full_len = save_kl_messages_to_file(kl_messages, fn, 0, queued_message_limit());
 
     /* We use the actual length of all messages (full_len), not the len of the mutated message subsequence (len)*/
     add_to_queue(fn, full_len, 0);
@@ -5819,7 +5846,7 @@ static u8 save_if_interesting(char** argv, void* mem, u32 len, u8 fault) {
 
     /* save the seed to file for replaying */
     u8 *fn_replay = alloc_printf("%s/replayable-queue/%s", out_dir, basename(queue_top->fname));
-    save_kl_messages_to_file(kl_messages, fn_replay, 1, messages_sent);
+    save_kl_messages_to_file(kl_messages, fn_replay, 1, queued_message_limit());
     ck_free(fn_replay);
 
     if (hnb == 2) {
@@ -5965,7 +5992,7 @@ keep_as_crash:
   /* If we're here, we apparently want to save the crash or hang
      test case, too. */
 
-  save_kl_messages_to_file(kl_messages, fn, 1, messages_sent);
+  save_kl_messages_to_file(kl_messages, fn, 1, queued_message_limit());
 
   /*fd = open(fn, O_WRONLY | O_CREAT | O_EXCL, 0600);
   if (fd < 0) PFATAL("Unable to create '%s'", fn);
@@ -7976,7 +8003,6 @@ AFLNET_REGIONS_SELECTION:;
 
   if (protocol_selected && protocol_name && uninteresting_times >= UNINTERESTING_THRESHOLD && chat_times < CHATTING_THRESHOLD)
   {
-    uninteresting_times = 0;
     // Fuzzing is stalled - ask LLM for help by taking the current sequence and if it has a prefix,
     // ask the LLM to generate a possibly correct next message
     u32 *response_bytes_temp = NULL;
@@ -7987,8 +8013,6 @@ AFLNET_REGIONS_SELECTION:;
     char **responses_temp = get_responses_from_file((u8 *)response_fname, &response_bytes_temp, &response_count, &buffer_len);
     if (responses_temp != NULL)
     {
-      chat_times++;
-
       char *history = NULL;
       u32 history_len = 0;
       char *examples = NULL;
@@ -8069,6 +8093,7 @@ AFLNET_REGIONS_SELECTION:;
 
       if (!empty)
       {
+        if (!history_len) goto free_stall;
         history = ck_realloc(history, history_len + 1);
         history[history_len] = '\0';
 
@@ -8104,7 +8129,7 @@ AFLNET_REGIONS_SELECTION:;
         if (!stall_prompt)
           goto free_stall;
 
-        stall_response = chat_with_llm(stall_prompt, "turbo", STALL_RETRIES, 1.5);
+        stall_response = request_stall_chat(history, stall_prompt);
 
         {
           char *stall_prompt_path = alloc_printf("%s/stall-interactions/prompt-%d", out_dir, chat_times);
@@ -8164,7 +8189,7 @@ AFLNET_REGIONS_SELECTION:;
             ck_free(responses_temp);
             if (response_bytes_temp) ck_free(response_bytes_temp);
 
-            delete_kl_messages(kl_messages);
+            clear_message_context();
 
             return ret_val;
           }
@@ -8173,7 +8198,7 @@ AFLNET_REGIONS_SELECTION:;
 
           /* Stalled probe did not trigger early exit; restore kl_messages from queue_cur so subsequent
              mutation stages operate on the original test case matching queue_cur->regions */
-          delete_kl_messages(kl_messages);
+          clear_message_context();
           kl_messages = construct_kl_messages(queue_cur->fname, queue_cur->regions, queue_cur->region_count);
 
           M2_prev = NULL;
@@ -10170,7 +10195,7 @@ abandon_entry:
   ck_free(out_buf);
   ck_free(eff_map);
 
-  delete_kl_messages(kl_messages);
+  clear_message_context();
 
   ck_free(mutated_regions);
   mutated_regions = NULL;
@@ -10181,6 +10206,86 @@ abandon_entry:
 
 #undef FLIP_BIT
 
+}
+
+
+/* Import a validated peer snapshot with its own live network message list.
+   The callback owns no buffers and runs synchronously through calibration and
+   saving. All source bytes and boundaries remain stable until it returns. */
+typedef u8 (*sync_case_callback)(const u8 *raw, u32 len, void *context);
+
+static u8 import_sync_case(const char *path, sync_case_callback callback,
+                           void *context) {
+  u8 *raw = NULL;
+  u32 length = 0, count = 0;
+  region_t *parts = NULL;
+  int error;
+  if (!path || !callback) { errno = EINVAL; return 0; }
+  if (kl_messages || M2_prev || M2_next || sync_case_message_count) {
+    errno = EBUSY;
+    return 0;
+  }
+  /* Peer queues are raw irrespective of the initial corpus's -I setting. */
+  if (!read_pivot_file(path, MAX_FILE, &raw, &length)) return 0;
+  if (!find_pivot_companion(path, raw, length, &parts, &count)) {
+    error = errno;
+    ck_free(raw);
+    errno = error;
+    return 0;
+  }
+
+  kl_messages = kl_init(lms);
+  for (u32 i = 0; i < count; i++) {
+    u32 n = parts[i].end_byte - parts[i].start_byte + 1;
+    message_t *message = ck_alloc(sizeof(*message));
+    message->msize = n;
+    if (n) {
+      message->mdata = ck_alloc(n);
+      memcpy(message->mdata, raw + parts[i].start_byte, n);
+    }
+    *kl_pushp(lms, kl_messages) = message;
+  }
+  M2_prev = NULL;
+  M2_next = kl_end(kl_messages);
+  u8 previous_corpus_flag = corpus_read_or_sync;
+  u32 previous_messages_sent = messages_sent;
+  corpus_read_or_sync = 0;
+  sync_case_message_count = count;
+  messages_sent = 0;
+  u8 completed = callback(raw, length, context);
+  error = errno;
+  clear_message_context();
+  sync_case_message_count = 0;
+  corpus_read_or_sync = previous_corpus_flag;
+  messages_sent = previous_messages_sent;
+  ck_free(raw);
+  ck_free(parts);
+  errno = error;
+  return completed;
+}
+
+/* readdir has no ordering guarantee. A later completed id must not advance
+   the checkpoint past an earlier case whose companion is still being saved. */
+static void record_sync_result(u32 id, u8 completed, u32 *next, u32 *retry) {
+  if (!completed || id == UINT_MAX) {
+    if (id < *retry) *retry = id;
+  } else if (id >= *next) *next = id + 1;
+}
+
+struct sync_run_context {
+  char **argv;
+  u8 *party;
+};
+
+static u8 execute_sync_case(const u8 *raw, u32 length, void *opaque) {
+  struct sync_run_context *context = opaque;
+  write_to_testcase((void *)raw, length);
+  u8 fault = run_target(context->argv, exec_tmout, afl_fsrv);
+  if (stop_soon) return 0;
+  syncing_party = context->party;
+  queued_imported += save_if_interesting(context->argv, (void *)raw, length, fault);
+  syncing_party = NULL;
+  return !stop_soon;
 }
 
 
@@ -10207,7 +10312,7 @@ static void sync_fuzzers(char** argv) {
     DIR* qd;
     struct dirent* qd_ent;
     u8 *qd_path, *qd_synced_path;
-    u32 min_accept = 0, next_min_accept;
+    u32 min_accept = 0, next_min_accept, retry_from = UINT_MAX;
 
     s32 id_fd;
 
@@ -10232,8 +10337,10 @@ static void sync_fuzzers(char** argv) {
 
     if (id_fd < 0) PFATAL("Unable to create '%s'", qd_synced_path);
 
-    if (read(id_fd, &min_accept, sizeof(u32)) > 0)
-      lseek(id_fd, 0, SEEK_SET);
+    ssize_t checkpoint_bytes = read(id_fd, &min_accept, sizeof(u32));
+    if (checkpoint_bytes < 0) PFATAL("Unable to read '%s'", qd_synced_path);
+    if (checkpoint_bytes != sizeof(u32)) min_accept = 0;
+    if (lseek(id_fd, 0, SEEK_SET) < 0) PFATAL("Unable to seek '%s'", qd_synced_path);
 
     next_min_accept = min_accept;
 
@@ -10250,76 +10357,30 @@ static void sync_fuzzers(char** argv) {
     while ((qd_ent = readdir(qd))) {
 
       u8* path;
-      s32 fd;
-      struct stat st;
 
       if (qd_ent->d_name[0] == '.' ||
           sscanf(qd_ent->d_name, CASE_PREFIX "%06u", &syncing_case) != 1 ||
           syncing_case < min_accept) continue;
 
-      /* OK, sounds like a new one. Let's give it a try. */
-
-      if (syncing_case >= next_min_accept)
-        next_min_accept = syncing_case + 1;
-
       path = alloc_printf("%s/%s", qd_path, qd_ent->d_name);
-
-      /* Allow this to fail in case the other fuzzer is resuming or so... */
-
-      fd = open(path, O_RDONLY);
-
-      if (fd < 0) {
-         ck_free(path);
-         continue;
-      }
-
-      if (fstat(fd, &st)) PFATAL("fstat() failed");
-
-      /* Ignore zero-sized or oversized files. */
-
-      if (st.st_size && st.st_size <= MAX_FILE) {
-
-        u8  fault;
-        u8* mem = mmap(0, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
-
-        if (mem == MAP_FAILED) PFATAL("Unable to mmap '%s'", path);
-
-        /* See what happens. We rely on save_if_interesting() to catch major
-           errors and save the test case. */
-
-        write_to_testcase(mem, st.st_size);
-
-        fault = run_target(argv, exec_tmout, afl_fsrv);
-
-        if (stop_soon) return;
-
-        /* AFLNet: set this flag to enable request extractions while adding new seed to the queue */
-        corpus_read_or_sync = 2;
-
-        syncing_party = sd_ent->d_name;
-        queued_imported += save_if_interesting(argv, mem, st.st_size, fault);
-        syncing_party = 0;
-
-        /* AFLNet: unset this flag to disable request extractions while adding new seed to the queue */
-        corpus_read_or_sync = 0;
-
-        munmap(mem, st.st_size);
-
-        if (!(stage_cur++ % stats_update_freq)) show_stats();
-
-      }
-
+      struct sync_run_context context = {argv, (u8 *)sd_ent->d_name};
+      u8 completed = import_sync_case((char *)path, execute_sync_case, &context);
+      record_sync_result(syncing_case, completed, &next_min_accept, &retry_from);
       ck_free(path);
-      close(fd);
-
+      if (stop_soon) break;
+      if (completed && !(stage_cur++ % stats_update_freq)) show_stats();
     }
 
-    ck_write(id_fd, &next_min_accept, sizeof(u32), qd_synced_path);
+    if (retry_from < next_min_accept) next_min_accept = retry_from;
+    if (!atomic_write_file((char *)qd_synced_path, (u8 *)&next_min_accept,
+                           sizeof(next_min_accept)))
+      PFATAL("Unable to save synchronization checkpoint '%s'", qd_synced_path);
 
     close(id_fd);
     closedir(qd);
     ck_free(qd_path);
     ck_free(qd_synced_path);
+    if (stop_soon) break;
 
   }
 

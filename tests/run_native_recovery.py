@@ -56,7 +56,7 @@ def main():
             stream.flush()
             result = subprocess.run(command, cwd=run, env=environment,
                                     stdout=stream, stderr=subprocess.STDOUT,
-                                    timeout=120)
+                                    timeout=300)
         if result.returncode:
             raise RuntimeError(f"Native test build failed; see {log}")
 

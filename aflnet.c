@@ -1586,8 +1586,7 @@ u32 save_kl_messages_to_file(klist_t(lms) *kl_messages, u8 *fname, u8 replay_ena
 		  mem = (u8 *)ck_realloc(mem, 4 + len + message_size);
 
       //Save packet size first
-      u32 *psize = (u32*)&mem[len];
-      *psize = message_size;
+      memcpy(&mem[len], &message_size, sizeof(message_size));
 
       //Save packet content
       if (message_size > 0 && kl_val(it)->mdata) {
