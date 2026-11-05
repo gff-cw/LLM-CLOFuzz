@@ -702,194 +702,299 @@ char *construct_prompt_for_requests_to_states(const char *protocol_name,
     return prompt;
 }
 
-void extract_message_grammars(char *answers, klist_t(gram) * grammar_list)
+/* Limits apply to individual grammar data, rather than relying on model output
+   length or fixed stack arrays. Pattern length excludes its terminating NUL. */
+#define GRAMMAR_RESPONSE_LIMIT (1024U * 1024U)
+#define GRAMMAR_JSON_LIMIT (256U * 1024U)
+#define GRAMMAR_PATTERN_LIMIT (64U * 1024U)
+
+static json_object *parse_grammar_json(const char *text, size_t length)
 {
-
-    char *ptr = answers;
-    int len = strlen(answers);
-
-    while (ptr < answers + len)
+    if (!text || !length || length > GRAMMAR_JSON_LIMIT)
     {
-        char *start = strchr(ptr, '[');
-        if (start == NULL)
-            break;
-        char *end = strchr(start, ']');
-        if (end == NULL)
-            break;
-        int count = end - start + 1;
-        char *temp = (char *)ck_alloc(count + 1);
-        strncpy(temp, start, count);
-        temp[count] = '\0';
-        ptr = end + 1;
-
-        // conver temp to json object and save it to the list
-        json_object *jobj = json_tokener_parse(temp);
-        *kl_pushp(gram, grammar_list) = jobj;
-
-        // printf("%s\n", temp);
+        errno = length > GRAMMAR_JSON_LIMIT ? E2BIG : EINVAL;
+        return NULL;
     }
+    /* json-c STRICT still accepts raw control bytes in strings on some
+       releases. JSON requires them to be escaped, including raw newlines. */
+    int quoted = 0, escaped = 0;
+    for (size_t i = 0; i < length; i++)
+    {
+        unsigned char byte = (unsigned char)text[i];
+        if (quoted)
+        {
+            if (byte < 32) { errno = EINVAL; return NULL; }
+            if (escaped) escaped = 0;
+            else if (byte == '\\') escaped = 1;
+            else if (byte == '"') quoted = 0;
+        }
+        else if (byte == '"') quoted = 1;
+    }
+    char *copy = malloc(length + 1);
+    if (!copy)
+        return NULL;
+    memcpy(copy, text, length);
+    copy[length] = '\0';
+
+    json_tokener *tokener = json_tokener_new_ex(64);
+    if (!tokener)
+    {
+        free(copy);
+        errno = ENOMEM;
+        return NULL;
+    }
+    json_tokener_set_flags(tokener, JSON_TOKENER_STRICT);
+    json_object *value = json_tokener_parse_ex(tokener, copy, (int)length + 1);
+    enum json_tokener_error error = json_tokener_get_error(tokener);
+    size_t consumed = json_tokener_get_parse_end(tokener);
+    while (consumed < length && isspace((unsigned char)copy[consumed]))
+        consumed++;
+    if (error != json_tokener_success || !value || consumed < length)
+    {
+        if (value) json_object_put(value);
+        value = NULL;
+        errno = EINVAL;
+    }
+    json_tokener_free(tokener);
+    free(copy);
+    return value;
 }
 
-int parse_pattern(pcre2_code *replacer, pcre2_match_data *match_data, const char *str, size_t len, char *pattern)
+static int is_message_grammar(json_object *value)
 {
-    strcat(pattern, "(?:");
-    // offset == 3;
-    int rc = pcre2_match(replacer, str, len, 0, 0, match_data, NULL);
-
-    if (rc < 0)
-    {
-        switch (rc)
-        {
-        case PCRE2_ERROR_NOMATCH:
-            // printf("No match for %s!\n", str);
-            break;
-        default:
-            // printf("Matching error %d\n", rc);
-            break;
-        }
-        pcre2_match_data_free(match_data);
-        pcre2_code_free(replacer);
+    if (!value || !json_object_is_type(value, json_type_array) ||
+        json_object_array_length(value) == 0)
         return 0;
-    }
-    // printf("RC is %d\n",rc);
-    PCRE2_SIZE *ovector = pcre2_get_ovector_pointer(match_data);
-    // for(int i = 1; i<rc;i++){
-    //     printf("Start %d, end %d\n",ovector[2*i],ovector[2*i+1]);
-    // }
-
-    if (rc == 4)
-    { // matched the first option - there is a special value
-        strncat(pattern, str + ovector[2], ovector[3] - ovector[2]);
-        // offset += ovector[3] - ovector[2];
-
-        strcat(pattern, "(.*)");
-        // offset += 3;
-
-        strncat(pattern, str + ovector[6], ovector[7] - ovector[6]);
-        // offset += ovector[7] - ovector[6];
-    }
-    else if (rc == 5)
+    for (size_t i = 0; i < json_object_array_length(value); i++)
     {
-        // matched the second option - there is no special value
-        strncat(pattern, str + ovector[8], ovector[9] - ovector[8]);
-        // offset += ovector[9] - ovector[8];
+        json_object *part = json_object_array_get_idx(value, i);
+        if (!part || !json_object_is_type(part, json_type_string))
+            return 0;
+        const char *text = json_object_get_string(part);
+        size_t length = (size_t)json_object_get_string_len(part);
+        /* Downstream hash keys are C strings, so embedded NUL is not lossless. */
+        if (!text || strlen(text) != length || (i == 0 && length == 0))
+            return 0;
     }
-    else
-    {
-        FATAL("Regex groups were updated but not the handling code.");
-    }
-    strcat(pattern, ")");
     return 1;
 }
 
-// If successful, puts 2 patterns in the patterns array, the first one is the header, the second is the fields
-// Else returns an array with the first element being NULL
-char *extract_message_pattern(const char *header_str, khash_t(field_table) * field_table, pcre2_code **patterns, int debug_file, const char *debug_file_name)
+void extract_message_grammars(char *answers, klist_t(gram) *grammar_list)
 {
-    int errornumber;
-    size_t erroroffset;
-    char header_pattern[128] = {0};
-    char fields_pattern[1024] = {0};
-    pcre2_code *replacer = pcre2_compile("(?:(.*)(?:<<(.*)>>)(.*))|(.+)", PCRE2_ZERO_TERMINATED, PCRE2_DOTALL, &errornumber, &erroroffset, NULL);
-    pcre2_match_data *match_data = pcre2_match_data_create_from_pattern(replacer, NULL);
-    char *message_type = NULL;
-    // int offset = 0;
-    /**
-     * Example output
-     * patterns[0] = (?:PLAY (.*)\r\n)
-     * patterns[1] = (?|(?:CSeq: (.*)\r\n)|(?:User-Agent: (.*)\r\n)|(?:Range: (.*)\r\n)|(?:\r\n))
-     */
-
+    if (!answers || !grammar_list)
+        return;
+    size_t length = strnlen(answers, GRAMMAR_RESPONSE_LIMIT + 1);
+    if (length > GRAMMAR_RESPONSE_LIMIT)
     {
-        // We use the string in such an escaped format for easier debugging as the regex library supports parsing it properly
-        // The string contains quotations so they are ignored
-        header_str++;
-
-        int message_len = 0;
-        while (header_str[message_len] != '\0' 
-        && header_str[message_len] != ' ' 
-        && header_str[message_len] != '\n' 
-        && header_str[message_len] != '\r' 
-        && header_str[message_len] != '\\' )
-        {
-            message_len++;
-        }
-        message_type = ck_alloc(message_len + 1);
-        memcpy(message_type, header_str, message_len);
-        message_type[message_len] = '\0';
-
-        size_t len = strlen(header_str) - 1;
-        strcat(header_pattern, "^"); // Ensure that it captures the start of the string
-        if (!parse_pattern(replacer, match_data, header_str, len, header_pattern))
-        {
-            patterns[0] = NULL;
-            return NULL;
-        }
+        errno = E2BIG;
+        return;
     }
 
-    int first = 1;
-
-    strcat(fields_pattern, "(?|");
-    for (khiter_t field_t_iter = kh_begin(field_table); field_t_iter != kh_end(field_table); ++field_t_iter)
+    const char *cursor = answers;
+    const char *limit = answers + length;
+    while (cursor < limit)
     {
-        if (!kh_exist(field_table, field_t_iter) || kh_value(field_table, field_t_iter) < (TEMPLATE_CONSISTENCY_COUNT / 2 + (TEMPLATE_CONSISTENCY_COUNT % 2)))
-            continue;
-
-        if (!first)
+        const char *start = memchr(cursor, '[', (size_t)(limit - cursor));
+        if (!start) break;
+        const char *end = NULL;
+        size_t depth = 0;
+        int quoted = 0, escaped = 0;
+        for (const char *at = start; at < limit; at++)
         {
-            strcat(fields_pattern, "|");
+            if (quoted)
+            {
+                if (escaped) escaped = 0;
+                else if (*at == '\\') escaped = 1;
+                else if (*at == '"') quoted = 0;
+            }
+            else if (*at == '"') quoted = 1;
+            else if (*at == '[') depth++;
+            else if (*at == ']' && --depth == 0)
+            {
+                end = at + 1;
+                break;
+            }
+        }
+        /* An unfinished candidate has no trustworthy boundary to resynchronize. */
+        if (!end) break;
+        cursor = end;
+        json_object *value = parse_grammar_json(start, (size_t)(end - start));
+        if (!is_message_grammar(value))
+        {
+            if (value) json_object_put(value);
+            continue;
+        }
+        /* The caller owns accepted JSON objects. Do not release them here:
+           setup_llm_grammars borrows their strings as consistency-table keys. */
+        *kl_pushp(gram, grammar_list) = value;
+    }
+}
+
+struct grammar_pattern_buffer
+{
+    char *data;
+    size_t length;
+    size_t capacity;
+};
+
+static int append_grammar_pattern(struct grammar_pattern_buffer *buffer,
+                                  const char *text, size_t length)
+{
+    if (length > GRAMMAR_PATTERN_LIMIT - buffer->length)
+    {
+        errno = E2BIG;
+        return 0;
+    }
+    size_t needed = buffer->length + length + 1;
+    if (needed > buffer->capacity)
+    {
+        size_t capacity = buffer->capacity ? buffer->capacity : 128;
+        while (capacity < needed)
+            capacity = capacity > (GRAMMAR_PATTERN_LIMIT + 1) / 2 ?
+                       GRAMMAR_PATTERN_LIMIT + 1 : capacity * 2;
+        char *grown = realloc(buffer->data, capacity);
+        if (!grown)
+            return 0;
+        buffer->data = grown;
+        buffer->capacity = capacity;
+    }
+    if (length) memcpy(buffer->data + buffer->length, text, length);
+    buffer->length += length;
+    buffer->data[buffer->length] = '\0';
+    return 1;
+}
+
+static int append_grammar_literal(struct grammar_pattern_buffer *buffer,
+                                  const char *text, size_t length)
+{
+    static const char metacharacters[] = "\\.^$|()[]{}*+?";
+    for (size_t i = 0; i < length; i++)
+    {
+        unsigned char byte = (unsigned char)text[i];
+        if (byte < 32 || byte == 127)
+        {
+            static const char hex[] = "0123456789abcdef";
+            char escape[] = {'\\', 'x', hex[byte >> 4], hex[byte & 15]};
+            if (!append_grammar_pattern(buffer, escape, sizeof(escape))) return 0;
         }
         else
         {
-            first = 0;
+            if (strchr(metacharacters, byte) &&
+                !append_grammar_pattern(buffer, "\\", 1)) return 0;
+            if (!append_grammar_pattern(buffer, text + i, 1)) return 0;
         }
+    }
+    return 1;
+}
 
-        json_object *field_v = json_object_new_string(kh_key(field_table, field_t_iter));
-        const char *str = json_object_to_json_string(field_v);
-        // We use the string in such an escaped format for easier debugging as the regex library supports parsing it properly
-        // The string contains quotations so they are ignored
-        str++;
-        size_t len = strlen(str) - 1;
-        int matched = parse_pattern(replacer, match_data, str, len, fields_pattern);
-        json_object_put(field_v);
-        if (!matched)
+static int append_grammar_template(struct grammar_pattern_buffer *buffer,
+                                   const char *text)
+{
+    if (!text) { errno = EINVAL; return 0; }
+    size_t length = strnlen(text, GRAMMAR_JSON_LIMIT + 1);
+    if (length > GRAMMAR_JSON_LIMIT)
+    {
+        errno = E2BIG;
+        return 0;
+    }
+    if (!append_grammar_pattern(buffer, "(?:", 3)) return 0;
+    const char *cursor = text;
+    while (*cursor)
+    {
+        const char *open = strstr(cursor, "<<");
+        const char *close = open ? strstr(open + 2, ">>") : NULL;
+        if (!open || !close || close == open + 2)
         {
-            patterns[0] = NULL;
-            return NULL;
+            if (!append_grammar_literal(buffer, cursor, strlen(cursor))) return 0;
+            break;
         }
+        if (!append_grammar_literal(buffer, cursor, (size_t)(open - cursor)) ||
+            !append_grammar_pattern(buffer, "(.*)", 4)) return 0;
+        cursor = close + 2;
     }
+    return append_grammar_pattern(buffer, ")", 1);
+}
 
-    strcat(fields_pattern, ")");
+/* header_str is a serialized JSON string; field_table keys are already-decoded
+   strings. Only <<...>> placeholders create capture groups. Literal fragments
+   are escaped once for PCRE, keeping quotes, brackets, backslashes and CR/LF. */
+char *extract_message_pattern(const char *header_str, khash_t(field_table) *field_table,
+                              pcre2_code **patterns, int debug_file,
+                              const char *debug_file_name)
+{
+    if (!patterns) { errno = EINVAL; return NULL; }
+    patterns[0] = patterns[1] = NULL;
+    if (!header_str || !field_table) { errno = EINVAL; return NULL; }
 
-    if (first == 1)
-    { // convert from (?|) to (.+) when the group is empty
-        fields_pattern[1] = '.';
-        fields_pattern[2] = '+';
-    }
+    size_t encoded_length = strnlen(header_str, GRAMMAR_JSON_LIMIT + 1);
+    json_object *header = parse_grammar_json(header_str, encoded_length);
+    struct grammar_pattern_buffer header_pattern = {0}, fields_pattern = {0};
+    pcre2_code *header_code = NULL, *fields_code = NULL;
+    char *message_type = NULL;
+    if (!header) goto fail;
+    if (!json_object_is_type(header, json_type_string)) { errno = EINVAL; goto fail; }
+    const char *text = json_object_get_string(header);
+    size_t text_length = (size_t)json_object_get_string_len(header);
+    if (!text || !text_length || strlen(text) != text_length) { errno = EINVAL; goto fail; }
+    size_t message_length = strcspn(text, " \t\r\n\\");
+    if (!message_length) { errno = EINVAL; goto fail; }
 
-    pcre2_match_data_free(match_data);
-    pcre2_code_free(replacer);
-    printf("Header pattern is %s\n", header_pattern);
-    printf("Fields pattern is %s\n", fields_pattern);
-
-    if (debug_file != -1 && debug_file_name != NULL)
+    if (!append_grammar_pattern(&header_pattern, "^", 1) ||
+        !append_grammar_template(&header_pattern, text) ||
+        !append_grammar_pattern(&fields_pattern, "(?|", 3)) goto fail;
+    int first = 1;
+    for (khiter_t it = kh_begin(field_table); it != kh_end(field_table); it++)
     {
-        ck_write(debug_file, header_pattern, strlen(header_pattern), debug_file_name);
+        if (!kh_exist(field_table, it) ||
+            kh_value(field_table, it) < (TEMPLATE_CONSISTENCY_COUNT + 1) / 2)
+            continue;
+        if (!first && !append_grammar_pattern(&fields_pattern, "|", 1)) goto fail;
+        if (!append_grammar_template(&fields_pattern, kh_key(field_table, it))) goto fail;
+        first = 0;
+    }
+    /* No agreed fields: retain the original (.+) fallback. */
+    if (first)
+    {
+        fields_pattern.length = 0;
+        if (!append_grammar_pattern(&fields_pattern, "(.+)", 4)) goto fail;
+    }
+    else if (!append_grammar_pattern(&fields_pattern, ")", 1)) goto fail;
+
+    int errornumber;
+    PCRE2_SIZE erroroffset;
+    header_code = pcre2_compile((PCRE2_SPTR)header_pattern.data, header_pattern.length,
+                               0, &errornumber, &erroroffset, NULL);
+    if (!header_code) { errno = EINVAL; goto fail; }
+    /* JIT is optional. Failed JIT leaves valid interpreted matching available. */
+    (void)pcre2_jit_compile(header_code, PCRE2_JIT_COMPLETE);
+    fields_code = pcre2_compile((PCRE2_SPTR)fields_pattern.data, fields_pattern.length,
+                               0, &errornumber, &erroroffset, NULL);
+    if (!fields_code) { errno = EINVAL; goto fail; }
+    (void)pcre2_jit_compile(fields_code, PCRE2_JIT_COMPLETE);
+
+    message_type = ck_alloc(message_length + 1);
+    memcpy(message_type, text, message_length);
+    message_type[message_length] = '\0';
+    if (debug_file >= 0 && debug_file_name)
+    {
+        ck_write(debug_file, header_pattern.data, header_pattern.length, debug_file_name);
         ck_write(debug_file, "\n", 1, debug_file_name);
-        ck_write(debug_file, fields_pattern, strlen(fields_pattern), debug_file_name);
+        ck_write(debug_file, fields_pattern.data, fields_pattern.length, debug_file_name);
     }
-
-    {
-        pcre2_code *p = pcre2_compile(header_pattern, PCRE2_ZERO_TERMINATED, 0, &errornumber, &erroroffset, NULL);
-        pcre2_jit_compile(p, PCRE2_JIT_COMPLETE);
-        patterns[0] = p;
-    }
-    {
-        pcre2_code *p = pcre2_compile(fields_pattern, PCRE2_ZERO_TERMINATED, 0, &errornumber, &erroroffset, NULL);
-        pcre2_jit_compile(p, PCRE2_JIT_COMPLETE);
-        patterns[1] = p;
-    }
+    patterns[0] = header_code;
+    patterns[1] = fields_code;
+    json_object_put(header);
+    free(header_pattern.data);
+    free(fields_pattern.data);
     return message_type;
+
+fail:
+    if (header_code) pcre2_code_free(header_code);
+    if (fields_code) pcre2_code_free(fields_code);
+    if (header) json_object_put(header);
+    free(header_pattern.data);
+    free(fields_pattern.data);
+    return NULL;
 }
 
 range_list starts_with(char *line, int length, pcre2_code *pattern)
