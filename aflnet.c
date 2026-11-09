@@ -857,6 +857,7 @@ region_t* extract_requests_iec104(unsigned char* buf, unsigned int buf_size, uns
     regions = (region_t *)ck_realloc(regions, region_count * sizeof(region_t));
     regions[region_count - 1].start_byte = byte_count;
     regions[region_count - 1].end_byte = byte_count + packet_len - 1;
+    regions[region_count - 1].modifiable = 0;
     regions[region_count - 1].state_sequence = NULL;
     regions[region_count - 1].state_count = 0;
 
@@ -869,6 +870,7 @@ region_t* extract_requests_iec104(unsigned char* buf, unsigned int buf_size, uns
     regions = (region_t *)ck_realloc(regions, region_count * sizeof(region_t));
     regions[region_count - 1].start_byte = byte_count;
     regions[region_count - 1].end_byte = buf_size - 1;
+    regions[region_count - 1].modifiable = 0;
     regions[region_count - 1].state_sequence = NULL;
     regions[region_count - 1].state_count = 0;
   }
@@ -898,6 +900,7 @@ region_t* extract_requests_iec61850(unsigned char* buf, unsigned int buf_size, u
     regions = (region_t *)ck_realloc(regions, region_count * sizeof(region_t));
     regions[region_count - 1].start_byte = byte_count;
     regions[region_count - 1].end_byte = byte_count + packet_len - 1;
+    regions[region_count - 1].modifiable = 0;
     regions[region_count - 1].state_sequence = NULL;
     regions[region_count - 1].state_count = 0;
 
@@ -910,6 +913,7 @@ region_t* extract_requests_iec61850(unsigned char* buf, unsigned int buf_size, u
     regions = (region_t *)ck_realloc(regions, region_count * sizeof(region_t));
     regions[region_count - 1].start_byte = byte_count;
     regions[region_count - 1].end_byte = buf_size - 1;
+    regions[region_count - 1].modifiable = 0;
     regions[region_count - 1].state_sequence = NULL;
     regions[region_count - 1].state_count = 0;
   }
@@ -956,6 +960,7 @@ region_t* extract_requests_opcua(unsigned char* buf, unsigned int buf_size, unsi
     regions = (region_t *)ck_realloc(regions, region_count * sizeof(region_t));
     regions[region_count - 1].start_byte = byte_count;
     regions[region_count - 1].end_byte = byte_count + packet_len - 1;
+    regions[region_count - 1].modifiable = 0;
     regions[region_count - 1].state_sequence = NULL;
     regions[region_count - 1].state_count = 0;
 
@@ -968,6 +973,7 @@ region_t* extract_requests_opcua(unsigned char* buf, unsigned int buf_size, unsi
     regions = (region_t *)ck_realloc(regions, region_count * sizeof(region_t));
     regions[region_count - 1].start_byte = byte_count;
     regions[region_count - 1].end_byte = buf_size - 1;
+    regions[region_count - 1].modifiable = 0;
     regions[region_count - 1].state_sequence = NULL;
     regions[region_count - 1].state_count = 0;
   }
@@ -999,6 +1005,7 @@ region_t* extract_requests_enip(unsigned char* buf, unsigned int buf_size, unsig
     regions = (region_t *)ck_realloc(regions, region_count * sizeof(region_t));
     regions[region_count - 1].start_byte = byte_count;
     regions[region_count - 1].end_byte = byte_count + packet_len - 1;
+    regions[region_count - 1].modifiable = 0;
     regions[region_count - 1].state_sequence = NULL;
     regions[region_count - 1].state_count = 0;
 
@@ -1011,6 +1018,58 @@ region_t* extract_requests_enip(unsigned char* buf, unsigned int buf_size, unsig
     regions = (region_t *)ck_realloc(regions, region_count * sizeof(region_t));
     regions[region_count - 1].start_byte = byte_count;
     regions[region_count - 1].end_byte = buf_size - 1;
+    regions[region_count - 1].modifiable = 0;
+    regions[region_count - 1].state_sequence = NULL;
+    regions[region_count - 1].state_count = 0;
+  }
+
+  *region_count_ref = region_count;
+  return regions;
+}
+
+region_t* extract_requests_modbus(unsigned char* buf, unsigned int buf_size, unsigned int* region_count_ref)
+{
+  if (!region_count_ref) return NULL;
+  *region_count_ref = 0;
+  if (!buf || buf_size == 0) return NULL;
+
+  unsigned int byte_count = 0;
+  unsigned int region_count = 0;
+  region_t *regions = NULL;
+
+  while (byte_count < buf_size) {
+    if (buf_size - byte_count < 6) break;
+
+    /* Modbus TCP Protocol Identifier MUST be 0x0000 */
+    if (buf[byte_count + 2] != 0x00 || buf[byte_count + 3] != 0x00) break;
+
+    unsigned int length_field = ((unsigned int)buf[byte_count + 4] << 8) |
+                                 (unsigned int)buf[byte_count + 5];
+
+    /* Minimum length is 2 (Unit ID + Function code), max valid is 254 (ADU max 260) */
+    if (length_field < 2 || length_field > 254) break;
+
+    unsigned int packet_len = 6 + length_field;
+    if (packet_len > buf_size - byte_count) break;
+
+    region_count++;
+    regions = (region_t *)ck_realloc(regions, region_count * sizeof(region_t));
+    regions[region_count - 1].start_byte = byte_count;
+    regions[region_count - 1].end_byte = byte_count + packet_len - 1;
+    regions[region_count - 1].modifiable = 0;
+    regions[region_count - 1].state_sequence = NULL;
+    regions[region_count - 1].state_count = 0;
+
+    byte_count += packet_len;
+  }
+
+  /* Absorb any trailing or unparsed bytes into a final region */
+  if ((byte_count < buf_size) && (buf_size > 0)) {
+    region_count++;
+    regions = (region_t *)ck_realloc(regions, region_count * sizeof(region_t));
+    regions[region_count - 1].start_byte = byte_count;
+    regions[region_count - 1].end_byte = buf_size - 1;
+    regions[region_count - 1].modifiable = 0;
     regions[region_count - 1].state_sequence = NULL;
     regions[region_count - 1].state_count = 0;
   }
@@ -1996,7 +2055,69 @@ unsigned int* extract_response_codes_enip(unsigned char* buf, unsigned int buf_s
   return state_sequence;
 }
 
-// kl_messages manipulating functions
+unsigned int* extract_response_codes_modbus(unsigned char* buf, unsigned int buf_size, unsigned int* state_count_ref)
+{
+  if (!state_count_ref) return NULL;
+  if (!buf || buf_size == 0) {
+    *state_count_ref = 1;
+    unsigned int *state_sequence = (unsigned int *)ck_alloc(sizeof(unsigned int));
+    state_sequence[0] = 0;
+    return state_sequence;
+  }
+
+  unsigned int state_count = 1;
+  unsigned int *state_sequence = (unsigned int *)ck_alloc(sizeof(unsigned int));
+  state_sequence[0] = 0;
+  unsigned int byte_count = 0;
+
+  while (byte_count < buf_size) {
+    if (buf_size - byte_count < 6) break;
+
+    /* Modbus TCP Protocol Identifier must be 0x0000 */
+    if (buf[byte_count + 2] != 0x00 || buf[byte_count + 3] != 0x00) break;
+
+    unsigned int length_field = ((unsigned int)buf[byte_count + 4] << 8) |
+                                 (unsigned int)buf[byte_count + 5];
+
+    if (length_field < 2 || length_field > 254) break;
+
+    unsigned int packet_len = 6 + length_field;
+    if (packet_len > buf_size - byte_count) break;
+
+    unsigned char func_code = buf[byte_count + 7];
+    unsigned int code = 0;
+
+    if (func_code & 0x80) {
+      /* Exception response: (FuncCode << 8) | ExceptionCode (e.g. 0x8302) */
+      if (packet_len >= 9) {
+        unsigned char exception_code = buf[byte_count + 8];
+        code = ((unsigned int)func_code << 8) | (unsigned int)exception_code;
+      } else {
+        code = ((unsigned int)func_code << 8) | 0xFF;
+      }
+    } else if (func_code == 0x08 && packet_len >= 10) {
+      /* Diagnostics: expand with 2-byte sub-function code */
+      unsigned int sub_func = ((unsigned int)buf[byte_count + 8] << 8) |
+                               (unsigned int)buf[byte_count + 9];
+      code = (0x08 << 16) | sub_func;
+    } else {
+      /* Normal response: Function Code (e.g. 0x01, 0x03, 0x06, 0x10) */
+      code = (unsigned int)func_code;
+    }
+
+    if (code == 0) code = 0xEE00;
+
+    state_count++;
+    state_sequence = (unsigned int *)ck_realloc(state_sequence, state_count * sizeof(unsigned int));
+    if (state_sequence == NULL) PFATAL("Unable to allocate memory for Modbus state sequence");
+    state_sequence[state_count - 1] = code;
+
+    byte_count += packet_len;
+  }
+
+  *state_count_ref = state_count;
+  return state_sequence;
+}
 
 klist_t(lms) *construct_kl_messages(u8* fname, region_t *regions, u32 region_count)
 {

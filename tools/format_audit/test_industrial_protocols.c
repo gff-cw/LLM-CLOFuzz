@@ -892,11 +892,249 @@ static bool test_enip_empty_buffer(void) {
 }
 
 /* ========================================================================= */
+/* SUITE 5: Modbus TCP                                                       */
+/* ========================================================================= */
+
+/* T29: Single Read Holding Registers frame (FC 0x03) */
+static bool test_modbus_valid_single_read_holding_registers(void) {
+  g_tests_run++;
+  /* TxID=1, Proto=0, Len=6, Unit=1, FC=0x03, Addr=0, Qty=10 (12 bytes) */
+  uint8_t req[12] = {
+    0x00, 0x01,
+    0x00, 0x00,
+    0x00, 0x06,
+    0x01,
+    0x03,
+    0x00, 0x00,
+    0x00, 0x0A
+  };
+  unsigned int rc = 0, sc = 0;
+
+  region_t *regions = extract_requests_modbus(req, sizeof(req), &rc);
+  TEST_ASSERT(rc == 1, "Modbus FC 0x03 request count must be 1");
+  TEST_ASSERT(regions[0].start_byte == 0 && regions[0].end_byte == 11, "Region bounds mismatch");
+  TEST_ASSERT(validate_regions_partition(req, sizeof(req), regions, rc), "Partition failed");
+
+  /* Response: TxID=1, Proto=0, Len=5, Unit=1, FC=0x03, ByteCount=2, Data=0x1234 (11 bytes) */
+  uint8_t resp[11] = {
+    0x00, 0x01,
+    0x00, 0x00,
+    0x00, 0x05,
+    0x01,
+    0x03,
+    0x02,
+    0x12, 0x34
+  };
+
+  unsigned int *states = extract_response_codes_modbus(resp, sizeof(resp), &sc);
+  TEST_ASSERT(sc == 2, "State count must be 2 (state 0 + FC 0x03)");
+  TEST_ASSERT(states[0] == 0, "Initial state 0 required");
+  TEST_ASSERT(states[1] == 0x03, "State code must be 0x03");
+
+  if (regions) ck_free(regions);
+  if (states) ck_free(states);
+  g_tests_passed++;
+  return true;
+}
+
+/* T30: Single Write Single Register frame (FC 0x06) */
+static bool test_modbus_valid_single_write_single_register(void) {
+  g_tests_run++;
+  /* TxID=2, Proto=0, Len=6, Unit=1, FC=0x06, Addr=4, Value=0x1234 (12 bytes) */
+  uint8_t frame[12] = {
+    0x00, 0x02,
+    0x00, 0x00,
+    0x00, 0x06,
+    0x01,
+    0x06,
+    0x00, 0x04,
+    0x12, 0x34
+  };
+  unsigned int rc = 0, sc = 0;
+
+  region_t *regions = extract_requests_modbus(frame, sizeof(frame), &rc);
+  TEST_ASSERT(rc == 1, "Modbus FC 0x06 request count must be 1");
+  TEST_ASSERT(regions[0].start_byte == 0 && regions[0].end_byte == 11, "Region bounds mismatch");
+  TEST_ASSERT(validate_regions_partition(frame, sizeof(frame), regions, rc), "Partition failed");
+
+  unsigned int *states = extract_response_codes_modbus(frame, sizeof(frame), &sc);
+  TEST_ASSERT(sc == 2, "State count must be 2");
+  TEST_ASSERT(states[0] == 0, "Initial state 0 required");
+  TEST_ASSERT(states[1] == 0x06, "State code must be 0x06");
+
+  if (regions) ck_free(regions);
+  if (states) ck_free(states);
+  g_tests_passed++;
+  return true;
+}
+
+/* T31: Single Exception Response (FC 0x83, ExCode 0x02) */
+static bool test_modbus_valid_single_exception_response(void) {
+  g_tests_run++;
+  /* TxID=3, Proto=0, Len=3, Unit=1, FC=0x83, ExCode=0x02 (9 bytes) */
+  uint8_t ex_frame[9] = {
+    0x00, 0x03,
+    0x00, 0x00,
+    0x00, 0x03,
+    0x01,
+    0x83,
+    0x02
+  };
+  unsigned int rc = 0, sc = 0;
+
+  region_t *regions = extract_requests_modbus(ex_frame, sizeof(ex_frame), &rc);
+  TEST_ASSERT(rc == 1, "Exception frame request count must be 1");
+  TEST_ASSERT(regions[0].start_byte == 0 && regions[0].end_byte == 8, "Region bounds mismatch");
+  TEST_ASSERT(validate_regions_partition(ex_frame, sizeof(ex_frame), regions, rc), "Partition failed");
+
+  unsigned int *states = extract_response_codes_modbus(ex_frame, sizeof(ex_frame), &sc);
+  TEST_ASSERT(sc == 2, "State count must be 2");
+  TEST_ASSERT(states[0] == 0, "Initial state 0 required");
+  TEST_ASSERT(states[1] == 0x8302, "Exception state code must be (0x83 << 8) | 0x02 = 0x8302");
+
+  if (regions) ck_free(regions);
+  if (states) ck_free(states);
+  g_tests_passed++;
+  return true;
+}
+
+/* T32: Multi-Frame Concatenated Stream */
+static bool test_modbus_multi_frame_stream(void) {
+  g_tests_run++;
+  /* Concatenate 3 frames: FC 0x03 (12B) + FC 0x06 (12B) + FC 0x83 (9B) = 33 bytes */
+  uint8_t stream[33] = {
+    /* Frame 1: FC 0x03 (bytes 0..11) */
+    0x00, 0x01, 0x00, 0x00, 0x00, 0x06, 0x01, 0x03, 0x00, 0x00, 0x00, 0x0A,
+    /* Frame 2: FC 0x06 (bytes 12..23) */
+    0x00, 0x02, 0x00, 0x00, 0x00, 0x06, 0x01, 0x06, 0x00, 0x04, 0x12, 0x34,
+    /* Frame 3: FC 0x83 (bytes 24..32) */
+    0x00, 0x03, 0x00, 0x00, 0x00, 0x03, 0x01, 0x83, 0x02
+  };
+  unsigned int rc = 0, sc = 0;
+
+  region_t *regions = extract_requests_modbus(stream, sizeof(stream), &rc);
+  TEST_ASSERT(rc == 3, "Stream must yield 3 regions");
+  TEST_ASSERT(regions[0].start_byte == 0 && regions[0].end_byte == 11, "Region 0 mismatch");
+  TEST_ASSERT(regions[1].start_byte == 12 && regions[1].end_byte == 23, "Region 1 mismatch");
+  TEST_ASSERT(regions[2].start_byte == 24 && regions[2].end_byte == 32, "Region 2 mismatch");
+  TEST_ASSERT(validate_regions_partition(stream, sizeof(stream), regions, rc), "Partition failed");
+
+  unsigned int *states = extract_response_codes_modbus(stream, sizeof(stream), &sc);
+  TEST_ASSERT(sc == 4, "Must yield 4 states (state 0 + 3 frames)");
+  TEST_ASSERT(states[0] == 0, "Initial state 0 required");
+  TEST_ASSERT(states[1] == 0x03, "State 1 mismatch (FC 0x03)");
+  TEST_ASSERT(states[2] == 0x06, "State 2 mismatch (FC 0x06)");
+  TEST_ASSERT(states[3] == 0x8302, "State 3 mismatch (Exception 0x8302)");
+
+  if (regions) ck_free(regions);
+  if (states) ck_free(states);
+  g_tests_passed++;
+  return true;
+}
+
+/* T33: Truncated buffer handling */
+static bool test_modbus_truncated_buffer(void) {
+  g_tests_run++;
+  /* Valid 12B frame + truncated 4-byte header */
+  uint8_t buf[16] = {
+    /* Valid Frame 1 (12 bytes) */
+    0x00, 0x01, 0x00, 0x00, 0x00, 0x06, 0x01, 0x03, 0x00, 0x00, 0x00, 0x0A,
+    /* Truncated header (4 bytes) */
+    0x00, 0x02, 0x00, 0x00
+  };
+  unsigned int rc = 0, sc = 0;
+
+  region_t *regions = extract_requests_modbus(buf, sizeof(buf), &rc);
+  TEST_ASSERT(rc == 2, "Must yield 2 regions (valid frame + absorbed trailer)");
+  TEST_ASSERT(regions[0].start_byte == 0 && regions[0].end_byte == 11, "Region 0 mismatch");
+  TEST_ASSERT(regions[1].start_byte == 12 && regions[1].end_byte == 15, "Region 1 mismatch");
+  TEST_ASSERT(validate_regions_partition(buf, sizeof(buf), regions, rc), "Partition failed");
+
+  unsigned int *states = extract_response_codes_modbus(buf, sizeof(buf), &sc);
+  TEST_ASSERT(sc == 2 && states[0] == 0 && states[1] == 0x03, "States mismatch on truncated buffer");
+
+  if (regions) ck_free(regions);
+  if (states) ck_free(states);
+  g_tests_passed++;
+  return true;
+}
+
+/* T34: Corrupt magic byte and malformed length handling */
+static bool test_modbus_corrupt_magic_and_length(void) {
+  g_tests_run++;
+  unsigned int rc = 0, sc = 0;
+
+  /* Bad Protocol ID (0x0001 instead of 0x0000) */
+  uint8_t bad_prot[12] = {
+    0x00, 0x01,
+    0x00, 0x01,
+    0x00, 0x06,
+    0x01, 0x03, 0x00, 0x00, 0x00, 0x0A
+  };
+  region_t *reg1 = extract_requests_modbus(bad_prot, sizeof(bad_prot), &rc);
+  TEST_ASSERT(rc == 1 && reg1[0].start_byte == 0 && reg1[0].end_byte == 11, "Bad protocol ID must be absorbed");
+  TEST_ASSERT(validate_regions_partition(bad_prot, sizeof(bad_prot), reg1, rc), "Partition failed");
+  unsigned int *st1 = extract_response_codes_modbus(bad_prot, sizeof(bad_prot), &sc);
+  TEST_ASSERT(sc == 1 && st1[0] == 0, "Bad protocol ID must produce only state 0");
+  if (reg1) ck_free(reg1);
+  if (st1) ck_free(st1);
+
+  /* Length < 2 (e.g. 1) */
+  uint8_t small_len[8] = {
+    0x00, 0x01,
+    0x00, 0x00,
+    0x00, 0x01,
+    0x01, 0x03
+  };
+  region_t *reg2 = extract_requests_modbus(small_len, sizeof(small_len), &rc);
+  TEST_ASSERT(rc == 1 && reg2[0].start_byte == 0 && reg2[0].end_byte == 7, "Length < 2 must be absorbed");
+  TEST_ASSERT(validate_regions_partition(small_len, sizeof(small_len), reg2, rc), "Partition failed");
+  if (reg2) ck_free(reg2);
+
+  /* Length > 254 (e.g. 300 = 0x012C) */
+  uint8_t huge_len[12] = {
+    0x00, 0x01,
+    0x00, 0x00,
+    0x01, 0x2C,
+    0x01, 0x03, 0x00, 0x00, 0x00, 0x00
+  };
+  region_t *reg3 = extract_requests_modbus(huge_len, sizeof(huge_len), &rc);
+  TEST_ASSERT(rc == 1 && reg3[0].start_byte == 0 && reg3[0].end_byte == 11, "Length > 254 must be absorbed");
+  TEST_ASSERT(validate_regions_partition(huge_len, sizeof(huge_len), reg3, rc), "Partition failed");
+  if (reg3) ck_free(reg3);
+
+  /* Buffer < 6 bytes */
+  uint8_t short_buf[5] = { 0x00, 0x01, 0x00, 0x00, 0x00 };
+  region_t *reg4 = extract_requests_modbus(short_buf, sizeof(short_buf), &rc);
+  TEST_ASSERT(rc == 1 && reg4[0].start_byte == 0 && reg4[0].end_byte == 4, "Buffer < 6 must be absorbed");
+  TEST_ASSERT(validate_regions_partition(short_buf, sizeof(short_buf), reg4, rc), "Partition failed");
+  if (reg4) ck_free(reg4);
+
+  g_tests_passed++;
+  return true;
+}
+
+/* T35: Empty buffer handling */
+static bool test_modbus_empty_buffer(void) {
+  g_tests_run++;
+  unsigned int rc = 99, sc = 99;
+  region_t *regions = extract_requests_modbus(NULL, 0, &rc);
+  TEST_ASSERT(rc == 0 && regions == NULL, "Empty buffer must yield 0 regions");
+
+  unsigned int *states = extract_response_codes_modbus(NULL, 0, &sc);
+  TEST_ASSERT(sc == 1 && states != NULL && states[0] == 0, "Empty buffer must yield state 0");
+
+  if (states) ck_free(states);
+  g_tests_passed++;
+  return true;
+}
+
+/* ========================================================================= */
 /* MAIN TEST RUNNER                                                          */
 /* ========================================================================= */
 
 int main(void) {
-  printf("[*] Running Native Industrial Protocol Extractor Unit Tests (28 tests)...\n");
+  printf("[*] Running Native Industrial Protocol Extractor Unit Tests (35 tests)...\n");
 
   printf("[*] Suite 1: IEC 60870-5-104 (7 tests)\n");
   assert(test_iec104_valid_single_u_frame());
@@ -933,6 +1171,15 @@ int main(void) {
   assert(test_enip_truncated_buffer());
   assert(test_enip_corrupt_magic_and_length());
   assert(test_enip_empty_buffer());
+
+  printf("[*] Suite 5: Modbus TCP (7 tests)\n");
+  assert(test_modbus_valid_single_read_holding_registers());
+  assert(test_modbus_valid_single_write_single_register());
+  assert(test_modbus_valid_single_exception_response());
+  assert(test_modbus_multi_frame_stream());
+  assert(test_modbus_truncated_buffer());
+  assert(test_modbus_corrupt_magic_and_length());
+  assert(test_modbus_empty_buffer());
 
   printf("\n========================================================\n");
   printf("[+] Test Summary: %d / %d tests passed (100.0%%)\n", g_tests_passed, g_tests_run);

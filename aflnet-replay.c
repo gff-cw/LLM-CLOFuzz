@@ -52,6 +52,7 @@ int main(int argc, char* argv[])
   else if (!strcasecmp(argv[2], "IEC61850") || !strcasecmp(argv[2], "IEC-61850") || !strcasecmp(argv[2], "MMS")) extract_response_codes = &extract_response_codes_iec61850;
   else if (!strcasecmp(argv[2], "OPCUA") || !strcasecmp(argv[2], "OPC_UA") || !strcasecmp(argv[2], "OPC-UA")) extract_response_codes = &extract_response_codes_opcua;
   else if (!strcasecmp(argv[2], "ETHERNET_IP") || !strcasecmp(argv[2], "ETHERNETIP") || !strcasecmp(argv[2], "ENIP") || !strcasecmp(argv[2], "EIP") || !strcasecmp(argv[2], "Ethernet/IP")) extract_response_codes = &extract_response_codes_enip;
+  else if (!strcasecmp(argv[2], "MODBUS") || !strcasecmp(argv[2], "MODBUS_TCP") || !strcasecmp(argv[2], "MODBUSTCP") || !strcasecmp(argv[2], "MODBUS-TCP")) extract_response_codes = &extract_response_codes_modbus;
   else {
     /* Universal fallback: use generic response code extractor */
     extract_response_codes = &extract_response_codes_generic;

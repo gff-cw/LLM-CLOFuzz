@@ -133,6 +133,11 @@ int main(int argc, char *argv[])
     extract_response_codes = &extract_response_codes_enip;
     extract_requests = &extract_requests_enip;
   }
+  else if (!strcasecmp(argv[2], "MODBUS") || !strcasecmp(argv[2], "MODBUS_TCP") || !strcasecmp(argv[2], "MODBUSTCP") || !strcasecmp(argv[2], "MODBUS-TCP"))
+  {
+    extract_response_codes = &extract_response_codes_modbus;
+    extract_requests = &extract_requests_modbus;
+  }
   else
   {
     /* Universal fallback: use generic response codes and request extraction */
