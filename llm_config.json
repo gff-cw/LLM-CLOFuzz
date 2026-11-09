@@ -1,8 +1,7 @@
 {
-  "model": "gpt-6.1-sol",
-  "base_url": "https://api.openai.com/v1",
-  "api_key": "YOUR_API_KEY_HERE",
-  "timeout": 60,
+  "model": "mock-bacnet-model",
+  "base_url": "http://127.0.0.1:8000/v1",
+  "api_key": "mock-api-key",
+  "timeout": 30,
   "max_tokens": 2048
 }
-

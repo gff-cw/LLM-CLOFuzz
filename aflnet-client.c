@@ -108,6 +108,11 @@ int main(int argc, char *argv[])
     extract_response_codes = &extract_response_codes_ipp;
     extract_requests = &extract_requests_ipp;
   }
+  else if (!strcasecmp(argv[2], "BACNET"))
+  {
+    extract_response_codes = &extract_response_codes_bacnet;
+    extract_requests = &extract_requests_bacnet;
+  }
   else
   {
     fprintf(stderr, "[AFLNet-client] Protocol %s has not been supported yet!\n", argv[2]);
@@ -137,7 +142,8 @@ int main(int argc, char *argv[])
   }
 
   int sockfd;
-  if ((!strcmp(argv[2], "DTLS12")) || (!strcmp(argv[2], "DNS")) || (!strcmp(argv[2], "SIP")))
+  if ((!strcasecmp(argv[2], "DTLS12")) || (!strcasecmp(argv[2], "DNS")) ||
+      (!strcasecmp(argv[2], "SIP"))    || (!strcasecmp(argv[2], "BACNET")))
   {
     sockfd = socket(AF_INET, SOCK_DGRAM, 0);
   }

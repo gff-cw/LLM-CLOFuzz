@@ -796,6 +796,43 @@ region_t* extract_requests_ipp(unsigned char* buf, unsigned int buf_size, unsign
   return regions;
 }
 
+region_t* extract_requests_bacnet(unsigned char* buf, unsigned int buf_size, unsigned int* region_count_ref)
+{
+  unsigned int byte_count = 0;
+  unsigned int region_count = 0;
+  region_t *regions = NULL;
+
+  while (byte_count < buf_size) {
+    if (buf_size - byte_count < 4) break;
+    if (buf[byte_count] != 0x81) break;
+
+    unsigned int packet_len = ((unsigned int)buf[byte_count + 2] << 8) | (unsigned int)buf[byte_count + 3];
+    if (packet_len < 4 || packet_len > buf_size - byte_count) break;
+
+    region_count++;
+    regions = (region_t *)ck_realloc(regions, region_count * sizeof(region_t));
+    regions[region_count - 1].start_byte = byte_count;
+    regions[region_count - 1].end_byte = byte_count + packet_len - 1;
+    regions[region_count - 1].state_sequence = NULL;
+    regions[region_count - 1].state_count = 0;
+
+    byte_count += packet_len;
+  }
+
+  /* Absorb any trailing or unparsed bytes into a final region */
+  if ((byte_count < buf_size) && (buf_size > 0)) {
+    region_count++;
+    regions = (region_t *)ck_realloc(regions, region_count * sizeof(region_t));
+    regions[region_count - 1].start_byte = byte_count;
+    regions[region_count - 1].end_byte = buf_size - 1;
+    regions[region_count - 1].state_sequence = NULL;
+    regions[region_count - 1].state_count = 0;
+  }
+
+  *region_count_ref = region_count;
+  return regions;
+}
+
 unsigned int* extract_response_codes_smtp(unsigned char* buf, unsigned int buf_size, unsigned int* state_count_ref)
 {
   char *mem;
@@ -1498,6 +1535,37 @@ unsigned int* extract_response_codes_ipp(unsigned char* buf, unsigned int buf_si
   }
 
   if (mem) ck_free(mem);
+  *state_count_ref = state_count;
+  return state_sequence;
+}
+
+unsigned int* extract_response_codes_bacnet(unsigned char* buf, unsigned int buf_size, unsigned int* state_count_ref)
+{
+  unsigned int state_count = 1;
+  unsigned int *state_sequence = (unsigned int *)ck_alloc(sizeof(unsigned int));
+  state_sequence[0] = 0;
+  unsigned int byte_count = 0;
+
+  while (byte_count < buf_size) {
+    if (buf_size - byte_count < 4) break;
+    if (buf[byte_count] != 0x81) break;
+
+    unsigned int packet_len = ((unsigned int)buf[byte_count + 2] << 8) | (unsigned int)buf[byte_count + 3];
+    if (packet_len < 4 || packet_len > buf_size - byte_count) break;
+
+    unsigned int code = (unsigned int)buf[byte_count + 1];
+    if (packet_len >= 7) {
+      code = (code << 8) | (unsigned int)(buf[byte_count + 6] & 0xF0);
+    }
+
+    state_count++;
+    state_sequence = (unsigned int *)ck_realloc(state_sequence, state_count * sizeof(unsigned int));
+    if (state_sequence == NULL) PFATAL("Unable to allocate memory for BACnet state sequence");
+    state_sequence[state_count - 1] = code;
+
+    byte_count += packet_len;
+  }
+
   *state_count_ref = state_count;
   return state_sequence;
 }

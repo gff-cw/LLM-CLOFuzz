@@ -3163,6 +3163,9 @@ unsigned int* extract_response_state_tracer(unsigned char* buf, unsigned int buf
 
   if (!state_count_ref) return NULL;
   if (!state_shared_ptr) {
+    if (orig_extract_response_codes) {
+      return orig_extract_response_codes(buf, buf_size, state_count_ref);
+    }
     *state_count_ref = 0;
     return NULL;
   }
@@ -10623,7 +10626,7 @@ static void usage(u8* argv0) {
        "Settings for network protocol fuzzing (AFLNet):\n\n"
 
        "  -N netinfo    - server information (e.g., tcp://127.0.0.1/8554)\n"
-       "  -P protocol   - application protocol to be tested (e.g., RTSP, FTP, DTLS12, DNS, SMTP, SSH, TLS)\n"
+       "  -P protocol   - application protocol to be tested (e.g., RTSP, FTP, DTLS12, DNS, SMTP, SSH, TLS, BACNET)\n"
        "  -D usec       - waiting time (in micro seconds) for the server to initialize\n"
        "  -W msec       - waiting time (in miliseconds) for receiving the first response to each input sent\n"
        "  -w usec       - waiting time (in micro seconds) for receiving follow-up responses\n"
@@ -11617,6 +11620,9 @@ int main(int argc, char** argv) {
         } else if (!strcmp(optarg, "IPP")) {
           extract_requests = &extract_requests_ipp;
           extract_response_codes = &extract_response_codes_ipp;
+        } else if (!strcasecmp(optarg, "BACNET")) {
+          extract_requests = &extract_requests_bacnet;
+          extract_response_codes = &extract_response_codes_bacnet;
         } else {
           FATAL("%s protocol is not supported yet!", optarg);
         }
