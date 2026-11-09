@@ -1,0 +1,136 @@
+{
+  "passed": true,
+  "scope": "single-process local synchronization smoke",
+  "run_directory": "/home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz/tests/out/runtime-fixes-20261105/sync-smoke/run-mjathjfk",
+  "llm_requests": false,
+  "protocol_option": false,
+  "state_aware_option": false,
+  "checks": {
+    "clean_bounded_exit": true,
+    "imported_statistic_positive": true,
+    "exactly_one_peer_import": true,
+    "imported_raw_matches_peer": true,
+    "three_replay_records_match_peer": true,
+    "sync_checkpoint_one": true,
+    "peer_unchanged": true,
+    "effective_aslr_disabled": true,
+    "source_hashes_stable": true,
+    "artifact_hashes_stable": true
+  },
+  "timeout_seconds": 45,
+  "child_core_limit_bytes": 0,
+  "environment_overrides": {
+    "TMPDIR": "/home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz/tests/out/runtime-fixes-20261105/sync-smoke/run-mjathjfk/tmp",
+    "TMP": "/home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz/tests/out/runtime-fixes-20261105/sync-smoke/run-mjathjfk/tmp",
+    "TEMP": "/home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz/tests/out/runtime-fixes-20261105/sync-smoke/run-mjathjfk/tmp",
+    "AFL_PATH": "/home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz",
+    "AFL_NO_UI": "1",
+    "AFL_NO_AFFINITY": "1",
+    "AFL_SKIP_CPUFREQ": "1",
+    "AFL_I_DONT_CARE_ABOUT_MISSING_CRASHES": "1",
+    "AFL_IMPORT_FIRST": "1"
+  },
+  "source_hashes_before": {
+    "afl-fuzz.c": "5d10b1fc120345af2cfd434ce2f052958e76b97f48cca667ec86bea7dadf1b96",
+    "aflnet.c": "772fb640c5c730f1f6e6f675183e50f71579d1ab66ce8bb27b889f146d6dd030",
+    "aflnet.h": "c3dceb13b6e80dc5e8969bc2d57b861bc6655138332b5d5df21e5a01bca4f715",
+    "chat-llm.c": "40f48501f185f7febaee275c11cc61161a9574a730247548d4566c4fff0af1df",
+    "chat-llm.h": "fc98af0675dfa833eaa77ecac321a77ff1c4d3d8b252a7c685bd1c3459a1683b",
+    "alloc-inl.h": "4ab62526760459a2f13de1a5d81d12df2a518ac5614e2c95936d3e4f9a93b97a",
+    "config.h": "c8bfa8d3e1f78bd11b9460f9ccfa609b4d09132013d272e738c5c1ccbace4e6a",
+    "types.h": "6cb9d023a25122bc457e9863ded211ae120db9337ae010720718673d2f576006",
+    "tests/llvm18/network_server.c": "f7700c7f5ed114dcb0304ed77b687a1ca5e96099d651eed620e67ccfe544ef17",
+    "tests/run_sync_smoke.py": "a80a2119e99a740a04e6e946f3ad88b4c18d08e6367b4bf69b274daf4b1d3ca6"
+  },
+  "artifact_hashes_before": {
+    "afl-fuzz": "93b515ad6e0b055b3a2177cff4baae6316dd8ef39b9fbd58ec700d8dfa670bee",
+    "afl-clang-fast": "58389fc0762d643dbd47290ee45401293a9a90f820b3e93cf41f2a48084e37bd",
+    "afl-llvm-pass.so": "6c36264a612926dda5a292fa81c6525a766f15b032760533ee6d26de679fa732",
+    "afl-llvm-rt.o": "f2bfca83c081afd35f4fa831f8950128f4aba7d62b813bc447f2e0db97d3a613",
+    "afl-llvm-rt-state-tracer.o": "6a17a23c4f786eaefc9eb6a8628bf47d39643170ff9df91c2b2f8fd00ac569f3",
+    "afl-llvm-rt-state-tracer.o.cpp.o": "a83d03818807b1740db09b85c1fccf82fffabd8cc1c1d221dd5bcc404469704b"
+  },
+  "checkout_head": "43b9b41ece4a5db00b4149e6301f3491f6a6b10b",
+  "cli_exit_code": 1,
+  "peer_hashes_before": {
+    "queue/id:000000,orig:sync-smoke": "706204f15ce1834ad298c8e8d270315652bbd6e40cec489f65802db2fdd03167",
+    "replayable-queue/id:000000,orig:sync-smoke": "ec307cf64ce453d504debf49e86146aa30bcbc894661c55791578a71f949747c"
+  },
+  "server_build_exit_code": 0,
+  "server_sha256": "6d50bcb10e7825c55747a060f0f880515229c582a40dad31a14ee5c2ee6888f1",
+  "loopback_port": 54145,
+  "stop_reason": "runtime-limit",
+  "elapsed_seconds": 45.03,
+  "fuzzer_exit_code": 0,
+  "forced_stop": false,
+  "stats": {
+    "start_time": "1793877764",
+    "last_update": "1793877808",
+    "fuzzer_pid": "413281",
+    "cycles_done": "0",
+    "execs_done": "455",
+    "execs_per_sec": "8.96",
+    "paths_total": "11",
+    "paths_favored": "1",
+    "paths_found": "9",
+    "paths_imported": "1",
+    "max_depth": "2",
+    "cur_path": "0",
+    "pending_favs": "0",
+    "pending_total": "11",
+    "variable_paths": "0",
+    "stability": "100.00%",
+    "bitmap_cvg": "0.06%",
+    "unique_crashes": "0",
+    "unique_hangs": "0",
+    "last_path": "1793877791",
+    "last_crash": "0",
+    "last_hang": "0",
+    "execs_since_crash": "455",
+    "exec_timeout": "1000",
+    "afl_banner": "local",
+    "afl_version": "2.56b",
+    "target_mode": "default",
+    "command_line": "/home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz/afl-fuzz -S local -i /home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz/tests/out/runtime-fixes-20261105/sync-smoke/run-mjathjfk/corpus -I replay -o /home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz/tests/out/runtime-fixes-20261105/sync-smoke/run-mjathjfk/sync -N tcp://127.0.0.1/54145 -D 10000 -W 20 -r 20 -w 10000 -m none -t 1000 -- /home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz/tests/out/runtime-fixes-20261105/sync-smoke/run-mjathjfk/network_server 54145",
+    "slowest_exec_ms": "145",
+    "peak_rss_mb": "3"
+  },
+  "imported_cases": [
+    {
+      "name": "id:000001,sync:peer,src:000000,+cov",
+      "raw_sha256": "706204f15ce1834ad298c8e8d270315652bbd6e40cec489f65802db2fdd03167",
+      "raw_matches_peer": true,
+      "replay_messages_hex": [
+        "410a",
+        "420a",
+        "430a"
+      ],
+      "replay_matches_peer": true
+    }
+  ],
+  "checkpoint": 1,
+  "peer_hashes_after": {
+    "queue/id:000000,orig:sync-smoke": "706204f15ce1834ad298c8e8d270315652bbd6e40cec489f65802db2fdd03167",
+    "replayable-queue/id:000000,orig:sync-smoke": "ec307cf64ce453d504debf49e86146aa30bcbc894661c55791578a71f949747c"
+  },
+  "source_hashes_after": {
+    "afl-fuzz.c": "5d10b1fc120345af2cfd434ce2f052958e76b97f48cca667ec86bea7dadf1b96",
+    "aflnet.c": "772fb640c5c730f1f6e6f675183e50f71579d1ab66ce8bb27b889f146d6dd030",
+    "aflnet.h": "c3dceb13b6e80dc5e8969bc2d57b861bc6655138332b5d5df21e5a01bca4f715",
+    "chat-llm.c": "40f48501f185f7febaee275c11cc61161a9574a730247548d4566c4fff0af1df",
+    "chat-llm.h": "fc98af0675dfa833eaa77ecac321a77ff1c4d3d8b252a7c685bd1c3459a1683b",
+    "alloc-inl.h": "4ab62526760459a2f13de1a5d81d12df2a518ac5614e2c95936d3e4f9a93b97a",
+    "config.h": "c8bfa8d3e1f78bd11b9460f9ccfa609b4d09132013d272e738c5c1ccbace4e6a",
+    "types.h": "6cb9d023a25122bc457e9863ded211ae120db9337ae010720718673d2f576006",
+    "tests/llvm18/network_server.c": "f7700c7f5ed114dcb0304ed77b687a1ca5e96099d651eed620e67ccfe544ef17",
+    "tests/run_sync_smoke.py": "a80a2119e99a740a04e6e946f3ad88b4c18d08e6367b4bf69b274daf4b1d3ca6"
+  },
+  "artifact_hashes_after": {
+    "afl-fuzz": "93b515ad6e0b055b3a2177cff4baae6316dd8ef39b9fbd58ec700d8dfa670bee",
+    "afl-clang-fast": "58389fc0762d643dbd47290ee45401293a9a90f820b3e93cf41f2a48084e37bd",
+    "afl-llvm-pass.so": "6c36264a612926dda5a292fa81c6525a766f15b032760533ee6d26de679fa732",
+    "afl-llvm-rt.o": "f2bfca83c081afd35f4fa831f8950128f4aba7d62b813bc447f2e0db97d3a613",
+    "afl-llvm-rt-state-tracer.o": "6a17a23c4f786eaefc9eb6a8628bf47d39643170ff9df91c2b2f8fd00ac569f3",
+    "afl-llvm-rt-state-tracer.o.cpp.o": "a83d03818807b1740db09b85c1fccf82fffabd8cc1c1d221dd5bcc404469704b"
+  }
+}

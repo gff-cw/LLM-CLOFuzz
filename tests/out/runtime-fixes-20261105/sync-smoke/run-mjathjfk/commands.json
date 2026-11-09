@@ -1,0 +1,57 @@
+[
+  {
+    "label": "fuzzer-cli",
+    "argv": [
+      "/home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz/afl-fuzz",
+      "--help"
+    ],
+    "cwd": "/home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz/tests/out/runtime-fixes-20261105/sync-smoke/run-mjathjfk"
+  },
+  {
+    "label": "build-fixed-local-server",
+    "argv": [
+      "/home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz/afl-clang-fast",
+      "-O2",
+      "-g",
+      "/home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz/tests/llvm18/network_server.c",
+      "-o",
+      "/home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz/tests/out/runtime-fixes-20261105/sync-smoke/run-mjathjfk/network_server"
+    ],
+    "cwd": "/home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz/tests/out/runtime-fixes-20261105/sync-smoke/run-mjathjfk"
+  },
+  {
+    "label": "bounded-import-first-fuzzer",
+    "argv": [
+      "setarch",
+      "x86_64",
+      "-R",
+      "/home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz/afl-fuzz",
+      "-S",
+      "local",
+      "-i",
+      "/home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz/tests/out/runtime-fixes-20261105/sync-smoke/run-mjathjfk/corpus",
+      "-I",
+      "replay",
+      "-o",
+      "/home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz/tests/out/runtime-fixes-20261105/sync-smoke/run-mjathjfk/sync",
+      "-N",
+      "tcp://127.0.0.1/54145",
+      "-D",
+      "10000",
+      "-W",
+      "20",
+      "-r",
+      "20",
+      "-w",
+      "10000",
+      "-m",
+      "none",
+      "-t",
+      "1000",
+      "--",
+      "/home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz/tests/out/runtime-fixes-20261105/sync-smoke/run-mjathjfk/network_server",
+      "54145"
+    ],
+    "cwd": "/home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz/tests/out/runtime-fixes-20261105/sync-smoke/run-mjathjfk"
+  }
+]

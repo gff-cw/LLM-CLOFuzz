@@ -1,0 +1,530 @@
+{
+  "run_directory": "/home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz/tests/out/native-recovery/run-sbnfxlb8",
+  "variants": {
+    "native": [
+      {
+        "case": "fresh_raw",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "fresh_replay",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "direct_replay_queue",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "direct_resume_replay_queue",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "direct_replay_malformed",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "explicit_replay_in_queue",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "explicit_raw_ambiguous",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "explicit_raw_in_replay_queue",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "explicit_replay_malformed",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "explicit_replay_empty",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "auto_partial_framing",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "auto_empty_raw",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "replay_zero_records",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "resume_normal",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "resume_in_place_layout",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "resume_same_output_path",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "resume_zero_records",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "resume_missing_companion",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "resume_empty_missing_companion",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "resume_regions_only",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "resume_stale_same_length",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "resume_wrong_length",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "resume_malformed_companion",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "resume_stale_priority_fallback",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "resume_malformed_priority_fallback",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "resume_oversized_priority_fallback",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "resume_oversized_companion",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "resume_basename_mismatch",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "resume_corrupt_replay_and_regions",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "save_round_trip",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "save_zero_records",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "save_invalid_partition",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "save_invalid_bounds",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "atomic_replace",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "atomic_short_write",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "atomic_interrupted_write",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "atomic_failed_write",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "atomic_partial_failed_write",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "atomic_zero_write",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "atomic_failed_fsync",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "atomic_failed_rename",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "atomic_failure_new_path",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "prepare_failed_write",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "prepare_failed_fsync",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "prepare_failed_rename",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "prepare_short_write",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "prepare_same_path_failed_write",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "prepare_same_path_failed_fsync",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "prepare_same_path_failed_rename",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "save_failed_write",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "save_failed_fsync",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "save_failed_rename",
+        "status": "passed",
+        "returncode": 0
+      }
+    ],
+    "sanitized": [
+      {
+        "case": "fresh_raw",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "fresh_replay",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "direct_replay_queue",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "direct_resume_replay_queue",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "direct_replay_malformed",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "explicit_replay_in_queue",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "explicit_raw_ambiguous",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "explicit_raw_in_replay_queue",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "explicit_replay_malformed",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "explicit_replay_empty",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "auto_partial_framing",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "auto_empty_raw",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "replay_zero_records",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "resume_normal",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "resume_in_place_layout",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "resume_same_output_path",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "resume_zero_records",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "resume_missing_companion",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "resume_empty_missing_companion",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "resume_regions_only",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "resume_stale_same_length",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "resume_wrong_length",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "resume_malformed_companion",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "resume_stale_priority_fallback",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "resume_malformed_priority_fallback",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "resume_oversized_priority_fallback",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "resume_oversized_companion",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "resume_basename_mismatch",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "resume_corrupt_replay_and_regions",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "save_round_trip",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "save_zero_records",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "save_invalid_partition",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "save_invalid_bounds",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "atomic_replace",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "atomic_short_write",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "atomic_interrupted_write",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "atomic_failed_write",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "atomic_partial_failed_write",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "atomic_zero_write",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "atomic_failed_fsync",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "atomic_failed_rename",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "atomic_failure_new_path",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "prepare_failed_write",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "prepare_failed_fsync",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "prepare_failed_rename",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "prepare_short_write",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "prepare_same_path_failed_write",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "prepare_same_path_failed_fsync",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "prepare_same_path_failed_rename",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "save_failed_write",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "save_failed_fsync",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "save_failed_rename",
+        "status": "passed",
+        "returncode": 0
+      }
+    ]
+  },
+  "failures": []
+}

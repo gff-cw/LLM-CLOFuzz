@@ -183,7 +183,7 @@ unsigned int* extract_response_state_tracer(unsigned char* buf, unsigned int buf
 unsigned int* (*orig_extract_response_codes)(unsigned char* buf, unsigned int buf_size, unsigned int* state_count_ref) = NULL;
 
 
-region_t* extract_requests_generic(unsigned char* buf, unsigned int buf_size, unsigned int* region_count_ref);
+region_t* extract_requests_stateafl(unsigned char* buf, unsigned int buf_size, unsigned int* region_count_ref);
 
 region_t* (*orig_extract_requests)(unsigned char* buf, unsigned int buf_size, unsigned int* region_count_ref) = NULL;
 
@@ -3163,7 +3163,7 @@ unsigned int* extract_response_state_tracer(unsigned char* buf, unsigned int buf
 
   if (!state_count_ref) return NULL;
   if (!state_shared_ptr) {
-    if (orig_extract_response_codes) {
+    if (orig_extract_response_codes && orig_extract_response_codes != &extract_response_state_tracer) {
       return orig_extract_response_codes(buf, buf_size, state_count_ref);
     }
     *state_count_ref = 0;
@@ -3265,10 +3265,7 @@ static u8 validate_mutated_regions(const region_t *regions, unsigned int count, 
   return (regions[count - 1].end_byte == (int)expected_size - 1);
 }
 
-region_t* extract_requests_generic(unsigned char* buf, unsigned int buf_size, unsigned int* region_count_ref) {
-
-  unsigned int region_count = 0;
-  region_t *regions = NULL;
+region_t* extract_requests_stateafl(unsigned char* buf, unsigned int buf_size, unsigned int* region_count_ref) {
 
   /* Only reuse mutated_regions if verified to match the active mutated buffer with strict geometric partition */
   if (mutated_regions != NULL && mutated_region_count > 0 &&
@@ -3277,7 +3274,7 @@ region_t* extract_requests_generic(unsigned char* buf, unsigned int buf_size, un
     if (validate_mutated_regions(mutated_regions, mutated_region_count, buf_size)) {
       *region_count_ref = mutated_region_count;
 
-      regions = ck_alloc(mutated_region_count * sizeof(region_t));
+      region_t *regions = ck_alloc(mutated_region_count * sizeof(region_t));
       memcpy(regions, mutated_regions, mutated_region_count * sizeof(region_t));
 
       return regions;
@@ -3285,59 +3282,15 @@ region_t* extract_requests_generic(unsigned char* buf, unsigned int buf_size, un
   }
 
   /* If original protocol extractor is registered, prefer it for raw buffers */
-  if (orig_extract_requests != NULL) {
-    regions = (*orig_extract_requests)(buf, buf_size, region_count_ref);
+  if (orig_extract_requests != NULL && orig_extract_requests != &extract_requests_stateafl) {
+    region_t *regions = (*orig_extract_requests)(buf, buf_size, region_count_ref);
     if (regions != NULL && *region_count_ref > 0) {
       return regions;
     }
   }
 
-  unsigned int byte_count = 0;
-  unsigned int cur_start = 0;
-
-  while (byte_count < buf_size) {
-
-    if (buf_size - byte_count < sizeof(unsigned int)) {
-      break;
-    }
-
-    unsigned int next_message_len;
-    memcpy(&next_message_len, &buf[byte_count], sizeof(unsigned int));
-
-    byte_count += sizeof(unsigned int);
-
-    if (next_message_len > buf_size - byte_count) {
-      break;
-    }
-
-    region_count++;
-
-    regions = (region_t *)ck_realloc(regions, region_count * sizeof(region_t));
-
-    regions[region_count - 1].start_byte = cur_start;
-    regions[region_count - 1].end_byte = (next_message_len > 0) ? (int)(cur_start + next_message_len - 1) : ((int)cur_start - 1);
-    regions[region_count - 1].state_sequence = NULL;
-    regions[region_count - 1].state_count = 0;
-
-    cur_start += next_message_len;
-    byte_count += next_message_len;
-
-  }
-
-  if (region_count > 0 && byte_count == buf_size) {
-    *region_count_ref = region_count;
-    return regions;
-  }
-
-  /* If replay parsing does not cover entire buffer, treat buffer as a single region */
-  if (regions) ck_free(regions);
-  regions = ck_alloc(sizeof(region_t));
-  regions[0].start_byte = 0;
-  regions[0].end_byte = (buf_size > 0) ? (int)(buf_size - 1) : -1;
-  regions[0].state_sequence = NULL;
-  regions[0].state_count = 0;
-  *region_count_ref = 1;
-  return regions;
+  /* Fallback to protocol-agnostic generic extractor in aflnet */
+  return extract_requests_generic(buf, buf_size, region_count_ref);
 
 }
 
@@ -11631,8 +11584,8 @@ int main(int argc, char** argv) {
              For packet segmentation, replay containers (4-byte length prefix)
              or single-region raw buffers are handled by extract_requests_generic.
              The protocol_name is forwarded directly to ChatAFL's LLM engine. */
-          extract_requests = &extract_requests_generic;
-          extract_response_codes = &extract_response_state_tracer;
+          extract_requests = NULL;
+          extract_response_codes = NULL;
           ACTF("Protocol '%s': enabled universal StateAFL state tracing and LLM enhancements.", optarg);
         }
 
@@ -11640,7 +11593,7 @@ int main(int argc, char** argv) {
         extract_response_codes = &extract_response_state_tracer;
 
         orig_extract_requests = extract_requests;
-        extract_requests = &extract_requests_generic;
+        extract_requests = &extract_requests_stateafl;
 
         protocol_name = ck_strdup(optarg);
         protocol_selected = 1;

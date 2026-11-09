@@ -1992,3 +1992,69 @@ u32 read_bytes_to_uint32(unsigned char* buf, unsigned int offset, int num_bytes)
   }
   return val;
 }
+
+unsigned int* extract_response_codes_generic(unsigned char* buf, unsigned int buf_size, unsigned int* state_count_ref) {
+  *state_count_ref = 0;
+  if (!buf || buf_size == 0) return NULL;
+  unsigned int *state_sequence = (unsigned int *)ck_alloc(sizeof(unsigned int));
+  state_sequence[0] = 0;
+  *state_count_ref = 1;
+  return state_sequence;
+}
+
+region_t* extract_requests_generic(unsigned char* buf, unsigned int buf_size, unsigned int* region_count_ref) {
+  unsigned int region_count = 0;
+  region_t *regions = NULL;
+
+  if (!buf || buf_size == 0) {
+    *region_count_ref = 0;
+    return NULL;
+  }
+
+  unsigned int byte_count = 0;
+  unsigned int cur_start = 0;
+
+  while (byte_count < buf_size) {
+    if (buf_size - byte_count < sizeof(unsigned int)) {
+      break;
+    }
+
+    unsigned int next_message_len;
+    memcpy(&next_message_len, &buf[byte_count], sizeof(unsigned int));
+    byte_count += sizeof(unsigned int);
+
+    if (next_message_len > buf_size - byte_count) {
+      break;
+    }
+
+    region_count++;
+    regions = (region_t *)ck_realloc(regions, region_count * sizeof(region_t));
+    regions[region_count - 1].start_byte = cur_start;
+    regions[region_count - 1].end_byte = (next_message_len > 0) ? (int)(cur_start + next_message_len - 1) : ((int)cur_start - 1);
+    regions[region_count - 1].state_sequence = NULL;
+    regions[region_count - 1].state_count = 0;
+
+    byte_count += next_message_len;
+    cur_start = byte_count;
+  }
+
+  if (region_count > 0 && byte_count == buf_size) {
+    *region_count_ref = region_count;
+    return regions;
+  }
+
+  if (regions) {
+    ck_free(regions);
+    regions = NULL;
+  }
+
+  region_count = 1;
+  regions = (region_t *)ck_alloc(sizeof(region_t));
+  regions[0].start_byte = 0;
+  regions[0].end_byte = (int)buf_size - 1;
+  regions[0].state_sequence = NULL;
+  regions[0].state_count = 0;
+
+  *region_count_ref = region_count;
+  return regions;
+}

@@ -1,0 +1,50 @@
+{
+  "baseline_commit": "43b9b41",
+  "baseline_source_sha256": "b3c8e4d3b535df44189615cf9afc91be69b59719dc4eda30dae0723d541b50f0",
+  "fixed_source_sha256": "40f48501f185f7febaee275c11cc61161a9574a730247548d4566c4fff0af1df",
+  "environment": {
+    "ASAN_OPTIONS": "detect_leaks=0:halt_on_error=1:disable_coredump=1:symbolize=0"
+  },
+  "runs": [
+    {
+      "variant": "baseline",
+      "case": "json",
+      "returncode": 2,
+      "command": [
+        "/home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz/tests/out/runtime-fixes-20261105/grammar-baseline/baseline-probe",
+        "json"
+      ],
+      "asan_stack_buffer_overflow": false
+    },
+    {
+      "variant": "baseline",
+      "case": "header",
+      "returncode": 1,
+      "command": [
+        "/home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz/tests/out/runtime-fixes-20261105/grammar-baseline/baseline-probe",
+        "header"
+      ],
+      "asan_stack_buffer_overflow": true
+    },
+    {
+      "variant": "fixed",
+      "case": "json",
+      "returncode": 0,
+      "command": [
+        "/home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz/tests/out/runtime-fixes-20261105/grammar-baseline/fixed-probe",
+        "json"
+      ],
+      "asan_stack_buffer_overflow": false
+    },
+    {
+      "variant": "fixed",
+      "case": "header",
+      "returncode": 0,
+      "command": [
+        "/home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz/tests/out/runtime-fixes-20261105/grammar-baseline/fixed-probe",
+        "header"
+      ],
+      "asan_stack_buffer_overflow": false
+    }
+  ]
+}

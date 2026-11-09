@@ -1,0 +1,16 @@
+$ clang -O1 -g -ffunction-sections -fdata-sections -Wno-pointer-sign -Wno-unused-result '-DAFL_PATH="/home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz"' '-DBIN_PATH="/home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz"' '-DDOC_PATH="/home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz/docs"' -c /home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz/aflnet.c -o /home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz/tests/out/native-recovery/run-z43e9auk/native/aflnet.o
+$ clang -O1 -g -ffunction-sections -fdata-sections -Wno-pointer-sign -Wno-unused-result '-DAFL_PATH="/home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz"' '-DBIN_PATH="/home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz"' '-DDOC_PATH="/home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz/docs"' -c /home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz/chat-llm.c -o /home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz/tests/out/native-recovery/run-z43e9auk/native/chat-llm.o
+/home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz/chat-llm.c:1235:21: warning: assigning to 'char *' from 'kh_cstr_t' (aka 'const char *') discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+ 1235 |         data[index] = kh_key(sequence,i);
+      |                     ^ ~~~~~~~~~~~~~~~~~~
+1 warning generated.
+$ clang -O1 -g -ffunction-sections -fdata-sections -Wno-pointer-sign -Wno-unused-result '-DAFL_PATH="/home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz"' '-DBIN_PATH="/home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz"' '-DDOC_PATH="/home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz/docs"' -c /home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz/tests/native_recovery.c -o /home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz/tests/out/native-recovery/run-z43e9auk/native/native_recovery.o
+In file included from /home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz/tests/native_recovery.c:5:
+/home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz/tests/../afl-fuzz.c:3196:26: warning: passing 'volatile unsigned int[100]' to parameter of type 'const void *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+ 3196 |   memcpy(state_sequence, state_shared_ptr->seq, *state_count_ref * sizeof(unsigned int));
+      |                          ^~~~~~~~~~~~~~~~~~~~~
+/usr/include/string.h:43:70: note: passing argument to parameter '__src' here
+   43 | extern void *memcpy (void *__restrict __dest, const void *__restrict __src,
+      |                                                                      ^
+1 warning generated.
+$ clang /home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz/tests/out/native-recovery/run-z43e9auk/native/aflnet.o /home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz/tests/out/native-recovery/run-z43e9auk/native/chat-llm.o /home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz/tests/out/native-recovery/run-z43e9auk/native/native_recovery.o -Wl,--gc-sections -Wl,--wrap=write -Wl,--wrap=fsync -Wl,--wrap=rename -ldl -lgvc -lcgraph -lm -lcurl -ljson-c -lpcre2-8 -o /home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz/tests/out/native-recovery/run-z43e9auk/native/native_recovery

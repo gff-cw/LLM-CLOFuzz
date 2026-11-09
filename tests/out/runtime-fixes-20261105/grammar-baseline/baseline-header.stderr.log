@@ -1,0 +1,53 @@
+=================================================================
+==413924==ERROR: AddressSanitizer: stack-buffer-overflow on address 0x7ffff50000d0 at pc 0x555555654a10 bp 0x7fffffffd2f0 sp 0x7fffffffd2e8
+WRITE of size 2 at 0x7ffff50000d0 thread T0
+    #0 0x555555654a0f  (/home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz/tests/out/runtime-fixes-20261105/grammar-baseline/baseline-probe+0x100a0f) (BuildId: d7ae4dbb7af313e0099cf18a6e27937d7f3149ea)
+    #1 0x555555655401  (/home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz/tests/out/runtime-fixes-20261105/grammar-baseline/baseline-probe+0x101401) (BuildId: d7ae4dbb7af313e0099cf18a6e27937d7f3149ea)
+    #2 0x555555651d39  (/home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz/tests/out/runtime-fixes-20261105/grammar-baseline/baseline-probe+0xfdd39) (BuildId: d7ae4dbb7af313e0099cf18a6e27937d7f3149ea)
+    #3 0x7ffff7a2a1c9  (/lib/x86_64-linux-gnu/libc.so.6+0x2a1c9) (BuildId: a4a7992a8e66555c8141ab2a08a8465ff6e0ea65)
+    #4 0x7ffff7a2a28a  (/lib/x86_64-linux-gnu/libc.so.6+0x2a28a) (BuildId: a4a7992a8e66555c8141ab2a08a8465ff6e0ea65)
+    #5 0x5555555843f4  (/home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz/tests/out/runtime-fixes-20261105/grammar-baseline/baseline-probe+0x303f4) (BuildId: d7ae4dbb7af313e0099cf18a6e27937d7f3149ea)
+
+Address 0x7ffff50000d0 is located in stack of thread T0 at offset 208 in frame
+    #0 0x555555654e27  (/home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz/tests/out/runtime-fixes-20261105/grammar-baseline/baseline-probe+0x100e27) (BuildId: d7ae4dbb7af313e0099cf18a6e27937d7f3149ea)
+
+  This frame has 4 object(s):
+    [32, 36) 'errornumber' (line 789)
+    [48, 56) 'erroroffset' (line 790)
+    [80, 208) 'header_pattern' (line 791) <== Memory access at offset 208 overflows this variable
+    [240, 1264) 'fields_pattern' (line 792)
+HINT: this may be a false positive if your program uses some custom stack unwind mechanism, swapcontext or vfork
+      (longjmp and C++ exceptions *are* supported)
+SUMMARY: AddressSanitizer: stack-buffer-overflow (/home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz/tests/out/runtime-fixes-20261105/grammar-baseline/baseline-probe+0x100a0f) (BuildId: d7ae4dbb7af313e0099cf18a6e27937d7f3149ea) 
+Shadow bytes around the buggy address:
+  0x7ffff4fffe00: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x7ffff4fffe80: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x7ffff4ffff00: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x7ffff4ffff80: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x7ffff5000000: f1 f1 f1 f1 04 f2 00 f2 f2 f2 00 00 00 00 00 00
+=>0x7ffff5000080: 00 00 00 00 00 00 00 00 00 00[f2]f2 f2 f2 00 00
+  0x7ffff5000100: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x7ffff5000180: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x7ffff5000200: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x7ffff5000280: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x7ffff5000300: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07 
+  Heap left redzone:       fa
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+==413924==ABORTING

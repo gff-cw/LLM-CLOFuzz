@@ -1,0 +1,16 @@
+$ clang -O1 -g -ffunction-sections -fdata-sections -Wno-pointer-sign -Wno-unused-result '-DAFL_PATH="/home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz"' '-DBIN_PATH="/home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz"' '-DDOC_PATH="/home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz/docs"' -fsanitize=address,undefined -fno-omit-frame-pointer -c /home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz/aflnet.c -o /home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz/tests/out/native-sync-stall/run-soxj71yp/sanitized/aflnet.o
+$ clang -O1 -g -ffunction-sections -fdata-sections -Wno-pointer-sign -Wno-unused-result '-DAFL_PATH="/home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz"' '-DBIN_PATH="/home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz"' '-DDOC_PATH="/home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz/docs"' -fsanitize=address,undefined -fno-omit-frame-pointer -c /home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz/chat-llm.c -o /home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz/tests/out/native-sync-stall/run-soxj71yp/sanitized/chat-llm.o
+/home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz/chat-llm.c:1340:21: warning: assigning to 'char *' from 'kh_cstr_t' (aka 'const char *') discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+ 1340 |         data[index] = kh_key(sequence,i);
+      |                     ^ ~~~~~~~~~~~~~~~~~~
+1 warning generated.
+$ clang -O1 -g -ffunction-sections -fdata-sections -Wno-pointer-sign -Wno-unused-result '-DAFL_PATH="/home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz"' '-DBIN_PATH="/home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz"' '-DDOC_PATH="/home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz/docs"' -fsanitize=address,undefined -fno-omit-frame-pointer -c /home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz/tests/native_sync_stall.c -o /home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz/tests/out/native-sync-stall/run-soxj71yp/sanitized/native_sync_stall.o
+In file included from /home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz/tests/native_sync_stall.c:3:
+/home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz/tests/../afl-fuzz.c:3228:26: warning: passing 'volatile unsigned int[100]' to parameter of type 'const void *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+ 3228 |   memcpy(state_sequence, state_shared_ptr->seq, *state_count_ref * sizeof(unsigned int));
+      |                          ^~~~~~~~~~~~~~~~~~~~~
+/usr/include/string.h:43:70: note: passing argument to parameter '__src' here
+   43 | extern void *memcpy (void *__restrict __dest, const void *__restrict __src,
+      |                                                                      ^
+1 warning generated.
+$ clang -fsanitize=address,undefined -fno-omit-frame-pointer /home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz/tests/out/native-sync-stall/run-soxj71yp/sanitized/aflnet.o /home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz/tests/out/native-sync-stall/run-soxj71yp/sanitized/chat-llm.o /home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz/tests/out/native-sync-stall/run-soxj71yp/sanitized/native_sync_stall.o -Wl,--gc-sections -Wl,--wrap=read -Wl,--wrap=chat_with_llm -ldl -lgvc -lcgraph -lm -lcurl -ljson-c -lpcre2-8 -o /home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz/tests/out/native-sync-stall/run-soxj71yp/sanitized/native_sync_stall

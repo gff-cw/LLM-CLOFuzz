@@ -115,9 +115,9 @@ int main(int argc, char *argv[])
   }
   else
   {
-    /* Universal fallback: use default response codes and request extraction */
-    extract_response_codes = &extract_response_codes_bacnet;
-    extract_requests = &extract_requests_bacnet;
+    /* Universal fallback: use generic response codes and request extraction */
+    extract_response_codes = &extract_response_codes_generic;
+    extract_requests = &extract_requests_generic;
   }
 
   portno = atoi(argv[3]);
@@ -143,7 +143,8 @@ int main(int argc, char *argv[])
   }
 
   int sockfd;
-  if ((!strcasecmp(argv[2], "DTLS12")) || (!strcasecmp(argv[2], "DNS"))  ||
+  if ((!strcasecmp(argv[2], "UDP"))    || (!strncasecmp(argv[2], "udp", 3)) ||
+      (!strcasecmp(argv[2], "DTLS12")) || (!strcasecmp(argv[2], "DNS"))  ||
       (!strcasecmp(argv[2], "SIP"))    || (!strcasecmp(argv[2], "BACNET")) ||
       (!strcasecmp(argv[2], "COAP"))   || (!strcasecmp(argv[2], "TFTP")) ||
       (!strcasecmp(argv[2], "DHCP"))   || (!strcasecmp(argv[2], "NTP"))  ||

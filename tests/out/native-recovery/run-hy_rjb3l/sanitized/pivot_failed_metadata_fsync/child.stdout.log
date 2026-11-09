@@ -1,0 +1,5 @@
+[1;94m[*] [0mImporting input files and preserving message boundaries...[0m
+)B[?25h[0m[1;91m
+[-]  SYSTEM ERROR : [1;97mCannot save 'target/regions/id:000000'; recovery originals retained[1;91m
+    Stop location : [0mpivot_inputs(), /home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz/tests/../afl-fuzz.c:5635
+[1;91m       OS message : [0mInput/output error

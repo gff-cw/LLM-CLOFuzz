@@ -70,6 +70,7 @@ unsigned int* extract_response_codes_sip(unsigned char* buf, unsigned int buf_si
 unsigned int* extract_response_codes_http(unsigned char* buf, unsigned int buf_size, unsigned int* state_count_ref);
 unsigned int* extract_response_codes_ipp(unsigned char* buf, unsigned int buf_size, unsigned int* state_count_ref);
 unsigned int* extract_response_codes_bacnet(unsigned char* buf, unsigned int buf_size, unsigned int* state_count_ref);
+unsigned int* extract_response_codes_generic(unsigned char* buf, unsigned int buf_size, unsigned int* state_count_ref);
 extern unsigned int* (*extract_response_codes)(unsigned char* buf, unsigned int buf_size, unsigned int* state_count_ref);
 
 region_t* extract_requests_smtp(unsigned char* buf, unsigned int buf_size, unsigned int* region_count_ref);
@@ -84,6 +85,7 @@ region_t* extract_requests_sip(unsigned char* buf, unsigned int buf_size, unsign
 region_t* extract_requests_http(unsigned char* buf, unsigned int buf_size, unsigned int* region_count_ref);
 region_t* extract_requests_ipp(unsigned char* buf, unsigned int buf_size, unsigned int* region_count_ref);
 region_t* extract_requests_bacnet(unsigned char* buf, unsigned int buf_size, unsigned int* region_count_ref);
+region_t* extract_requests_generic(unsigned char* buf, unsigned int buf_size, unsigned int* region_count_ref);
 extern region_t* (*extract_requests)(unsigned char* buf, unsigned int buf_size, unsigned int* region_count_ref);
 
 // Network communication functions

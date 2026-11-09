@@ -1,0 +1,167 @@
+{
+  "run_directory": "/home/weicresec/Desktop/GPTFuzz/LLM-CLOFuzz/tests/out/native-sync-stall/run-4vtvim13",
+  "variants": {
+    "native": [
+      {
+        "case": "sync_mixed",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "sync_zeros",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "sync_initial_replay",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "sync_initial_raw",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "sync_callback_failure",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "sync_missing_then_retry",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "sync_stale",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "sync_malformed",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "sync_wrong_basename",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "sync_priority_fallback",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "sync_oversized_companion",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "sync_companion_race_retry",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "sync_snapshot_not_reread",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "sync_frozen_save_count",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "sync_frozen_zero_records",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "clear_idle",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "clear_live",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "sync_busy_list",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "sync_busy_boundary",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "sync_busy_frozen_count",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "cursor_failed_before_higher_success",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "cursor_lowest_retry",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "cursor_completed",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "cursor_real_retry",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "stall_empty_history",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "stall_missing_history",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "stall_failed_prompt",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "stall_empty_prompt",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "stall_actual_attempt",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "stall_response_failure_charged",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "stall_cap_64",
+        "status": "passed",
+        "returncode": 0
+      },
+      {
+        "case": "stall_skips_preserve_quota",
+        "status": "passed",
+        "returncode": 0
+      }
+    ]
+  }
+}
