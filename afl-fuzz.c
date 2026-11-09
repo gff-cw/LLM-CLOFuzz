@@ -10626,7 +10626,7 @@ static void usage(u8* argv0) {
        "Settings for network protocol fuzzing (AFLNet):\n\n"
 
        "  -N netinfo    - server information (e.g., tcp://127.0.0.1/8554)\n"
-       "  -P protocol   - application protocol to be tested (e.g., RTSP, FTP, DTLS12, DNS, SMTP, SSH, TLS, BACNET)\n"
+       "  -P protocol   - application protocol to be tested (e.g., BACNET, MQTT, COAP, MODBUS, RTSP, FTP, or any protocol)\n"
        "  -D usec       - waiting time (in micro seconds) for the server to initialize\n"
        "  -W msec       - waiting time (in miliseconds) for receiving the first response to each input sent\n"
        "  -w usec       - waiting time (in micro seconds) for receiving follow-up responses\n"
@@ -11624,7 +11624,16 @@ int main(int argc, char** argv) {
           extract_requests = &extract_requests_bacnet;
           extract_response_codes = &extract_response_codes_bacnet;
         } else {
-          FATAL("%s protocol is not supported yet!", optarg);
+          /* Universal StateAFL Protocol Adaptation:
+             StateAFL does not require protocol-specific network response codes
+             because internal state transitions are captured automatically via
+             LLVM memory state tracing (extract_response_state_tracer).
+             For packet segmentation, replay containers (4-byte length prefix)
+             or single-region raw buffers are handled by extract_requests_generic.
+             The protocol_name is forwarded directly to ChatAFL's LLM engine. */
+          extract_requests = &extract_requests_generic;
+          extract_response_codes = &extract_response_state_tracer;
+          ACTF("Protocol '%s': enabled universal StateAFL state tracing and LLM enhancements.", optarg);
         }
 
         orig_extract_response_codes = extract_response_codes;

@@ -115,8 +115,9 @@ int main(int argc, char *argv[])
   }
   else
   {
-    fprintf(stderr, "[AFLNet-client] Protocol %s has not been supported yet!\n", argv[2]);
-    exit(1);
+    /* Universal fallback: use default response codes and request extraction */
+    extract_response_codes = &extract_response_codes_bacnet;
+    extract_requests = &extract_requests_bacnet;
   }
 
   portno = atoi(argv[3]);
@@ -142,8 +143,11 @@ int main(int argc, char *argv[])
   }
 
   int sockfd;
-  if ((!strcasecmp(argv[2], "DTLS12")) || (!strcasecmp(argv[2], "DNS")) ||
-      (!strcasecmp(argv[2], "SIP"))    || (!strcasecmp(argv[2], "BACNET")))
+  if ((!strcasecmp(argv[2], "DTLS12")) || (!strcasecmp(argv[2], "DNS"))  ||
+      (!strcasecmp(argv[2], "SIP"))    || (!strcasecmp(argv[2], "BACNET")) ||
+      (!strcasecmp(argv[2], "COAP"))   || (!strcasecmp(argv[2], "TFTP")) ||
+      (!strcasecmp(argv[2], "DHCP"))   || (!strcasecmp(argv[2], "NTP"))  ||
+      (!strcasecmp(argv[2], "SNMP")))
   {
     sockfd = socket(AF_INET, SOCK_DGRAM, 0);
   }

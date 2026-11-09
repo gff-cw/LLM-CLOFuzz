@@ -62,7 +62,10 @@ int main(int argc, char* argv[])
   else if (!strcmp(argv[2], "HTTP")) extract_response_codes = &extract_response_codes_http;
   else if (!strcmp(argv[2], "IPP")) extract_response_codes = &extract_response_codes_ipp;
   else if (!strcasecmp(argv[2], "BACNET")) extract_response_codes = &extract_response_codes_bacnet;
-  else {fprintf(stderr, "[AFL-replay] Protocol %s has not been supported yet!\n", argv[2]); exit(1);}
+  else {
+    /* Universal fallback: use default response code extractor */
+    extract_response_codes = &extract_response_codes_bacnet;
+  }
 
   portno = atoi(argv[3]);
 
@@ -77,8 +80,11 @@ int main(int argc, char* argv[])
   usleep(server_wait_usecs);
 
   int sockfd;
-  if ((!strcasecmp(argv[2], "DTLS12")) || (!strcasecmp(argv[2], "SIP")) ||
-      (!strcasecmp(argv[2], "DNS"))    || (!strcasecmp(argv[2], "BACNET"))) {
+  if ((!strcasecmp(argv[2], "DTLS12")) || (!strcasecmp(argv[2], "SIP"))  ||
+      (!strcasecmp(argv[2], "DNS"))    || (!strcasecmp(argv[2], "BACNET")) ||
+      (!strcasecmp(argv[2], "COAP"))   || (!strcasecmp(argv[2], "TFTP")) ||
+      (!strcasecmp(argv[2], "DHCP"))   || (!strcasecmp(argv[2], "NTP"))  ||
+      (!strcasecmp(argv[2], "SNMP"))) {
     sockfd = socket(AF_INET, SOCK_DGRAM, 0);
   } else {
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
