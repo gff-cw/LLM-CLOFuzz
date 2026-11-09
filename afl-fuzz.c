@@ -10579,7 +10579,7 @@ static void usage(u8* argv0) {
        "Settings for network protocol fuzzing (AFLNet):\n\n"
 
        "  -N netinfo    - server information (e.g., tcp://127.0.0.1/8554)\n"
-       "  -P protocol   - application protocol to be tested (e.g., BACNET, MQTT, COAP, MODBUS, RTSP, FTP, or any protocol)\n"
+       "  -P protocol   - application protocol to be tested (e.g., BACNET, IEC104, IEC61850, OPCUA, ENIP, RTSP, FTP, or any protocol)\n"
        "  -D usec       - waiting time (in micro seconds) for the server to initialize\n"
        "  -W msec       - waiting time (in miliseconds) for receiving the first response to each input sent\n"
        "  -w usec       - waiting time (in micro seconds) for receiving follow-up responses\n"
@@ -11576,6 +11576,18 @@ int main(int argc, char** argv) {
         } else if (!strcasecmp(optarg, "BACNET")) {
           extract_requests = &extract_requests_bacnet;
           extract_response_codes = &extract_response_codes_bacnet;
+        } else if (!strcasecmp(optarg, "IEC104") || !strcasecmp(optarg, "IEC60870_5_104") || !strcasecmp(optarg, "IEC-104")) {
+          extract_requests = &extract_requests_iec104;
+          extract_response_codes = &extract_response_codes_iec104;
+        } else if (!strcasecmp(optarg, "IEC61850") || !strcasecmp(optarg, "IEC-61850") || !strcasecmp(optarg, "MMS")) {
+          extract_requests = &extract_requests_iec61850;
+          extract_response_codes = &extract_response_codes_iec61850;
+        } else if (!strcasecmp(optarg, "OPCUA") || !strcasecmp(optarg, "OPC_UA") || !strcasecmp(optarg, "OPC-UA")) {
+          extract_requests = &extract_requests_opcua;
+          extract_response_codes = &extract_response_codes_opcua;
+        } else if (!strcasecmp(optarg, "ETHERNET_IP") || !strcasecmp(optarg, "ETHERNETIP") || !strcasecmp(optarg, "ENIP") || !strcasecmp(optarg, "EIP") || !strcasecmp(optarg, "Ethernet/IP")) {
+          extract_requests = &extract_requests_enip;
+          extract_response_codes = &extract_response_codes_enip;
         } else {
           /* Universal StateAFL Protocol Adaptation:
              StateAFL does not require protocol-specific network response codes

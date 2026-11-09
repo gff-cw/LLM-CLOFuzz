@@ -833,6 +833,192 @@ region_t* extract_requests_bacnet(unsigned char* buf, unsigned int buf_size, uns
   return regions;
 }
 
+region_t* extract_requests_iec104(unsigned char* buf, unsigned int buf_size, unsigned int* region_count_ref)
+{
+  if (!region_count_ref) return NULL;
+  *region_count_ref = 0;
+  if (!buf || buf_size == 0) return NULL;
+
+  unsigned int byte_count = 0;
+  unsigned int region_count = 0;
+  region_t *regions = NULL;
+
+  while (byte_count < buf_size) {
+    if (buf_size - byte_count < 2) break;
+    if (buf[byte_count] != 0x68) break;
+
+    unsigned int apdu_len = (unsigned int)buf[byte_count + 1];
+    if (apdu_len < 4 || apdu_len > 253) break;
+
+    unsigned int packet_len = apdu_len + 2;
+    if (packet_len > buf_size - byte_count) break;
+
+    region_count++;
+    regions = (region_t *)ck_realloc(regions, region_count * sizeof(region_t));
+    regions[region_count - 1].start_byte = byte_count;
+    regions[region_count - 1].end_byte = byte_count + packet_len - 1;
+    regions[region_count - 1].state_sequence = NULL;
+    regions[region_count - 1].state_count = 0;
+
+    byte_count += packet_len;
+  }
+
+  /* Absorb any trailing or unparsed bytes into a final region */
+  if ((byte_count < buf_size) && (buf_size > 0)) {
+    region_count++;
+    regions = (region_t *)ck_realloc(regions, region_count * sizeof(region_t));
+    regions[region_count - 1].start_byte = byte_count;
+    regions[region_count - 1].end_byte = buf_size - 1;
+    regions[region_count - 1].state_sequence = NULL;
+    regions[region_count - 1].state_count = 0;
+  }
+
+  *region_count_ref = region_count;
+  return regions;
+}
+
+region_t* extract_requests_iec61850(unsigned char* buf, unsigned int buf_size, unsigned int* region_count_ref)
+{
+  if (!region_count_ref) return NULL;
+  *region_count_ref = 0;
+  if (!buf || buf_size == 0) return NULL;
+
+  unsigned int byte_count = 0;
+  unsigned int region_count = 0;
+  region_t *regions = NULL;
+
+  while (byte_count < buf_size) {
+    if (buf_size - byte_count < 4) break;
+    if (buf[byte_count] != 0x03 || buf[byte_count + 1] != 0x00) break;
+
+    unsigned int packet_len = ((unsigned int)buf[byte_count + 2] << 8) | (unsigned int)buf[byte_count + 3];
+    if (packet_len < 4 || packet_len > buf_size - byte_count) break;
+
+    region_count++;
+    regions = (region_t *)ck_realloc(regions, region_count * sizeof(region_t));
+    regions[region_count - 1].start_byte = byte_count;
+    regions[region_count - 1].end_byte = byte_count + packet_len - 1;
+    regions[region_count - 1].state_sequence = NULL;
+    regions[region_count - 1].state_count = 0;
+
+    byte_count += packet_len;
+  }
+
+  /* Absorb any trailing or unparsed bytes into a final region */
+  if ((byte_count < buf_size) && (buf_size > 0)) {
+    region_count++;
+    regions = (region_t *)ck_realloc(regions, region_count * sizeof(region_t));
+    regions[region_count - 1].start_byte = byte_count;
+    regions[region_count - 1].end_byte = buf_size - 1;
+    regions[region_count - 1].state_sequence = NULL;
+    regions[region_count - 1].state_count = 0;
+  }
+
+  *region_count_ref = region_count;
+  return regions;
+}
+
+static inline int is_valid_opcua_type(const unsigned char *b) {
+  return ((b[0] == 'H' && b[1] == 'E' && b[2] == 'L') ||
+          (b[0] == 'A' && b[1] == 'C' && b[2] == 'K') ||
+          (b[0] == 'E' && b[1] == 'R' && b[2] == 'R') ||
+          (b[0] == 'O' && b[1] == 'P' && b[2] == 'N') ||
+          (b[0] == 'C' && b[1] == 'L' && b[2] == 'O') ||
+          (b[0] == 'M' && b[1] == 'S' && b[2] == 'G') ||
+          (b[0] == 'R' && b[1] == 'H' && b[2] == 'E'));
+}
+
+region_t* extract_requests_opcua(unsigned char* buf, unsigned int buf_size, unsigned int* region_count_ref)
+{
+  if (!region_count_ref) return NULL;
+  *region_count_ref = 0;
+  if (!buf || buf_size == 0) return NULL;
+
+  unsigned int byte_count = 0;
+  unsigned int region_count = 0;
+  region_t *regions = NULL;
+
+  while (byte_count < buf_size) {
+    if (buf_size - byte_count < 8) break;
+    if (!is_valid_opcua_type(&buf[byte_count])) break;
+
+    unsigned char chunk_type = buf[byte_count + 3];
+    if (chunk_type != 'F' && chunk_type != 'C' && chunk_type != 'A') break;
+
+    unsigned int packet_len = (unsigned int)buf[byte_count + 4] |
+                             ((unsigned int)buf[byte_count + 5] << 8) |
+                             ((unsigned int)buf[byte_count + 6] << 16) |
+                             ((unsigned int)buf[byte_count + 7] << 24);
+
+    if (packet_len < 8 || packet_len > buf_size - byte_count) break;
+
+    region_count++;
+    regions = (region_t *)ck_realloc(regions, region_count * sizeof(region_t));
+    regions[region_count - 1].start_byte = byte_count;
+    regions[region_count - 1].end_byte = byte_count + packet_len - 1;
+    regions[region_count - 1].state_sequence = NULL;
+    regions[region_count - 1].state_count = 0;
+
+    byte_count += packet_len;
+  }
+
+  /* Absorb any trailing or unparsed bytes into a final region */
+  if ((byte_count < buf_size) && (buf_size > 0)) {
+    region_count++;
+    regions = (region_t *)ck_realloc(regions, region_count * sizeof(region_t));
+    regions[region_count - 1].start_byte = byte_count;
+    regions[region_count - 1].end_byte = buf_size - 1;
+    regions[region_count - 1].state_sequence = NULL;
+    regions[region_count - 1].state_count = 0;
+  }
+
+  *region_count_ref = region_count;
+  return regions;
+}
+
+region_t* extract_requests_enip(unsigned char* buf, unsigned int buf_size, unsigned int* region_count_ref)
+{
+  if (!region_count_ref) return NULL;
+  *region_count_ref = 0;
+  if (!buf || buf_size == 0) return NULL;
+
+  unsigned int byte_count = 0;
+  unsigned int region_count = 0;
+  region_t *regions = NULL;
+
+  while (byte_count < buf_size) {
+    if (buf_size - byte_count < 24) break;
+
+    unsigned int payload_len = (unsigned int)buf[byte_count + 2] |
+                              ((unsigned int)buf[byte_count + 3] << 8);
+
+    unsigned int packet_len = 24 + payload_len;
+    if (packet_len > buf_size - byte_count) break;
+
+    region_count++;
+    regions = (region_t *)ck_realloc(regions, region_count * sizeof(region_t));
+    regions[region_count - 1].start_byte = byte_count;
+    regions[region_count - 1].end_byte = byte_count + packet_len - 1;
+    regions[region_count - 1].state_sequence = NULL;
+    regions[region_count - 1].state_count = 0;
+
+    byte_count += packet_len;
+  }
+
+  /* Absorb any trailing or unparsed bytes into a final region */
+  if ((byte_count < buf_size) && (buf_size > 0)) {
+    region_count++;
+    regions = (region_t *)ck_realloc(regions, region_count * sizeof(region_t));
+    regions[region_count - 1].start_byte = byte_count;
+    regions[region_count - 1].end_byte = buf_size - 1;
+    regions[region_count - 1].state_sequence = NULL;
+    regions[region_count - 1].state_count = 0;
+  }
+
+  *region_count_ref = region_count;
+  return regions;
+}
+
 unsigned int* extract_response_codes_smtp(unsigned char* buf, unsigned int buf_size, unsigned int* state_count_ref)
 {
   char *mem;
@@ -1561,6 +1747,246 @@ unsigned int* extract_response_codes_bacnet(unsigned char* buf, unsigned int buf
     state_count++;
     state_sequence = (unsigned int *)ck_realloc(state_sequence, state_count * sizeof(unsigned int));
     if (state_sequence == NULL) PFATAL("Unable to allocate memory for BACnet state sequence");
+    state_sequence[state_count - 1] = code;
+
+    byte_count += packet_len;
+  }
+
+  *state_count_ref = state_count;
+  return state_sequence;
+}
+
+unsigned int* extract_response_codes_iec104(unsigned char* buf, unsigned int buf_size, unsigned int* state_count_ref)
+{
+  if (!state_count_ref) return NULL;
+  if (!buf || buf_size == 0) {
+    *state_count_ref = 1;
+    unsigned int *state_sequence = (unsigned int *)ck_alloc(sizeof(unsigned int));
+    state_sequence[0] = 0;
+    return state_sequence;
+  }
+
+  unsigned int state_count = 1;
+  unsigned int *state_sequence = (unsigned int *)ck_alloc(sizeof(unsigned int));
+  state_sequence[0] = 0;
+  unsigned int byte_count = 0;
+
+  while (byte_count < buf_size) {
+    if (buf_size - byte_count < 2) break;
+    if (buf[byte_count] != 0x68) break;
+
+    unsigned int apdu_len = (unsigned int)buf[byte_count + 1];
+    if (apdu_len < 4 || apdu_len > 253) break;
+
+    unsigned int packet_len = apdu_len + 2;
+    if (packet_len > buf_size - byte_count) break;
+
+    unsigned int code = 0;
+    unsigned char ctrl_byte0 = buf[byte_count + 2];
+
+    if ((ctrl_byte0 & 0x01) == 0x00) {
+      /* I-format frame */
+      if (packet_len >= 7) {
+        unsigned char type_id = buf[byte_count + 6];
+        unsigned char cot = (packet_len >= 9) ? (buf[byte_count + 8] & 0x3F) : 0;
+        code = (0x03 << 16) | ((unsigned int)type_id << 8) | (unsigned int)cot;
+      } else {
+        code = 0x030000;
+      }
+    } else if ((ctrl_byte0 & 0x03) == 0x01) {
+      /* S-format frame (Supervisory ACK) */
+      code = 0x020001;
+    } else if ((ctrl_byte0 & 0x03) == 0x03) {
+      /* U-format frame (Unnumbered Control) */
+      code = (0x01 << 16) | (unsigned int)ctrl_byte0;
+    }
+
+    state_count++;
+    state_sequence = (unsigned int *)ck_realloc(state_sequence, state_count * sizeof(unsigned int));
+    if (state_sequence == NULL) PFATAL("Unable to allocate memory for IEC104 state sequence");
+    state_sequence[state_count - 1] = code;
+
+    byte_count += packet_len;
+  }
+
+  *state_count_ref = state_count;
+  return state_sequence;
+}
+
+unsigned int* extract_response_codes_iec61850(unsigned char* buf, unsigned int buf_size, unsigned int* state_count_ref)
+{
+  if (!state_count_ref) return NULL;
+  if (!buf || buf_size == 0) {
+    *state_count_ref = 1;
+    unsigned int *state_sequence = (unsigned int *)ck_alloc(sizeof(unsigned int));
+    state_sequence[0] = 0;
+    return state_sequence;
+  }
+
+  unsigned int state_count = 1;
+  unsigned int *state_sequence = (unsigned int *)ck_alloc(sizeof(unsigned int));
+  state_sequence[0] = 0;
+  unsigned int byte_count = 0;
+
+  while (byte_count < buf_size) {
+    if (buf_size - byte_count < 4) break;
+    if (buf[byte_count] != 0x03 || buf[byte_count + 1] != 0x00) break;
+
+    unsigned int packet_len = ((unsigned int)buf[byte_count + 2] << 8) | (unsigned int)buf[byte_count + 3];
+    if (packet_len < 4 || packet_len > buf_size - byte_count) break;
+
+    unsigned int code = 0x0300; /* Default TPKT fallback */
+
+    if (packet_len >= 6) {
+      unsigned char cotp_li = buf[byte_count + 4];
+      unsigned char cotp_type = buf[byte_count + 5];
+
+      if ((cotp_type & 0xF0) != 0xF0) {
+        code = (unsigned int)cotp_type;
+      } else {
+        code = (unsigned int)cotp_type;
+        unsigned int cotp_hdr_len = 1 + (unsigned int)cotp_li;
+        unsigned int mms_offset = 4 + cotp_hdr_len;
+
+        unsigned int scan_limit = (packet_len < mms_offset + 32) ? packet_len : (mms_offset + 32);
+        for (unsigned int i = mms_offset; i < scan_limit; i++) {
+          unsigned char tag = buf[byte_count + i];
+          if (tag == 0xA1 || tag == 0xA2 || tag == 0xA4 || tag == 0xA9 || tag == 0xAA || tag == 0x8C || tag == 0x8D) {
+            code = (0xF0 << 16) | ((unsigned int)tag << 8);
+            if (i + 4 < packet_len) {
+              code |= (unsigned int)buf[byte_count + i + 4];
+            }
+            break;
+          }
+        }
+      }
+    }
+
+    state_count++;
+    state_sequence = (unsigned int *)ck_realloc(state_sequence, state_count * sizeof(unsigned int));
+    if (state_sequence == NULL) PFATAL("Unable to allocate memory for IEC61850 state sequence");
+    state_sequence[state_count - 1] = code;
+
+    byte_count += packet_len;
+  }
+
+  *state_count_ref = state_count;
+  return state_sequence;
+}
+
+unsigned int* extract_response_codes_opcua(unsigned char* buf, unsigned int buf_size, unsigned int* state_count_ref)
+{
+  if (!state_count_ref) return NULL;
+  if (!buf || buf_size == 0) {
+    *state_count_ref = 1;
+    unsigned int *state_sequence = (unsigned int *)ck_alloc(sizeof(unsigned int));
+    state_sequence[0] = 0;
+    return state_sequence;
+  }
+
+  unsigned int state_count = 1;
+  unsigned int *state_sequence = (unsigned int *)ck_alloc(sizeof(unsigned int));
+  state_sequence[0] = 0;
+  unsigned int byte_count = 0;
+
+  while (byte_count < buf_size) {
+    if (buf_size - byte_count < 8) break;
+    if (!is_valid_opcua_type(&buf[byte_count])) break;
+
+    unsigned char chunk_type = buf[byte_count + 3];
+    if (chunk_type != 'F' && chunk_type != 'C' && chunk_type != 'A') break;
+
+    unsigned int packet_len = (unsigned int)buf[byte_count + 4] |
+                             ((unsigned int)buf[byte_count + 5] << 8) |
+                             ((unsigned int)buf[byte_count + 6] << 16) |
+                             ((unsigned int)buf[byte_count + 7] << 24);
+
+    if (packet_len < 8 || packet_len > buf_size - byte_count) break;
+
+    unsigned int code = ((unsigned int)buf[byte_count] << 24) |
+                        ((unsigned int)buf[byte_count + 1] << 16) |
+                        ((unsigned int)buf[byte_count + 2] << 8) |
+                        (unsigned int)buf[byte_count + 3];
+
+    if (buf[byte_count] == 'E' && buf[byte_count + 1] == 'R' && buf[byte_count + 2] == 'R') {
+      if (packet_len >= 12) {
+        unsigned int status_code = (unsigned int)buf[byte_count + 8] |
+                                  ((unsigned int)buf[byte_count + 9] << 8) |
+                                  ((unsigned int)buf[byte_count + 10] << 16) |
+                                  ((unsigned int)buf[byte_count + 11] << 24);
+        code = (status_code != 0) ? status_code : 0x80000000;
+      }
+    }
+
+    state_count++;
+    state_sequence = (unsigned int *)ck_realloc(state_sequence, state_count * sizeof(unsigned int));
+    if (state_sequence == NULL) PFATAL("Unable to allocate memory for OPC UA state sequence");
+    state_sequence[state_count - 1] = code;
+
+    byte_count += packet_len;
+  }
+
+  *state_count_ref = state_count;
+  return state_sequence;
+}
+
+unsigned int* extract_response_codes_enip(unsigned char* buf, unsigned int buf_size, unsigned int* state_count_ref)
+{
+  if (!state_count_ref) return NULL;
+  if (!buf || buf_size == 0) {
+    *state_count_ref = 1;
+    unsigned int *state_sequence = (unsigned int *)ck_alloc(sizeof(unsigned int));
+    state_sequence[0] = 0;
+    return state_sequence;
+  }
+
+  unsigned int state_count = 1;
+  unsigned int *state_sequence = (unsigned int *)ck_alloc(sizeof(unsigned int));
+  state_sequence[0] = 0;
+  unsigned int byte_count = 0;
+
+  while (byte_count < buf_size) {
+    if (buf_size - byte_count < 24) break;
+
+    unsigned int payload_len = (unsigned int)buf[byte_count + 2] |
+                              ((unsigned int)buf[byte_count + 3] << 8);
+    unsigned int packet_len = 24 + payload_len;
+    if (packet_len > buf_size - byte_count) break;
+
+    unsigned int cmd = (unsigned int)buf[byte_count] |
+                      ((unsigned int)buf[byte_count + 1] << 8);
+
+    unsigned int status = (unsigned int)buf[byte_count + 8] |
+                         ((unsigned int)buf[byte_count + 9] << 8) |
+                         ((unsigned int)buf[byte_count + 10] << 16) |
+                         ((unsigned int)buf[byte_count + 11] << 24);
+
+    unsigned int code;
+    if (status != 0) {
+      code = (cmd << 16) | (status & 0xFFFF);
+    } else {
+      if ((cmd == 0x006F || cmd == 0x0070) && packet_len >= 43) {
+        unsigned int item1_len = (unsigned int)buf[byte_count + 34] |
+                                ((unsigned int)buf[byte_count + 35] << 8);
+        unsigned int item2_offset = 36 + item1_len;
+
+        if (packet_len >= item2_offset + 7) {
+          unsigned char cip_service = buf[byte_count + item2_offset + 4];
+          unsigned char cip_status = buf[byte_count + item2_offset + 6];
+          code = (cmd << 16) | ((unsigned int)cip_service << 8) | (unsigned int)cip_status;
+        } else {
+          code = cmd;
+        }
+      } else {
+        code = cmd;
+      }
+    }
+
+    if (code == 0) code = 0x006F0000;
+
+    state_count++;
+    state_sequence = (unsigned int *)ck_realloc(state_sequence, state_count * sizeof(unsigned int));
+    if (state_sequence == NULL) PFATAL("Unable to allocate memory for EtherNet/IP state sequence");
     state_sequence[state_count - 1] = code;
 
     byte_count += packet_len;

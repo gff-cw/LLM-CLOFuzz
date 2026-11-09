@@ -113,6 +113,26 @@ int main(int argc, char *argv[])
     extract_response_codes = &extract_response_codes_bacnet;
     extract_requests = &extract_requests_bacnet;
   }
+  else if (!strcasecmp(argv[2], "IEC104") || !strcasecmp(argv[2], "IEC60870_5_104") || !strcasecmp(argv[2], "IEC-104"))
+  {
+    extract_response_codes = &extract_response_codes_iec104;
+    extract_requests = &extract_requests_iec104;
+  }
+  else if (!strcasecmp(argv[2], "IEC61850") || !strcasecmp(argv[2], "IEC-61850") || !strcasecmp(argv[2], "MMS"))
+  {
+    extract_response_codes = &extract_response_codes_iec61850;
+    extract_requests = &extract_requests_iec61850;
+  }
+  else if (!strcasecmp(argv[2], "OPCUA") || !strcasecmp(argv[2], "OPC_UA") || !strcasecmp(argv[2], "OPC-UA"))
+  {
+    extract_response_codes = &extract_response_codes_opcua;
+    extract_requests = &extract_requests_opcua;
+  }
+  else if (!strcasecmp(argv[2], "ETHERNET_IP") || !strcasecmp(argv[2], "ETHERNETIP") || !strcasecmp(argv[2], "ENIP") || !strcasecmp(argv[2], "EIP") || !strcasecmp(argv[2], "Ethernet/IP"))
+  {
+    extract_response_codes = &extract_response_codes_enip;
+    extract_requests = &extract_requests_enip;
+  }
   else
   {
     /* Universal fallback: use generic response codes and request extraction */

@@ -55,7 +55,7 @@ KHASH_INIT(hms, khint32_t, state_info_t *, 1, kh_int_hash_func, kh_int_hash_equa
 
 // Functions for extracting requests and responses
 
-/*To add support for a new application protocol, please add corresponding function declartion and implementation
+/*To add support for a new application protocol, please add corresponding function declaration and implementation
 And update the code to handle -P option in the main function in afl-fuzz.c accordingly */
 
 unsigned int* extract_response_codes_smtp(unsigned char* buf, unsigned int buf_size, unsigned int* state_count_ref);
@@ -70,6 +70,10 @@ unsigned int* extract_response_codes_sip(unsigned char* buf, unsigned int buf_si
 unsigned int* extract_response_codes_http(unsigned char* buf, unsigned int buf_size, unsigned int* state_count_ref);
 unsigned int* extract_response_codes_ipp(unsigned char* buf, unsigned int buf_size, unsigned int* state_count_ref);
 unsigned int* extract_response_codes_bacnet(unsigned char* buf, unsigned int buf_size, unsigned int* state_count_ref);
+unsigned int* extract_response_codes_iec104(unsigned char* buf, unsigned int buf_size, unsigned int* state_count_ref);
+unsigned int* extract_response_codes_iec61850(unsigned char* buf, unsigned int buf_size, unsigned int* state_count_ref);
+unsigned int* extract_response_codes_opcua(unsigned char* buf, unsigned int buf_size, unsigned int* state_count_ref);
+unsigned int* extract_response_codes_enip(unsigned char* buf, unsigned int buf_size, unsigned int* state_count_ref);
 unsigned int* extract_response_codes_generic(unsigned char* buf, unsigned int buf_size, unsigned int* state_count_ref);
 extern unsigned int* (*extract_response_codes)(unsigned char* buf, unsigned int buf_size, unsigned int* state_count_ref);
 
@@ -85,6 +89,10 @@ region_t* extract_requests_sip(unsigned char* buf, unsigned int buf_size, unsign
 region_t* extract_requests_http(unsigned char* buf, unsigned int buf_size, unsigned int* region_count_ref);
 region_t* extract_requests_ipp(unsigned char* buf, unsigned int buf_size, unsigned int* region_count_ref);
 region_t* extract_requests_bacnet(unsigned char* buf, unsigned int buf_size, unsigned int* region_count_ref);
+region_t* extract_requests_iec104(unsigned char* buf, unsigned int buf_size, unsigned int* region_count_ref);
+region_t* extract_requests_iec61850(unsigned char* buf, unsigned int buf_size, unsigned int* region_count_ref);
+region_t* extract_requests_opcua(unsigned char* buf, unsigned int buf_size, unsigned int* region_count_ref);
+region_t* extract_requests_enip(unsigned char* buf, unsigned int buf_size, unsigned int* region_count_ref);
 region_t* extract_requests_generic(unsigned char* buf, unsigned int buf_size, unsigned int* region_count_ref);
 extern region_t* (*extract_requests)(unsigned char* buf, unsigned int buf_size, unsigned int* region_count_ref);
 

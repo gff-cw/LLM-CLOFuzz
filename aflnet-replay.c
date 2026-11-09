@@ -48,6 +48,10 @@ int main(int argc, char* argv[])
   else if (!strcmp(argv[2], "HTTP")) extract_response_codes = &extract_response_codes_http;
   else if (!strcmp(argv[2], "IPP")) extract_response_codes = &extract_response_codes_ipp;
   else if (!strcasecmp(argv[2], "BACNET")) extract_response_codes = &extract_response_codes_bacnet;
+  else if (!strcasecmp(argv[2], "IEC104") || !strcasecmp(argv[2], "IEC60870_5_104") || !strcasecmp(argv[2], "IEC-104")) extract_response_codes = &extract_response_codes_iec104;
+  else if (!strcasecmp(argv[2], "IEC61850") || !strcasecmp(argv[2], "IEC-61850") || !strcasecmp(argv[2], "MMS")) extract_response_codes = &extract_response_codes_iec61850;
+  else if (!strcasecmp(argv[2], "OPCUA") || !strcasecmp(argv[2], "OPC_UA") || !strcasecmp(argv[2], "OPC-UA")) extract_response_codes = &extract_response_codes_opcua;
+  else if (!strcasecmp(argv[2], "ETHERNET_IP") || !strcasecmp(argv[2], "ETHERNETIP") || !strcasecmp(argv[2], "ENIP") || !strcasecmp(argv[2], "EIP") || !strcasecmp(argv[2], "Ethernet/IP")) extract_response_codes = &extract_response_codes_enip;
   else {
     /* Universal fallback: use generic response code extractor */
     extract_response_codes = &extract_response_codes_generic;
