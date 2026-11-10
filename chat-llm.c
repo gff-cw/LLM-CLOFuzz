@@ -421,11 +421,283 @@ char *chat_with_llm(char *prompt, char *model, int tries, float temperature)
     return answer;
 }
 
+int is_binary_protocol(const char *protocol_name)
+{
+    if (!protocol_name) return 0;
+    if (!strcasecmp(protocol_name, "BACNET")) return 1;
+    if (!strcasecmp(protocol_name, "MODBUS") || !strcasecmp(protocol_name, "MODBUS_TCP") ||
+        !strcasecmp(protocol_name, "MODBUSTCP") || !strcasecmp(protocol_name, "MODBUS-TCP")) return 1;
+    if (!strcasecmp(protocol_name, "IEC104") || !strcasecmp(protocol_name, "IEC60870_5_104") ||
+        !strcasecmp(protocol_name, "IEC-104")) return 1;
+    if (!strcasecmp(protocol_name, "IEC61850") || !strcasecmp(protocol_name, "IEC-61850") ||
+        !strcasecmp(protocol_name, "MMS")) return 1;
+    if (!strcasecmp(protocol_name, "OPCUA") || !strcasecmp(protocol_name, "OPC_UA") ||
+        !strcasecmp(protocol_name, "OPC-UA")) return 1;
+    if (!strcasecmp(protocol_name, "ETHERNET_IP") || !strcasecmp(protocol_name, "ETHERNETIP") ||
+        !strcasecmp(protocol_name, "ENIP") || !strcasecmp(protocol_name, "EIP") ||
+        !strcasecmp(protocol_name, "Ethernet/IP")) return 1;
+    return 0;
+}
+
+char *bytes_to_hex_str(const unsigned char *data, size_t len, int spaced)
+{
+    if (!data || len == 0) return (char *)ck_strdup((u8 *)"");
+    size_t out_len = spaced ? (len * 3) : (len * 2);
+    char *out = (char *)ck_alloc(out_len + 1);
+    if (!out) return NULL;
+    static const char hex_chars[] = "0123456789abcdef";
+    size_t pos = 0;
+    for (size_t i = 0; i < len; i++) {
+        out[pos++] = hex_chars[(data[i] >> 4) & 0x0F];
+        out[pos++] = hex_chars[data[i] & 0x0F];
+        if (spaced && i + 1 < len) {
+            out[pos++] = ' ';
+        }
+    }
+    out[pos] = '\0';
+    return out;
+}
+
+static inline int hex_char_val(char c) {
+    if (c >= '0' && c <= '9') return c - '0';
+    if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+    if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+    return -1;
+}
+
+unsigned char *hex_str_to_bytes(const char *hex_str, size_t *out_len)
+{
+    if (out_len) *out_len = 0;
+    if (!hex_str) return NULL;
+
+    size_t slen = strlen(hex_str);
+    unsigned char *buf = (unsigned char *)ck_alloc(slen / 2 + 2);
+    if (!buf) return NULL;
+
+    size_t count = 0;
+    int hi = -1;
+    for (size_t i = 0; i < slen; i++) {
+        char c = hex_str[i];
+        if (c == ' ' || c == '\t' || c == '\r' || c == '\n' || c == ':' || c == ',' || c == '-' || c == 'x' || c == 'X') {
+            continue;
+        }
+        int v = hex_char_val(c);
+        if (v < 0) {
+            continue;
+        }
+        if (hi < 0) {
+            hi = v;
+        } else {
+            buf[count++] = (unsigned char)((hi << 4) | v);
+            hi = -1;
+        }
+    }
+    if (out_len) *out_len = count;
+    return buf;
+}
+
+char *extract_hex_payload(const char *text, size_t text_len, size_t *out_bytes_len)
+{
+    if (out_bytes_len) *out_bytes_len = 0;
+    if (!text || text_len == 0) return NULL;
+
+    /* Check if wrapped in markdown code blocks e.g. ```hex ... ``` or ``` ... ``` */
+    const char *start = text;
+    const char *fence = strstr(text, "```");
+    if (fence) {
+        fence += 3;
+        while (*fence == 'h' || *fence == 'e' || *fence == 'x' || *fence == ' ') fence++;
+        if (*fence == '\r') fence++;
+        if (*fence == '\n') fence++;
+        start = fence;
+        const char *end_fence = strstr(start, "```");
+        if (end_fence) {
+            size_t sublen = (size_t)(end_fence - start);
+            char *sub = (char *)ck_alloc(sublen + 1);
+            if (sub) {
+                memcpy(sub, start, sublen);
+                sub[sublen] = '\0';
+                unsigned char *res = hex_str_to_bytes(sub, out_bytes_len);
+                ck_free(sub);
+                return (char *)res;
+            }
+        }
+    }
+
+    return (char *)hex_str_to_bytes(start, out_bytes_len);
+}
+
+char *classify_protocol_message_type(const char *proto, const unsigned char *buf, size_t len)
+{
+    if (!proto || !buf || len == 0) return NULL;
+
+    if (!strcasecmp(proto, "BACNET")) {
+        if (len >= 4 && buf[0] == 0x81) {
+            uint8_t bvlc_func = buf[1];
+            size_t npdu_off = 4;
+            if (bvlc_func == 0x04 && len >= 7) npdu_off = 7; /* Forwarded-NPDU */
+            if (len > npdu_off + 2 && buf[npdu_off] == 0x01) {
+                uint8_t npdu_ctrl = buf[npdu_off + 1];
+                size_t apdu_off = npdu_off + 2;
+                if (npdu_ctrl & 0x20) { /* DNET, DLEN, DADR */
+                    if (len > apdu_off + 2) {
+                        uint8_t dlen = buf[apdu_off + 2];
+                        apdu_off += 3 + dlen;
+                    }
+                }
+                if (npdu_ctrl & 0x08) { /* SNET, SLEN, SADR */
+                    if (len > apdu_off + 2) {
+                        uint8_t slen = buf[apdu_off + 2];
+                        apdu_off += 3 + slen;
+                    }
+                }
+                if (npdu_ctrl & 0x04) apdu_off += 1; /* Hop count */
+                if (len > apdu_off) {
+                    uint8_t apdu_type = (buf[apdu_off] >> 4) & 0x0F;
+                    if (apdu_type == 0x00 && len > apdu_off + 2) { /* Confirmed-REQ */
+                        uint8_t svc = buf[apdu_off + 2];
+                        if (svc == 0x0C) return (char *)ck_strdup((u8 *)"READ_PROPERTY");
+                        if (svc == 0x0E) return (char *)ck_strdup((u8 *)"READ_PROPERTY_MULTIPLE");
+                        if (svc == 0x0F) return (char *)ck_strdup((u8 *)"WRITE_PROPERTY");
+                        if (svc == 0x10) return (char *)ck_strdup((u8 *)"WRITE_PROPERTY_MULTIPLE");
+                        return (char *)ck_strdup((u8 *)"CONFIRMED_REQ");
+                    } else if (apdu_type == 0x01 && len > apdu_off + 1) { /* Unconfirmed-REQ */
+                        uint8_t svc = buf[apdu_off + 1];
+                        if (svc == 0x08) return (char *)ck_strdup((u8 *)"WHO_IS");
+                        if (svc == 0x00) return (char *)ck_strdup((u8 *)"I_AM");
+                        if (svc == 0x07) return (char *)ck_strdup((u8 *)"WHO_HAS");
+                        if (svc == 0x01) return (char *)ck_strdup((u8 *)"I_HAVE");
+                        return (char *)ck_strdup((u8 *)"UNCONFIRMED_REQ");
+                    } else if (apdu_type == 0x02) return (char *)ck_strdup((u8 *)"SIMPLE_ACK");
+                    else if (apdu_type == 0x03) return (char *)ck_strdup((u8 *)"COMPLEX_ACK");
+                    else if (apdu_type == 0x05) return (char *)ck_strdup((u8 *)"ERROR");
+                }
+            }
+            if (bvlc_func == 0x0a) return (char *)ck_strdup((u8 *)"BVLC_UNICAST");
+            if (bvlc_func == 0x0b) return (char *)ck_strdup((u8 *)"BVLC_BROADCAST");
+        }
+        return (char *)ck_strdup((u8 *)"BACNET_MSG");
+    }
+
+    if (!strncasecmp(proto, "MODBUS", 6)) {
+        if (len >= 8) {
+            uint8_t fc = buf[7];
+            switch (fc) {
+                case 0x01: return (char *)ck_strdup((u8 *)"READ_COILS");
+                case 0x02: return (char *)ck_strdup((u8 *)"READ_DISCRETE_INPUTS");
+                case 0x03: return (char *)ck_strdup((u8 *)"READ_HOLDING_REGISTERS");
+                case 0x04: return (char *)ck_strdup((u8 *)"READ_INPUT_REGISTERS");
+                case 0x05: return (char *)ck_strdup((u8 *)"WRITE_SINGLE_COIL");
+                case 0x06: return (char *)ck_strdup((u8 *)"WRITE_SINGLE_REGISTER");
+                case 0x0F: return (char *)ck_strdup((u8 *)"WRITE_MULTIPLE_COILS");
+                case 0x10: return (char *)ck_strdup((u8 *)"WRITE_MULTIPLE_REGISTERS");
+                default: {
+                    char tmp[32];
+                    snprintf(tmp, sizeof(tmp), "MODBUS_FC_%02X", fc);
+                    return (char *)ck_strdup((u8 *)tmp);
+                }
+            }
+        }
+        return (char *)ck_strdup((u8 *)"MODBUS_TCP");
+    }
+
+    if (!strncasecmp(proto, "IEC104", 6) || !strcasecmp(proto, "IEC60870_5_104") || !strcasecmp(proto, "IEC-104")) {
+        if (len >= 6 && buf[0] == 0x68) {
+            uint8_t c1 = buf[2];
+            if ((c1 & 0x01) == 0) {
+                if (len >= 7) {
+                    uint8_t asdu_type = buf[6];
+                    if (asdu_type == 100) return (char *)ck_strdup((u8 *)"INTERROGATION");
+                    if (asdu_type == 45) return (char *)ck_strdup((u8 *)"SINGLE_COMMAND");
+                    if (asdu_type == 46) return (char *)ck_strdup((u8 *)"DOUBLE_COMMAND");
+                    if (asdu_type == 103) return (char *)ck_strdup((u8 *)"CLOCK_SYNC");
+                    char tmp[32];
+                    snprintf(tmp, sizeof(tmp), "ASDU_TYPE_%u", asdu_type);
+                    return (char *)ck_strdup((u8 *)tmp);
+                }
+                return (char *)ck_strdup((u8 *)"I_FORMAT");
+            } else if ((c1 & 0x03) == 0x01) {
+                return (char *)ck_strdup((u8 *)"S_FORMAT");
+            } else if ((c1 & 0x03) == 0x03) {
+                if (c1 == 0x07) return (char *)ck_strdup((u8 *)"STARTDT_ACT");
+                if (c1 == 0x0B) return (char *)ck_strdup((u8 *)"STARTDT_CON");
+                if (c1 == 0x13) return (char *)ck_strdup((u8 *)"STOPDT_ACT");
+                if (c1 == 0x17) return (char *)ck_strdup((u8 *)"STOPDT_CON");
+                if (c1 == 0x43) return (char *)ck_strdup((u8 *)"TESTFR_ACT");
+                if (c1 == 0x83) return (char *)ck_strdup((u8 *)"TESTFR_CON");
+                return (char *)ck_strdup((u8 *)"U_FORMAT");
+            }
+        }
+        return (char *)ck_strdup((u8 *)"IEC104_FRAME");
+    }
+
+    if (!strncasecmp(proto, "IEC61850", 8) || !strcasecmp(proto, "IEC-61850") || !strcasecmp(proto, "MMS")) {
+        if (len >= 4 && buf[0] == 0x03) { /* TPKT */
+            if (len >= 7) {
+                uint8_t cotp_pdu = buf[5];
+                if (cotp_pdu == 0xE0) return (char *)ck_strdup((u8 *)"COTP_CR");
+                if (cotp_pdu == 0xD0) return (char *)ck_strdup((u8 *)"COTP_CC");
+                if (cotp_pdu == 0xF0 && len >= 8) {
+                    uint8_t mms_tag = buf[7];
+                    if (mms_tag == 0xA8) return (char *)ck_strdup((u8 *)"INITIATE_REQ");
+                    if (mms_tag == 0xA9) return (char *)ck_strdup((u8 *)"INITIATE_RESP");
+                    if (mms_tag == 0xA0) return (char *)ck_strdup((u8 *)"CONFIRMED_REQ");
+                    if (mms_tag == 0xA1) return (char *)ck_strdup((u8 *)"CONFIRMED_RESP");
+                }
+            }
+            return (char *)ck_strdup((u8 *)"TPKT_COTP");
+        }
+        return (char *)ck_strdup((u8 *)"IEC61850_MSG");
+    }
+
+    if (!strncasecmp(proto, "OPCUA", 5) || !strcasecmp(proto, "OPC_UA") || !strcasecmp(proto, "OPC-UA")) {
+        if (len >= 3) {
+            if (!memcmp(buf, "HEL", 3)) return (char *)ck_strdup((u8 *)"HELLO");
+            if (!memcmp(buf, "ACK", 3)) return (char *)ck_strdup((u8 *)"ACKNOWLEDGE");
+            if (!memcmp(buf, "ERR", 3)) return (char *)ck_strdup((u8 *)"ERROR");
+            if (!memcmp(buf, "OPN", 3)) return (char *)ck_strdup((u8 *)"OPEN_SECURE_CHANNEL");
+            if (!memcmp(buf, "CLO", 3)) return (char *)ck_strdup((u8 *)"CLOSE_SECURE_CHANNEL");
+            if (!memcmp(buf, "MSG", 3)) return (char *)ck_strdup((u8 *)"MESSAGE");
+        }
+        return (char *)ck_strdup((u8 *)"OPCUA_MSG");
+    }
+
+    if (!strncasecmp(proto, "ETHERNET", 8) || !strcasecmp(proto, "ENIP") || !strcasecmp(proto, "EIP") || !strcasecmp(proto, "Ethernet/IP")) {
+        if (len >= 2) {
+            uint16_t cmd = (uint16_t)buf[0] | ((uint16_t)buf[1] << 8);
+            switch (cmd) {
+                case 0x0004: return (char *)ck_strdup((u8 *)"LIST_TARGETS");
+                case 0x0063: return (char *)ck_strdup((u8 *)"LIST_IDENTITY");
+                case 0x0064: return (char *)ck_strdup((u8 *)"LIST_INTERFACES");
+                case 0x0065: return (char *)ck_strdup((u8 *)"REGISTER_SESSION");
+                case 0x0066: return (char *)ck_strdup((u8 *)"UNREGISTER_SESSION");
+                case 0x006F: return (char *)ck_strdup((u8 *)"SEND_RR_DATA");
+                case 0x0070: return (char *)ck_strdup((u8 *)"SEND_UNIT_DATA");
+                default: {
+                    char tmp[32];
+                    snprintf(tmp, sizeof(tmp), "ENIP_CMD_%04X", cmd);
+                    return (char *)ck_strdup((u8 *)tmp);
+                }
+            }
+        }
+        return (char *)ck_strdup((u8 *)"ENIP_MSG");
+    }
+
+    return NULL;
+}
+
 char *construct_prompt_stall(char *protocol_name, char *examples, char *history)
 {
-    char *template = "In the %s protocol, the communication history between the %s client and the %s server is as follows."
-                     "The next proper client request that can affect the server's state are:\n\n"
-                     "Desired format of real client requests:\n%sCommunication History:\n\"\"\"\n%s\"\"\"";
+    char *template = NULL;
+    if (protocol_name && is_binary_protocol(protocol_name)) {
+        template = "In the %s protocol (binary industrial protocol with hexadecimal byte encoding), the communication history between the %s client and the %s server is as follows."
+                   "The next proper client request that can affect the server's state in hex byte format are:\n\n"
+                   "Desired format of real client requests:\n%sCommunication History:\n\"\"\"\n%s\"\"\"";
+    } else {
+        template = "In the %s protocol, the communication history between the %s client and the %s server is as follows."
+                   "The next proper client request that can affect the server's state are:\n\n"
+                   "Desired format of real client requests:\n%sCommunication History:\n\"\"\"\n%s\"\"\"";
+    }
 
     char *prompt = NULL;
     if (asprintf(&prompt, template, protocol_name ? protocol_name : "",
@@ -444,7 +716,7 @@ char *construct_prompt_stall(char *protocol_name, char *examples, char *history)
 
     json_object *sys_msg = json_object_new_object();
     json_object_object_add(sys_msg, "role", json_object_new_string("system"));
-    json_object_object_add(sys_msg, "content", json_object_new_string("You are a helpful assistant."));
+    json_object_object_add(sys_msg, "content", json_object_new_string("You are a helpful assistant for network protocol fuzzing and message format extraction."));
     json_object_array_add(messages_obj, sys_msg);
 
     json_object *user_msg = json_object_new_object();
@@ -462,30 +734,66 @@ char *construct_prompt_stall(char *protocol_name, char *examples, char *history)
 
 char *construct_prompt_for_templates(char *protocol_name, char **final_msg)
 {
-    // Give one example for learning formats
-    char *prompt_rtsp_example = "For the RTSP protocol, the DESCRIBE client request template is:\\n"
-                                "DESCRIBE: [\\\"DESCRIBE <<VALUE>>\\\\r\\\\n\\\","
-                                "\\\"CSeq: <<VALUE>>\\\\r\\\\n\\\","
-                                "\\\"User-Agent: <<VALUE>>\\\\r\\\\n\\\","
-                                "\\\"Accept: <<VALUE>>\\\\r\\\\n\\\","
-                                "\\\"\\\\r\\\\n\\\"]";
-
-    char *prompt_http_example = "For the HTTP protocol, the GET client request template is:\\n"
-                                "GET: [\\\"GET <<VALUE>>\\\\r\\\\n\\\"]";
-
     char *msg = NULL;
-    asprintf(&msg, "%s\\n%s\\nFor the %s protocol, all of client request templates are :", prompt_rtsp_example, prompt_http_example, protocol_name);
+
+    if (protocol_name && is_binary_protocol(protocol_name)) {
+        if (!strcasecmp(protocol_name, "BACNET")) {
+            char *p1 = "For BACnet/IP, client requests follow the BVLC header (type 0x81, function, length) + NPDU + APDU format. Example templates:\\n"
+                       "WHO_IS: [\\\"81\\\", \\\"0a\\\", \\\"<<LENGTH>>\\\", \\\"01\\\", \\\"00\\\", \\\"10\\\", \\\"08\\\"]\\n"
+                       "READ_PROPERTY: [\\\"81\\\", \\\"0a\\\", \\\"<<LENGTH>>\\\", \\\"01\\\", \\\"00\\\", \\\"00\\\", \\\"<<INVOKE_ID>>\\\", \\\"0c\\\", \\\"<<OBJECT_ID>>\\\", \\\"<<PROP_ID>>\\\"]";
+            asprintf(&msg, "%s\\nFor the BACnet protocol, all of client request templates in JSON array format are :", p1);
+        } else if (!strncasecmp(protocol_name, "MODBUS", 6)) {
+            char *p1 = "For Modbus TCP, client requests follow the MBAP header (Transaction ID, Protocol 0x0000, Length, Unit ID) + PDU (Function Code, Data) format. Example templates:\\n"
+                       "READ_HOLDING_REGISTERS: [\\\"<<TRANS_ID>>\\\", \\\"0000\\\", \\\"0006\\\", \\\"01\\\", \\\"03\\\", \\\"<<START_ADDR>>\\\", \\\"<<QUANTITY>>\\\"]\\n"
+                       "WRITE_SINGLE_REGISTER: [\\\"<<TRANS_ID>>\\\", \\\"0000\\\", \\\"0006\\\", \\\"01\\\", \\\"06\\\", \\\"<<REG_ADDR>>\\\", \\\"<<REG_VAL>>\\\"]\\n"
+                       "READ_COILS: [\\\"<<TRANS_ID>>\\\", \\\"0000\\\", \\\"0006\\\", \\\"01\\\", \\\"01\\\", \\\"<<START_ADDR>>\\\", \\\"<<QUANTITY>>\\\"]";
+            asprintf(&msg, "%s\\nFor the Modbus TCP protocol, all of client request templates in JSON array format are :", p1);
+        } else if (!strncasecmp(protocol_name, "IEC104", 6) || !strcasecmp(protocol_name, "IEC60870_5_104") || !strcasecmp(protocol_name, "IEC-104")) {
+            char *p1 = "For IEC 60870-5-104, client requests follow Start Byte 0x68 + Length + 4-byte APCI control fields + optional ASDU format. Example templates:\\n"
+                       "STARTDT_ACT: [\\\"68\\\", \\\"04\\\", \\\"07000000\\\"]\\n"
+                       "TESTFR_ACT: [\\\"68\\\", \\\"04\\\", \\\"43000000\\\"]\\n"
+                       "INTERROGATION: [\\\"68\\\", \\\"0e\\\", \\\"<<SEQ>>\\\", \\\"64\\\", \\\"01\\\", \\\"0600\\\", \\\"<<COMMON_ADDR>>\\\", \\\"000000\\\", \\\"14\\\"]";
+            asprintf(&msg, "%s\\nFor the IEC 60870-5-104 protocol, all of client request templates in JSON array format are :", p1);
+        } else if (!strncasecmp(protocol_name, "IEC61850", 8) || !strcasecmp(protocol_name, "IEC-61850") || !strcasecmp(protocol_name, "MMS")) {
+            char *p1 = "For IEC 61850 (MMS over COTP/TPKT), client requests follow TPKT (0x03, 0x00, Length) + COTP + MMS PDU format. Example templates:\\n"
+                       "INITIATE_REQ: [\\\"0300\\\", \\\"<<LENGTH>>\\\", \\\"02f080\\\", \\\"a8\\\", \\\"<<MMS_INIT_PDU>>\\\"]\\n"
+                       "CONFIRMED_REQ: [\\\"0300\\\", \\\"<<LENGTH>>\\\", \\\"02f080\\\", \\\"a0\\\", \\\"<<INVOKE_ID>>\\\", \\\"<<MMS_BODY>>\\\"]";
+            asprintf(&msg, "%s\\nFor the IEC 61850 MMS protocol, all of client request templates in JSON array format are :", p1);
+        } else if (!strncasecmp(protocol_name, "OPCUA", 5) || !strcasecmp(protocol_name, "OPC_UA") || !strcasecmp(protocol_name, "OPC-UA")) {
+            char *p1 = "For OPC UA Binary, client requests follow 3-letter Type + Chunk 'F' + 4-byte little-endian Size + payload format. Example templates:\\n"
+                       "HELLO: [\\\"HEL\\\", \\\"F\\\", \\\"<<SIZE>>\\\", \\\"00000000\\\", \\\"<<BUFFER_SIZES>>\\\", \\\"<<ENDPOINT_URL>>\\\"]\\n"
+                       "OPEN_SECURE_CHANNEL: [\\\"OPN\\\", \\\"F\\\", \\\"<<SIZE>>\\\", \\\"<<SEC_CHANNEL_ID>>\\\", \\\"<<SECURITY_POLICY>>\\\"]\\n"
+                       "MESSAGE: [\\\"MSG\\\", \\\"F\\\", \\\"<<SIZE>>\\\", \\\"<<SEC_CHANNEL_ID>>\\\", \\\"<<TOKEN_ID>>\\\", \\\"<<REQUEST_BODY>>\\\"]";
+            asprintf(&msg, "%s\\nFor the OPC UA Binary protocol, all of client request templates in JSON array format are :", p1);
+        } else if (!strncasecmp(protocol_name, "ETHERNET", 8) || !strcasecmp(protocol_name, "ENIP") || !strcasecmp(protocol_name, "EIP") || !strcasecmp(protocol_name, "Ethernet/IP")) {
+            char *p1 = "For EtherNet/IP, client requests follow the 24-byte Encapsulation Header (Command, Length, Session, Status, Context, Options) + CPF/CIP payload. Example templates:\\n"
+                       "LIST_IDENTITY: [\\\"6300\\\", \\\"0000\\\", \\\"00000000\\\", \\\"00000000\\\", \\\"0000000000000000\\\", \\\"00000000\\\"]\\n"
+                       "REGISTER_SESSION: [\\\"6500\\\", \\\"0400\\\", \\\"00000000\\\", \\\"00000000\\\", \\\"0000000000000000\\\", \\\"00000000\\\", \\\"0100\\\", \\\"0000\\\"]\\n"
+                       "SEND_RR_DATA: [\\\"6f00\\\", \\\"<<LENGTH>>\\\", \\\"<<SESSION>>\\\", \\\"00000000\\\", \\\"0000000000000000\\\", \\\"00000000\\\", \\\"<<CPF_DATA>>\\\"]";
+            asprintf(&msg, "%s\\nFor the EtherNet/IP protocol, all of client request templates in JSON array format are :", p1);
+        } else {
+            char *p1 = "For binary industrial protocols, client requests are structured frames in hex format. Example template:\\n"
+                       "REQUEST: [\\\"<<HEADER>>\\\", \\\"<<LENGTH>>\\\", \\\"<<PAYLOAD>>\\\"]";
+            asprintf(&msg, "%s\\nFor the %s protocol, all of client request templates are :", p1, protocol_name);
+        }
+    } else {
+        // Give one example for learning formats
+        char *prompt_rtsp_example = "For the RTSP protocol, the DESCRIBE client request template is:\\n"
+                                    "DESCRIBE: [\\\"DESCRIBE <<VALUE>>\\\\r\\\\n\\\","
+                                    "\\\"CSeq: <<VALUE>>\\\\r\\\\n\\\","
+                                    "\\\"User-Agent: <<VALUE>>\\\\r\\\\n\\\","
+                                    "\\\"Accept: <<VALUE>>\\\\r\\\\n\\\","
+                                    "\\\"\\\\r\\\\n\\\"]";
+
+        char *prompt_http_example = "For the HTTP protocol, the GET client request template is:\\n"
+                                    "GET: [\\\"GET <<VALUE>>\\\\r\\\\n\\\"]";
+
+        asprintf(&msg, "%s\\n%s\\nFor the %s protocol, all of client request templates are :", prompt_rtsp_example, prompt_http_example, protocol_name ? protocol_name : "");
+    }
+
     *final_msg = msg;
-    /** Format of prompt_grammars
-    prompt_grammars = [
-        {"role": "system", "content": "You are a helpful assistant."},
-        {"role": "user", "content": msg}
-    ]
-     **/
     char *prompt_grammars = NULL;
-
-    asprintf(&prompt_grammars, "[{\"role\": \"system\", \"content\": \"You are a helpful assistant.\"}, {\"role\": \"user\", \"content\": \"%s\"}]", msg);
-
+    asprintf(&prompt_grammars, "[{\"role\": \"system\", \"content\": \"You are a helpful assistant for network protocol fuzzing and message format extraction.\"}, {\"role\": \"user\", \"content\": \"%s\"}]", msg ? msg : "");
     return prompt_grammars;
 }
 
@@ -596,19 +904,27 @@ char *format_request_message(char *message)
 
 char *construct_prompt_for_protocol_message_types(char *protocol_name)
 {
-    /***
-     * Prompt to ask the protocol states as follow:
-     * ```
-     * In the RTSP protocol, the protocol states are:
-     *
-     * Desired format:
-     * <comma_separated_list_of_states_in_uppercase>
-     * ```
-     * ***/
     char *prompt = NULL;
 
-    // transfer the prompt into string
-    asprintf(&prompt, "In the %s protocol, the message types are: \\n\\nDesired format:\\n<comma_separated_list_of_states_in_uppercase_and_without_whitespaces>", protocol_name);
+    if (protocol_name && is_binary_protocol(protocol_name)) {
+        const char *hint = "";
+        if (!strcasecmp(protocol_name, "BACNET")) {
+            hint = " (e.g., WHO_IS,I_AM,READ_PROPERTY,WRITE_PROPERTY,WHO_HAS,I_HAVE,COV_NOTIFICATION)";
+        } else if (!strncasecmp(protocol_name, "MODBUS", 6)) {
+            hint = " (e.g., READ_COILS,READ_DISCRETE_INPUTS,READ_HOLDING_REGISTERS,READ_INPUT_REGISTERS,WRITE_SINGLE_COIL,WRITE_SINGLE_REGISTER,WRITE_MULTIPLE_REGISTERS)";
+        } else if (!strncasecmp(protocol_name, "IEC104", 6) || !strcasecmp(protocol_name, "IEC60870_5_104") || !strcasecmp(protocol_name, "IEC-104")) {
+            hint = " (e.g., STARTDT_ACT,TESTFR_ACT,STOPDT_ACT,INTERROGATION,CLOCK_SYNC,SINGLE_COMMAND,DOUBLE_COMMAND)";
+        } else if (!strncasecmp(protocol_name, "IEC61850", 8) || !strcasecmp(protocol_name, "IEC-61850") || !strcasecmp(protocol_name, "MMS")) {
+            hint = " (e.g., INITIATE_REQUEST,CONCL_REQUEST,GET_NAME_LIST,READ_REQUEST,WRITE_REQUEST,GET_VAR_ACCESS_ATTR)";
+        } else if (!strncasecmp(protocol_name, "OPCUA", 5) || !strcasecmp(protocol_name, "OPC_UA") || !strcasecmp(protocol_name, "OPC-UA")) {
+            hint = " (e.g., HELLO,OPEN_SECURE_CHANNEL,CLOSE_SECURE_CHANNEL,GET_ENDPOINTS,CREATE_SESSION,ACTIVATE_SESSION,READ,WRITE)";
+        } else if (!strncasecmp(protocol_name, "ETHERNET", 8) || !strcasecmp(protocol_name, "ENIP") || !strcasecmp(protocol_name, "EIP") || !strcasecmp(protocol_name, "Ethernet/IP")) {
+            hint = " (e.g., LIST_IDENTITY,LIST_INTERFACES,REGISTER_SESSION,UNREGISTER_SESSION,SEND_RR_DATA,SEND_UNIT_DATA)";
+        }
+        asprintf(&prompt, "In the %s protocol, the message types are%s: \\n\\nDesired format:\\n<comma_separated_list_of_states_in_uppercase_and_without_whitespaces>", protocol_name, hint);
+    } else {
+        asprintf(&prompt, "In the %s protocol, the message types are: \\n\\nDesired format:\\n<comma_separated_list_of_states_in_uppercase_and_without_whitespaces>", protocol_name ? protocol_name : "");
+    }
 
     return prompt;
 }

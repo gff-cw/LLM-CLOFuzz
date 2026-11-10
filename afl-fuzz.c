@@ -3429,19 +3429,29 @@ void get_seeds_with_messsage_types(const char *in_dir, khash_t(strSet) * message
       for (int j = 0; j < region_count; j++)
       { 
         // remove all messages that are observed
-        int header_len = 0;
-        while (regions[j].start_byte + header_len < regions[j].end_byte 
-        && raw_content[regions[j].start_byte + header_len] != ' ' 
-        && raw_content[regions[j].start_byte + header_len] != '\r' 
-        && raw_content[regions[j].start_byte + header_len] != '\n'
-        && raw_content[regions[j].start_byte + header_len] != '\\')
-        {
-          header_len++;
+        char *header = NULL;
+        if (protocol_name && is_binary_protocol(protocol_name)) {
+          size_t rlen = (regions[j].end_byte >= regions[j].start_byte) ?
+                        (size_t)(regions[j].end_byte - regions[j].start_byte + 1) : 0;
+          header = classify_protocol_message_type(protocol_name,
+                    (const unsigned char *)raw_content + regions[j].start_byte, rlen);
         }
 
-        char *header = ck_alloc(header_len + 1);
-        memcpy(header, raw_content + regions[j].start_byte, header_len);
-        header[header_len] = '\0';
+        if (!header) {
+          int header_len = 0;
+          while (regions[j].start_byte + header_len < regions[j].end_byte 
+          && raw_content[regions[j].start_byte + header_len] != ' ' 
+          && raw_content[regions[j].start_byte + header_len] != '\r' 
+          && raw_content[regions[j].start_byte + header_len] != '\n'
+          && raw_content[regions[j].start_byte + header_len] != '\\')
+          {
+            header_len++;
+          }
+
+          header = ck_alloc(header_len + 1);
+          memcpy(header, raw_content + regions[j].start_byte, header_len);
+          header[header_len] = '\0';
+        }
 
         khiter_t k = kh_get(strSet, messages, header);
         if (k != kh_end(messages) && kh_exist(messages, k))
@@ -3477,51 +3487,91 @@ void get_seeds_with_messsage_types(const char *in_dir, khash_t(strSet) * message
 
       khash_t(strSet)* subset = kv_A(message_subsets, idx); 
 
-      // Try enriching the sequence
-      char *client_request_answer = enrich_sequence(raw_content, subset);
+      if (protocol_name && is_binary_protocol(protocol_name)) {
+        char *hex_seed = bytes_to_hex_str((const unsigned char *)raw_content, raw_len, 0);
+        char *client_request_answer = enrich_sequence(hex_seed, subset);
+        ck_free(hex_seed);
 
-      if (client_request_answer == NULL)
-        continue;
+        if (client_request_answer == NULL)
+          continue;
 
-      // Check whether the client_request_answer is the same as the raw_content or if the client_request_answer is empty
-      char *unescaped_client_requests = unescape_string(client_request_answer);
-      if (unescaped_client_requests == NULL) {
+        size_t enriched_len = 0;
+        char *enriched_bytes = extract_hex_payload(client_request_answer, strlen(client_request_answer), &enriched_len);
         free(client_request_answer);
-        continue;
-      }
-      char *formatted_raw_content = format_string(raw_content);
-      char *formatted_unescaped_client_requests = format_string(unescaped_client_requests);
-      if (formatted_unescaped_client_requests == NULL || strcmp(formatted_unescaped_client_requests, formatted_raw_content) == 0)
-      {
-        printf("## Skip the same seed\n");
-        if (unescaped_client_requests) free(unescaped_client_requests);
-        free(client_request_answer);
-        continue;
-      }
-      free(client_request_answer);
 
-      char *formatted_client_requests = format_request_message(unescaped_client_requests);
-      free(unescaped_client_requests);
-
-      // Create the file in the same directory with the name enriched_<idx>_<file_name>
-      char *enriched_file_name = malloc(strlen(nl_file_name) + 10 + 20);
-      if (enriched_file_name) {
-        strcpy(enriched_file_name, "enriched_");
-        sprintf(enriched_file_name + 9, "%d_", idx);
-        strcat(enriched_file_name, nl_file_name);
-        char *enriched_file_path = malloc(strlen(in_dir) + strlen(enriched_file_name) + 2);
-        if (enriched_file_path) {
-          strcpy(enriched_file_path, in_dir);
-          strcat(enriched_file_path, "/");
-          strcat(enriched_file_path, enriched_file_name);
-
-          write_new_seeds(enriched_file_path, formatted_client_requests);
-          free(enriched_file_path);
+        if (!enriched_bytes || enriched_len == 0) {
+          if (enriched_bytes) ck_free(enriched_bytes);
+          continue;
         }
-        free(enriched_file_name);
-      }
 
-      ck_free(formatted_client_requests);
+        char *enriched_file_name = malloc(strlen(nl_file_name) + 10 + 20);
+        if (enriched_file_name) {
+          strcpy(enriched_file_name, "enriched_");
+          sprintf(enriched_file_name + 9, "%d_", idx);
+          strcat(enriched_file_name, nl_file_name);
+          char *enriched_file_path = malloc(strlen(in_dir) + strlen(enriched_file_name) + 2);
+          if (enriched_file_path) {
+            strcpy(enriched_file_path, in_dir);
+            strcat(enriched_file_path, "/");
+            strcat(enriched_file_path, enriched_file_name);
+
+            FILE *efp = fopen(enriched_file_path, "wb");
+            if (efp) {
+              fwrite(enriched_bytes, 1, enriched_len, efp);
+              fclose(efp);
+            }
+            free(enriched_file_path);
+          }
+          free(enriched_file_name);
+        }
+        ck_free(enriched_bytes);
+      } else {
+        // Try enriching the sequence
+        char *client_request_answer = enrich_sequence(raw_content, subset);
+
+        if (client_request_answer == NULL)
+          continue;
+
+        // Check whether the client_request_answer is the same as the raw_content or if the client_request_answer is empty
+        char *unescaped_client_requests = unescape_string(client_request_answer);
+        if (unescaped_client_requests == NULL) {
+          free(client_request_answer);
+          continue;
+        }
+        char *formatted_raw_content = format_string(raw_content);
+        char *formatted_unescaped_client_requests = format_string(unescaped_client_requests);
+        if (formatted_unescaped_client_requests == NULL || strcmp(formatted_unescaped_client_requests, formatted_raw_content) == 0)
+        {
+          printf("## Skip the same seed\n");
+          if (unescaped_client_requests) free(unescaped_client_requests);
+          free(client_request_answer);
+          continue;
+        }
+        free(client_request_answer);
+
+        char *formatted_client_requests = format_request_message(unescaped_client_requests);
+        free(unescaped_client_requests);
+
+        // Create the file in the same directory with the name enriched_<idx>_<file_name>
+        char *enriched_file_name = malloc(strlen(nl_file_name) + 10 + 20);
+        if (enriched_file_name) {
+          strcpy(enriched_file_name, "enriched_");
+          sprintf(enriched_file_name + 9, "%d_", idx);
+          strcat(enriched_file_name, nl_file_name);
+          char *enriched_file_path = malloc(strlen(in_dir) + strlen(enriched_file_name) + 2);
+          if (enriched_file_path) {
+            strcpy(enriched_file_path, in_dir);
+            strcat(enriched_file_path, "/");
+            strcat(enriched_file_path, enriched_file_name);
+
+            write_new_seeds(enriched_file_path, formatted_client_requests);
+            free(enriched_file_path);
+          }
+          free(enriched_file_name);
+        }
+
+        ck_free(formatted_client_requests);
+      }
     }
 
     for(int idx = 0; idx < kv_size(message_subsets); idx++) {
@@ -7948,38 +7998,59 @@ AFLNET_REGIONS_SELECTION:;
       {
         empty = 0;
 
-        json_object *request_v = json_object_new_string_len(kl_val(it_pref)->mdata ? kl_val(it_pref)->mdata : "", kl_val(it_pref)->msize);
-        char *request_orig = strdup(json_object_to_json_string(request_v));
-        json_object_put(request_v);
-        char *request = request_orig;
-        int request_len = strlen(request);
-        if (request_len >= 2) {
-          request_len -= 2;
-          request++;
-        }
-        for (int j = 0; j < request_len; j++)
-        {
-          if (!isprint((unsigned char)request[j]) || request[j] < 0 || request[j] >= 127)
-            request[j] = ' ';
+        char *request = NULL;
+        int request_len = 0;
+        char *request_orig = NULL;
+
+        if (protocol_name && is_binary_protocol(protocol_name)) {
+          request = bytes_to_hex_str((const unsigned char *)kl_val(it_pref)->mdata, kl_val(it_pref)->msize, 0);
+          request_len = request ? strlen(request) : 0;
+          request_orig = request;
+        } else {
+          json_object *request_v = json_object_new_string_len(kl_val(it_pref)->mdata ? kl_val(it_pref)->mdata : "", kl_val(it_pref)->msize);
+          request_orig = strdup(json_object_to_json_string(request_v));
+          json_object_put(request_v);
+          request = request_orig;
+          request_len = strlen(request);
+          if (request_len >= 2) {
+            request_len -= 2;
+            request++;
+          }
+          for (int j = 0; j < request_len; j++)
+          {
+            if (!isprint((unsigned char)request[j]) || request[j] < 0 || request[j] >= 127)
+              request[j] = ' ';
+          }
         }
 
         int resp_chunk_len = response_bytes_temp[i] - prev_len;
         if (resp_chunk_len < 0) resp_chunk_len = 0;
-        json_object *response_v = json_object_new_string_len(responses_temp[i], resp_chunk_len);
-        char *response_orig = strdup(json_object_to_json_string(response_v));
-        json_object_put(response_v);
         prev_len = response_bytes_temp[i];
-        char *response = response_orig;
-        int response_len = strlen(response);
-        if (response_len >= 2) {
-          response_len -= 2;
-          response++;
-        }
 
-        for (int j = 0; j < response_len; j++)
-        {
-          if (!isprint((unsigned char)response[j]) || response[j] < 0 || response[j] >= 127)
-            response[j] = ' ';
+        char *response = NULL;
+        int response_len = 0;
+        char *response_orig = NULL;
+
+        if (protocol_name && is_binary_protocol(protocol_name)) {
+          response = bytes_to_hex_str((const unsigned char *)responses_temp[i], resp_chunk_len, 0);
+          response_len = response ? strlen(response) : 0;
+          response_orig = response;
+        } else {
+          json_object *response_v = json_object_new_string_len(responses_temp[i], resp_chunk_len);
+          response_orig = strdup(json_object_to_json_string(response_v));
+          json_object_put(response_v);
+          response = response_orig;
+          response_len = strlen(response);
+          if (response_len >= 2) {
+            response_len -= 2;
+            response++;
+          }
+
+          for (int j = 0; j < response_len; j++)
+          {
+            if (!isprint((unsigned char)response[j]) || response[j] < 0 || response[j] >= 127)
+              response[j] = ' ';
+          }
         }
 
         if (i == 0)
@@ -7987,8 +8058,13 @@ AFLNET_REGIONS_SELECTION:;
           examples_len = asprintf(&examples, "Request-1:\\n%.*s\\nRequest-2:\\n%.*s\\n", request_len, request, request_len, request);
           if (examples_len < 0 || !examples) {
             examples = NULL;
-            free(request_orig);
-            free(response_orig);
+            if (protocol_name && is_binary_protocol(protocol_name)) {
+              if (request_orig) ck_free(request_orig);
+              if (response_orig) ck_free(response_orig);
+            } else {
+              if (request_orig) free(request_orig);
+              if (response_orig) free(response_orig);
+            }
             goto free_stall;
           }
         }
@@ -8001,8 +8077,13 @@ AFLNET_REGIONS_SELECTION:;
         memcpy(history + history_len, response, response_len);
         history_len += response_len;
 
-        free(request_orig);
-        free(response_orig);
+        if (protocol_name && is_binary_protocol(protocol_name)) {
+          if (request_orig) ck_free(request_orig);
+          if (response_orig) ck_free(response_orig);
+        } else {
+          if (request_orig) free(request_orig);
+          if (response_orig) free(response_orig);
+        }
       }
 
       if (!empty)
@@ -8066,17 +8147,35 @@ AFLNET_REGIONS_SELECTION:;
           ck_free(stall_response_path);
         }
 
-        char *stall_message_raw = extract_stalled_message(stall_response, strlen(stall_response));
+        char *stall_message = NULL;
+        size_t stall_msg_len = 0;
 
-        if (stall_message_raw == NULL)
+        if (protocol_name && is_binary_protocol(protocol_name)) {
+          stall_message = extract_hex_payload(stall_response, strlen(stall_response), &stall_msg_len);
+          if (!stall_message || stall_msg_len == 0) {
+            if (stall_message) ck_free(stall_message);
+            char *raw_extract = extract_stalled_message(stall_response, strlen(stall_response));
+            if (raw_extract) {
+              stall_message = extract_hex_payload(raw_extract, strlen(raw_extract), &stall_msg_len);
+              free(raw_extract);
+            }
+          }
+        } else {
+          char *stall_message_raw = extract_stalled_message(stall_response, strlen(stall_response));
+          if (stall_message_raw == NULL)
+            goto free_stall;
+
+          stall_message = format_request_message(stall_message_raw);
+          stall_msg_len = stall_message ? strlen(stall_message) : 0;
+          free(stall_message_raw);
+        }
+
+        if (stall_message == NULL || stall_msg_len == 0)
           goto free_stall;
-
-        char *stall_message = format_request_message(stall_message_raw);
-        free(stall_message_raw);
 
         if (stall_message != NULL)
         {
-          if (common_fuzz_stuff(argv, stall_message, strlen(stall_message)))
+          if (common_fuzz_stuff(argv, stall_message, (u32)stall_msg_len))
           {
             splicing_with = -1;
 
